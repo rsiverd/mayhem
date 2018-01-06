@@ -1,0 +1,4 @@
+thar01   a00   thar&thar&none    DOUBLE      doub
+thar12   a00   none&thar&thar    DOUBLE      doub
+tung01   w00   tung&tung&none    LAMPFLAT    flat
+tung12   w00   none&tung&tung    LAMPFLAT    flat

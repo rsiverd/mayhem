@@ -1,0 +1,10 @@
+# cam  obstype    day_before     day_after   notes
+nres      bias      20170728      20170729   # switched to CPT igloo
+nres      dark      20170728      20170729   # switched to CPT igloo
+nres      lamp      20170728      20170729   # switched to CPT igloo
+nres01    bias      20170727      20170728   # fl09 temperature control failed
+nres01    dark      20170727      20170728   # fl09 temperature control failed
+nres01    lamp      20170727      20170728   # fl09 temperature control failed
+nres01    bias      20170731      20170801   # recovered temperature control
+nres01    dark      20170731      20170801   # recovered temperature control
+nres01    lamp      20170801      20170802   # recovered temperature control

@@ -1,0 +1,44 @@
+arch_root="/archive/engineering"
+save_root="/scratch/rsiverd/mayhem"
+
+## Camera storage locations:
+#declare -A cam_storage
+#cam_storage["nres"]="/archive/engineering/bpl/nres"
+#cam_storage["nres01"]="/archive/engineering/lsc/nres01"
+
+
+# -----------------------------------------------------------------------
+# Image picking routines:
+
+
+# Get destination path for 'clean' files:
+get_save_folder () {
+   hdata=( `imhget CAMID DRTAG DAY-OBS $1` )
+   local camid=${hdata[0]}
+   local drtag=${hdata[1]}
+   local dayobs=${hdata[2]}
+   echo $save_root/$camid/$dayobs
+}
+
+## Get appropriate bias frame path:
+get_bias_path () {
+   local image="$1"
+   local camid="$2"
+   local drtag="$3"
+   local dayobs=$(imhget DAY-OBS $image)
+   #cmde "ls $save_root/$camid/$dayobs/med_bias_${dayobs}_*.fits"
+   #if [ -f $save_root/$camid/$dayobs/med_bias_${dayobs}_${drtag}.fits ];
+   echo $save_root/$camid/$dayobs/med_bias_${dayobs}_${drtag}.fits
+}
+
+## Get appropriate dark frame path:
+pick_bias () {
+   local image="$1"
+   local camid="$2"
+   local drtag="$3"
+   local dayobs=$(imhget DAY-OBS $image)
+   #cmde "ls $save_root/$camid/$dayobs/med_bias_${dayobs}_*.fits"
+   #if [ -f $save_root/$camid/$dayobs/med_bias_${dayobs}_${drtag}.fits ];
+   echo $save_root/$camid/$dayobs/med_dark_${dayobs}_${drtag}.fits
+}
+

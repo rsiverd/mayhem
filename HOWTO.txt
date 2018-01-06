@@ -1,0 +1,30 @@
+bias_start=20170701
+dark_start=20170705
+
+
+idlenice ./Z01_rebuild_range.sh nres01 20170625 20170722 bias -k -B0
+idlenice ./Z01_rebuild_range.sh nres01 20170701 20170722 bias -k -B2 
+idlenice ./Z01_rebuild_range.sh nres01 20170701 20170722 bias -k -B4    
+
+idlenice ./Z01_rebuild_range.sh nres01 20170625 20170722 dark -k -B0
+idlenice ./Z01_rebuild_range.sh nres01 20170701 20170722 dark -k -B2    
+idlenice ./Z01_rebuild_range.sh nres01 20170701 20170722 dark -k -B4    
+
+
+idlenice ./Z01_rebuild_range.sh nres01 20170701 20170722 lamp -k -B4 --thar01
+idlenice ./Z01_rebuild_range.sh nres01 20170701 20170722 lamp -k -B4 --thar12
+idlenice ./Z01_rebuild_range.sh nres01 20170701 20170722 lamp -k -B4 --tung01
+idlenice ./Z01_rebuild_range.sh nres01 20170701 20170722 lamp -k -B4 --tung12
+
+idlenice ./Z01_rebuild_range.sh nres01 20170701 20170722 lamp -k -B0 --thar01
+idlenice ./Z01_rebuild_range.sh nres01 20170701 20170722 lamp -k -B0 --thar12
+idlenice ./Z01_rebuild_range.sh nres01 20170701 20170722 lamp -k -B0 --tung01
+idlenice ./Z01_rebuild_range.sh nres01 20170701 20170722 lamp -k -B0 --tung12
+
+
+# TESTING:
+idlenice ./Z01_rebuild_range.sh nres01 20170701 20170705 bias -k -B0
+idlenice ./Z01_rebuild_range.sh nres01 20170701 20170705 dark -k -B0
+
+
+

@@ -1,0 +1,3 @@
+nres     /archive/engineering/bpl/nres
+nres01   /archive/engineering/lsc/nres01
+nres03   /archive/engineering/bpl/nres03

@@ -1,0 +1,12 @@
+The "mayhem" pipeline is a robust, fault-tolerant pipeline for calibration and
+processing of NRES spectra. This software is meant to run automatically via
+cron job and produce science-grade results to simplify a wide range of analysis
+and engineering tasks. If it works as intended, this code can be run at ~any
+time and will automatically update existing results as needed, eliminating the
+risk of processing with incomplete data (results will auto-converge to best).
+
+Features:
+* building of master calibration files across multiple days (with barriers)
+* automatic rebuilding of old/existing files with new methods or new data
+* blind extraction and identification of spectroscopic orders and fibers!
+

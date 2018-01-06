@@ -1,3 +1,4 @@
+
 arch_root="/archive/engineering"
 save_root="/scratch/rsiverd/mayhem"
 calib_conf="./calib_types.txt"
@@ -149,10 +150,12 @@ update_output_header () {
    local obstype="$3"
    local exptime="$4"
    local drtag="$5"
+   local mversion="$6"
    vcmde "hdrtool $image  -U OBSTYPE  --value='$obstype'"   || return $? 
    vcmde "hdrtool $image  -U EXPTIME  --value='$exptime'"   || return $? 
    vcmde "hdrtool $image  -U CAMID    --value='$camid'"     || return $? 
    vcmde "hdrtool $image  -U DRTAG    --value='$drtag'"     || return $?
+   vcmde "hdrtool $image  -U MVERSION --value='$mversion'"  || return $?
    #vcmde "hdrtool $image  -U BDRTAG   --value='$bdr_tag'"   || return $?
    #vcmde "hdrtool $image  -U DDRTAG   --value='$ddr_tag'"   || return $?
    vcmde "hdrtool $image  -U EXTNAME  --value='SPECTRUM'"   || return $?
@@ -212,4 +215,13 @@ barrier_check_pass () {
    done
    return 0
 }
+
+######################################################################
+# CHANGELOG (config.sh):
+#---------------------------------------------------------------------
+#
+#  2018-01-05:
+#     -- update_output_header now also sets MVERSION for revision tracking.
+#     -- Added this change log.
+#
 

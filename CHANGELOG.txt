@@ -2,14 +2,15 @@
 #   Change log for mayhem pipeline.
 #
 # Rob Siverd
-# Created:      2017-07-07
-# Last updated: 2017-07-07
+# Created:      2018-01-05
+# Last updated: 2018-01-05
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
-2017-07-07:
-   -- Increased CODE_VERSION to 0.0.1. Updated LAST_UPDATE.
-   -- demo first created.
+2018-01-05:
+   -- Decided on MVERSION keyword for output products.
+   -- Added this project to mayhem git repo.
+   -- First created changelog.
 
 

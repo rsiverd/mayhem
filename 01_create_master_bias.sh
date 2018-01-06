@@ -11,7 +11,7 @@
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.51"
+script_version="0.55"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -26,7 +26,7 @@ days_prior=0
 days_after=0
 keep_clean=0          # if true (=1), save temp files in daydir for later use
 access_mode="symlink" # (symlink|copy) how to access existing 'clean' files
-min_version="0.5"     # force rebuild of data with version older than this
+min_version="0.55"    # force rebuild of data with version older than this
 
 ## Standard scratch files/dirs:
 tmp_name="$(date +%Y%m%d.%H%M%S).$$.$(whoami)"
@@ -98,7 +98,14 @@ EOH
 
 ##--------------------------------------------------------------------------##
 ## Parse command line with getopt (reorders and stores CL args):
-source 00_arg_parsing.sh
+#source aux/00_arg_parsing.sh
+#source aux/01_barriers.sh
+aux_files=( `ls aux/??_*.sh 2>/dev/null` )
+echo "Loading auxiliary files: ${aux_files[*]}"
+for item in ${aux_files[*]}; do
+   source $item
+done
+exit
 
 ## Check for an appropriate number of arguments:
 if [ -z "$2" ]; then
@@ -203,6 +210,8 @@ nite_bias="$nite_folder/med_bias_${fdate}_${drtag}.fits"
 cmde "mkdir -p $nite_folder" || exit $?
 
 ##--------------------------------------------------------------------------##
+##                Existing Image Removal: Barrier Check                     ##
+##--------------------------------------------------------------------------##
 
 ## Add fdates to list, one per line:
 nlist="$tmp_dir/nite_list.$$.txt"
@@ -229,6 +238,10 @@ if [ "$bcheck" = "FAIL" ]; then
    rm -rf $tmp_dir
    exit 1
 fi
+
+##--------------------------------------------------------------------------##
+##                Existing Image Removal: Version Check                     ##
+##--------------------------------------------------------------------------##
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -261,7 +274,8 @@ else
       # Existing 'clean' file unavailable, make it:
       echo
       cmde "nres-cdp-trim-oscan -q $image -o $foo"          || exit $?
-      update_output_header $foo $camid BIAS 0.0 $drtag      || exit $?
+      hargs=( $camid BIAS 0.0 $drtag $script_version )
+      cmde "update_output_header $foo ${hargs[*]}"          || exit $?
       cmde "mv -f $foo $isave"                              || exit $?
    done
    timer
@@ -275,7 +289,9 @@ else
    # Add stats and identifiers to header:
    cmde "fitsperc -qS $foo"                                 || exit $?
    cmde "kimstat -qSC9 $foo"                                || exit $?
-   update_output_header $foo $camid BIAS 0.0 $drtag         || exit $?
+   #update_output_header $foo $camid BIAS 0.0 $drtag         || exit $?
+   hargs=( $camid BIAS 0.0 $drtag $script_version )
+   cmde "update_output_header $foo ${hargs[*]}"          || exit $?
    cmde "mv -f $foo $nite_bias"                             || exit $?
 
    # Preserve files (if requested):
@@ -304,6 +320,12 @@ exit 0
 ######################################################################
 # CHANGELOG (01_create_master_bias.sh):
 #---------------------------------------------------------------------
+#
+#  2018-01-05:
+#     -- Increased script_version to 0.55.
+#     -- Current script_version now goes to update_output_header for recording.
+#     -- Now use new 'aux' location for 00_arg_parsing.sh and related.
+#     -- Introduced min_version with initial value of 0.55 (current).
 #
 #  2017-08-07:
 #     -- Increased script_version to 0.50.

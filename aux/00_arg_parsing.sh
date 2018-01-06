@@ -1,3 +1,6 @@
+## NOTE: this command-line parsing code is SOURCED by the caller because it
+## needs to run in the script's global namespace.
+
 ##--------------------------------------------------------------------------##
 ## Parse command line with getopt (reorders and stores CL args):
 s_opts="A:B:cko:rhqtv"
@@ -179,5 +182,4 @@ while true ; do
       #-------------------------------------------------------------------
    esac
 done
-
 

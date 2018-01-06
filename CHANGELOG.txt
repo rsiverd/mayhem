@@ -9,7 +9,11 @@
 #--------------------------------------------------------------------------
 
 2018-01-05:
-   -- Decided on MVERSION keyword for output products.
+   -- Now record version numbers in calibration product headers to facilitate
+         automatic rebuild of out-of-date files.
+   -- Created 'func' folder for shared shell functions.
+   -- Created 'aux' folder for shell code that gets sourced directly (currently
+         just arg-parsing for calib builder scripts).
    -- Added this project to mayhem git repo.
    -- First created changelog.
 

@@ -110,13 +110,6 @@ EOH
 ## Parse command line with getopt (reorders and stores CL args):
 source aux/00_arg_parsing.sh
 
-#aux_files=( `ls aux/??_*.sh 2>/dev/null` )
-#echo "Loading auxiliary files: ${aux_files[*]}"
-#for item in ${aux_files[*]}; do
-#   source $item
-#done
-#exit
-
 ## Check for an appropriate number of arguments:
 if [ -z "$2" ]; then
    usage >&2
@@ -131,6 +124,13 @@ fdate="$2"
 ##**************************************************************************##
 ##==========================================================================##
 ##--------------------------------------------------------------------------##
+
+## Load shared functions:
+func_files=( `ls func/??_*.sh 2>/dev/null` )
+echo "Loading function files: ${func_files[*]}"
+for item in ${func_files[*]}; do
+   source $item
+done
 
 ##--------------------------------------------------------------------------##
 ## Load configuration files:
@@ -391,7 +391,7 @@ exit 0
 #  2018-01-05:
 #     -- Increased script_version to 0.35.
 #     -- Current script_version now goes to update_output_header for recording.
-#     -- Now use new 'aux' location for 00_arg_parsing.sh and related.
+#     -- Now use new 'aux' and 'func' locations for common code and routines.
 #     -- Introduced min_version with initial value of 0.35 (current).
 #
 #  2017-08-07:

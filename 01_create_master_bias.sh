@@ -115,12 +115,12 @@ fdate="$2"
 ##==========================================================================##
 ##--------------------------------------------------------------------------##
 
-### List of recent nights:
-#nights=5
-#declare -a nite_list
-#for (( x = $nights; x >= -1; x-- )); do
-#   nite_list+=( $(date -u +%Y%m%d --date="$x days ago") )
-#done
+## Load shared functions:
+func_files=( `ls func/??_*.sh 2>/dev/null` )
+vyecho "Loading function files: ${func_files[*]}\n"
+for item in ${func_files[*]}; do
+   source $item
+done
 
 ##--------------------------------------------------------------------------##
 ## Load configuration files:
@@ -204,7 +204,7 @@ cmde "mkdir -p $nite_folder" || exit $?
 ##--------------------------------------------------------------------------##
 
 ## Load helpers:
-source aux/01_barriers.sh
+source func/01_barriers.sh
 
 ## Add fdates to list, one per line:
 nlist="$tmp_dir/nite_list.$$.txt"
@@ -316,7 +316,7 @@ exit 0
 #  2018-01-05:
 #     -- Increased script_version to 0.55.
 #     -- Current script_version now goes to update_output_header for recording.
-#     -- Now use new 'aux' location for 00_arg_parsing.sh and related.
+#     -- Now use new 'aux' and 'func' locations for common code and routines.
 #     -- Introduced min_version with initial value of 0.55 (current).
 #
 #  2017-08-07:

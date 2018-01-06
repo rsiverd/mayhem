@@ -103,13 +103,6 @@ EOH
 ## Parse command line with getopt (reorders and stores CL args):
 source aux/00_arg_parsing.sh
 
-#aux_files=( `ls aux/??_*.sh 2>/dev/null` )
-#echo "Loading auxiliary files: ${aux_files[*]}"
-#for item in ${aux_files[*]}; do
-#   source $item
-#done
-#exit
-
 ## Check for an appropriate number of arguments:
 if [ -z "$2" ]; then
    usage >&2
@@ -125,12 +118,12 @@ fdate="$2"
 ##==========================================================================##
 ##--------------------------------------------------------------------------##
 
-### List of recent nights:
-#nights=5
-#declare -a nite_list
-#for (( x = $nights; x >= -1; x-- )); do
-#   nite_list+=( $(date -u +%Y%m%d --date="$x days ago") )
-#done
+## Load shared functions:
+func_files=( `ls func/??_*.sh 2>/dev/null` )
+echo "Loading function files: ${func_files[*]}"
+for item in ${func_files[*]}; do
+   source $item
+done
 
 ##--------------------------------------------------------------------------##
 ## Load configuration files:
@@ -215,9 +208,6 @@ fi
 ##                Existing Image Removal: Barrier Check                     ##
 ##--------------------------------------------------------------------------##
 
-## Load helpers:
-source aux/01_barriers.sh
-
 ## Add fdates to list, one per line:
 nlist="$tmp_dir/nite_list.$$.txt"
 echo ${fdate_list[*]} | tr ' ' '\n' > $nlist
@@ -243,7 +233,6 @@ if [ "$bcheck" = "FAIL" ]; then
    rm -rf $tmp_dir
    exit 1
 fi
-exit
 
 ##--------------------------------------------------------------------------##
 ## Create master dark (if not present):
@@ -345,7 +334,7 @@ exit 0
 #  2018-01-05:
 #     -- Increased script_version to 0.60.
 #     -- Current script_version now goes to update_output_header for recording.
-#     -- Now use new 'aux' location for 00_arg_parsing.sh and related.
+#     -- Now use new 'aux' and 'func' locations for common code and routines.
 #     -- Introduced min_version with initial value of 0.60 (current).
 #
 #  2017-08-07:

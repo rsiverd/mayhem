@@ -10,3 +10,10 @@ Features:
 * automatic rebuilding of old/existing files with new methods or new data
 * blind extraction and identification of spectroscopic orders and fibers!
 
+
+How versioning works:
+* type-specific script_version is recorded to FITS headers of output images
+* keywords used are BIASVERS, DARKVERS, and LAMPVERS
+* a list of *minimum* versions for these are kept in (config.sh)
+* build-scripts check inputs against relevant minima and decide how to proceed
+

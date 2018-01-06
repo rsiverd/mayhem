@@ -19,6 +19,12 @@ dark_stack_args="-r410 --itable -c5"
 #objects_keyword["tung12"]="none&tung&tung"
 
 ##--------------------------------------------------------------------------##
+## Calibration version requirements:
+min_biasvers="0.55"     # biases with version older than this are rebuilt
+min_darkvers="0.60"     #  darks with version older than this are rebuilt
+min_lampvers="0.35"     #  lamps with version older than this are rebuilt
+
+##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 ## Date/time convenience functions:
@@ -142,28 +148,6 @@ pick_best_bdcal () {
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
-##--------------------------------------------------------------------------##
-## Output image header updates:
-#update_output_header () {
-#   local image="$1"
-#   local camid="$2"
-#   local obstype="$3"
-#   local exptime="$4"
-#   local drtag="$5"
-#   local mversion="$6"
-#   vcmde "hdrtool $image  -U OBSTYPE  --value='$obstype'"   || return $? 
-#   vcmde "hdrtool $image  -U EXPTIME  --value='$exptime'"   || return $? 
-#   vcmde "hdrtool $image  -U CAMID    --value='$camid'"     || return $? 
-#   vcmde "hdrtool $image  -U DRTAG    --value='$drtag'"     || return $?
-#   vcmde "hdrtool $image  -U MVERSION --value='$mversion'"  || return $?
-#   #vcmde "hdrtool $image  -U BDRTAG   --value='$bdr_tag'"   || return $?
-#   #vcmde "hdrtool $image  -U DDRTAG   --value='$ddr_tag'"   || return $?
-#   vcmde "hdrtool $image  -U EXTNAME  --value='SPECTRUM'"   || return $?
-#   vcmde "hdrtool $image -CU TELESCOP --value='$camid'"     || return $?
-#}
-
-##--------------------------------------------------------------------------##
-##--------------------------------------------------------------------------##
 ## Check for fdate in array:
 date_is_listed () {
    local fdate="$1"
@@ -187,40 +171,12 @@ dates_are_listed () {
    return 0
 }
 
-### Load barriers:
-#barrier_check_pass () {
-#   local camid=$1
-#   local otype=$2
-#   local nlist=$3
-#   matches=0
-#   if [ ! -f $barrier_list ]; then
-#      echo "No barrier list found!"
-#      return 0
-#   fi
-#   barriers=( `awk -v camid=$camid -v otype=$otype '{
-#      if (($1 == camid) && ($2 == otype)) print $3"_"$4
-#      }' $barrier_list` )
-#   
-#   #echo "barriers: ${barriers[*]}"
-#   for dpair in ${barriers[*]}; do
-#      nites=( `echo $dpair | tr '_' ' '` )
-#      #echo "nites: ${nites[*]}"
-#      #grep -e ${nites[0]} -e ${nites[1]} $nlist
-#      hits=$(grep -e ${nites[0]} -e ${nites[1]} $nlist | wc -l)
-#      #echo "hits: $hits"
-#      if [ $hits -eq 2 ]; then
-#         #echo "BARRIER CROSSED! ${nites[*]}" >&2
-#         return 1
-#      fi
-#   done
-#   return 0
-#}
-
 ######################################################################
 # CHANGELOG (config.sh):
 #---------------------------------------------------------------------
 #
 #  2018-01-05:
+#     -- Introduced min_biasvers=0.55, min_darkvers=0.60, min_lampvers=0.35.
 #     -- Moved barrier_check_pass() into separate aux/01_barriers.sh file.
 #     -- update_output_header now also sets MVERSION for revision tracking.
 #     -- Added this change log.

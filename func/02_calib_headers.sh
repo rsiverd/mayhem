@@ -32,14 +32,46 @@ update_output_header () {
 
 ##--------------------------------------------------------------------------##
 ## Set versioning keywords:
-#record_cal_version () {
-#   local image="$1"
-#   local version="$3"
-#   [ -z "$3" ] && return 1
-#   case $2 in
-#      -b) vkey="BIASVERS"
-#}
+record_cal_version () {
+   local image="$1"
+   local version="$3"
+   [ -z "$3" ] && ErrorAbort "Too few args for record_cal_version() ..."
+   case $2 in
+      -b) name="bias"; kword="BIASVERS" ;;
+      -d) name="dark"; kword="DARKVERS" ;;
+      -l) name="lamp"; kword="LAMPVERS" ;;
+      *) ErrorAbort "Unhandled argument: '$2'" ;;
+      #*) Recho "lolwut: '$2'"; exit 1 ;;
+   esac
+   ctext="Master $name script version"
+   hargs="-U $kword --hdr_data=$3 --comment='$ctext'"
+   #echo "hargs: $hargs"
+   vcmde "hdrtool $image $hargs" || return $?
+}
 
+##--------------------------------------------------------------------------##
+## Get calib versions:
+get_cal_versions () {
+   results=( `imhget -u $1 BIASVERS DARKVERS LAMPVERS` ) || exit $?
+   echo ${results[*]} | sed 's/___/0.0/g'
+}
+
+## Check calib versions:
+cal_version_pass () {
+   [ -z "$2" ] && ErrorAbort "Too few args for cal_version_pass() ..."
+   [ $# -gt 4 ] && ErrorAbort "Too many args for cal_version_pass() ..."
+   local image=$1; shift
+   needvers=( $* )
+   versions=( `get_cal_versions $image` )
+   for (( i = 0; i < $#; i++ )); do
+      need="${needvers[i]}"
+      have="${versions[i]}"
+      okay=`bc <<< "$have >= $need"`
+      #echo "i: $i, need: $need, have: $have, okay: $okay"
+      [ $okay -eq 0 ] && return 1
+   done
+   return 0 # everything passed
+}
 
 ######################################################################
 # CHANGELOG (02_calib_headers.sh):

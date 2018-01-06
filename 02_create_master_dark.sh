@@ -26,7 +26,6 @@ days_prior=0
 days_after=0
 keep_clean=0          # if true (>0), save temp files in daydir for later use
 access_mode="symlink" # (symlink|copy) how to access existing 'clean' files
-min_version="0.55"    # force rebuild of data with version older than this
 
 ## Standard scratch files/dirs:
 tmp_name="$(date +%Y%m%d.%H%M%S).$$.$(whoami)"
@@ -235,6 +234,21 @@ if [ "$bcheck" = "FAIL" ]; then
 fi
 
 ##--------------------------------------------------------------------------##
+##                Existing Image Removal: Version Check                     ##
+##--------------------------------------------------------------------------##
+
+if [ -f $nite_dark ]; then
+   echo "min_biasvers: $min_biasvers"
+   echo "min_darkvers: $min_darkvers"
+   if ( cal_version_pass $nite_dark $min_biasvers $min_darkvers ); then
+      Gecho "Existing $nite_dark passed version check!\n"
+   else
+      Recho "Existing $nite_dark FAILED version check!\n"
+   fi
+fi
+exit
+
+##--------------------------------------------------------------------------##
 ## Create master dark (if not present):
 if [ -f $nite_dark ]; then
    Gecho "$nite_dark already exists!\n"
@@ -283,8 +297,9 @@ else
       echo "darkexp: $darkexp"
       cmde "fitsarith -qHi $foo -S $use_bias -d $darkexp -o '!$bar'" || exit $?
       cmde "hdrtool $bar --add_hist='use_bias ${use_bias##*/}'"      || exit $?
-      hargs=( $camid DARK 1.0 $drtag $script_version )
-      cmde "update_output_header $foo ${hargs[*]}"                   || exit $?
+      cmde "record_cal_version $foo -d $script_version"              || exit $?
+      #hargs=( $camid DARK 1.0 $drtag )
+      cmde "update_output_header $foo $camid DARK 1.0 $drtag"        || exit $?
       cmde "mv -f $bar $isave"                                       || exit $?
 
    done
@@ -299,8 +314,9 @@ else
    # Add stats and identifiers to header:
    cmde "fitsperc -qS $foo"                                 || exit $?
    cmde "kimstat -qSC9 $foo"                                || exit $?
-   hargs=( $camid DARK 1.0 $drtag $script_version )
-   cmde "update_output_header $foo ${hargs[*]}"             || exit $?
+   cmde "record_cal_version $foo -d $script_version"        || exit $?
+   #hargs=( $camid DARK 1.0 $drtag )
+   cmde "update_output_header $foo $camid DARK 1.0 $drtag"  || exit $?
    cmde "mv -f $foo $nite_dark"                             || exit $?
 
    # Preserve stack files (if requested):
@@ -333,9 +349,8 @@ exit 0
 #
 #  2018-01-05:
 #     -- Increased script_version to 0.60.
-#     -- Current script_version now goes to update_output_header for recording.
+#     -- Current script_version now recorded to DARKVERS keyword.
 #     -- Now use new 'aux' and 'func' locations for common code and routines.
-#     -- Introduced min_version with initial value of 0.60 (current).
 #
 #  2017-08-07:
 #     -- Increased script_version to 0.55.

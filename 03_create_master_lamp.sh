@@ -27,7 +27,6 @@ days_after=0
 keep_clean=0          # if true (>0), save temp files in daydir for later use
 calib_type=""         # name of lamp+calibration channel selected (REQUIRED)
 access_mode="symlink" # (symlink|copy) how to access existing 'clean' files
-min_version="0.35"    # force rebuild of data with version older than this
 
 ## Standard scratch files/dirs:
 tmp_name="$(date +%Y%m%d.%H%M%S).$$.$(whoami)"
@@ -250,9 +249,6 @@ fi
 ##                Existing Image Removal: Barrier Check                     ##
 ##--------------------------------------------------------------------------##
 
-## Load helpers:
-source aux/01_barriers.sh
-
 ## Add fdates to list, one per line:
 nlist="$tmp_dir/nite_list.$$.txt"
 echo ${fdate_list[*]} | tr ' ' '\n' > $nlist
@@ -278,6 +274,23 @@ if [ "$bcheck" = "FAIL" ]; then
    rm -rf $tmp_dir
    exit 1
 fi
+
+##--------------------------------------------------------------------------##
+##                Existing Image Removal: Version Check                     ##
+##--------------------------------------------------------------------------##
+
+if [ -f $nite_lampsave ]; then
+   echo "min_biasvers: $min_biasvers"
+   echo "min_darkvers: $min_darkvers"
+   echo "min_lampvers: $min_lampvers"
+   need_these=( $min_biasvers $min_darkvers $min_lampvers )
+   if ( cal_version_pass $nite_lampsave ${need_these[*]} ); then
+      Gecho "Existing $nite_lampsave passed version check!\n"
+   else
+      Recho "Existing $nite_lampsave FAILED version check!\n"
+   fi
+fi
+exit
 
 ##--------------------------------------------------------------------------##
 ## Create master dark (if not present):
@@ -340,7 +353,8 @@ else
       cmde "hdrtool $bar --add_hist='use_bias ${use_bias##*/}'"   || exit $?
       cmde "hdrtool $bar --add_hist='use_dark ${use_dark##*/}'"   || exit $?
       cmde "hdrtool $bar -U OBJECTS --value='$lampobj'"           || exit $?
-      hargs=( $camid $obstype $lampexp $drtag $script_version )
+      cmde "record_cal_version $foo -l $script_version"           || exit $?
+      hargs=( $camid $obstype $lampexp $drtag )
       cmde "update_output_header $foo ${hargs[*]}"                || exit $?
       cmde "mv -f $bar $isave"                                    || exit $?
 
@@ -357,7 +371,8 @@ else
    cmde "fitsperc -qS $foo"                                       || exit $?
    cmde "kimstat -qSC9 $foo"                                      || exit $?
    cmde "hdrtool $foo -U OBJECTS --value='$lampobj'"              || exit $?
-   hargs=( $camid $obstype $lampexp $drtag $script_version )
+   cmde "record_cal_version $foo -l $script_version"              || exit $?
+   hargs=( $camid $obstype $lampexp $drtag )
    cmde "update_output_header $foo ${hargs[*]}"                   || exit $?
    cmde "mv -f $foo $nite_lampsave"                               || exit $?
 
@@ -390,9 +405,8 @@ exit 0
 #
 #  2018-01-05:
 #     -- Increased script_version to 0.35.
-#     -- Current script_version now goes to update_output_header for recording.
+#     -- Current script_version now recorded to LAMPVERS keyword.
 #     -- Now use new 'aux' and 'func' locations for common code and routines.
-#     -- Introduced min_version with initial value of 0.35 (current).
 #
 #  2017-08-07:
 #     -- Increased script_version to 0.30.

@@ -26,7 +26,6 @@ days_prior=0
 days_after=0
 keep_clean=0          # if true (=1), save temp files in daydir for later use
 access_mode="symlink" # (symlink|copy) how to access existing 'clean' files
-min_version="0.55"    # force rebuild of data with version older than this
 
 ## Standard scratch files/dirs:
 tmp_name="$(date +%Y%m%d.%H%M%S).$$.$(whoami)"
@@ -236,6 +235,16 @@ fi
 ##                Existing Image Removal: Version Check                     ##
 ##--------------------------------------------------------------------------##
 
+if [ -f $nite_bias ]; then
+   echo "min_biasvers: $min_biasvers"
+   if ( cal_version_pass $nite_bias $min_biasvers ); then
+      Gecho "Existing $nite_bias passed version check!\n"
+   else
+      Recho "Existing $nite_bias FAILED version check!\n"
+   fi
+fi
+exit
+
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 ## Create master bias (if not present):
@@ -266,10 +275,11 @@ else
       
       # Existing 'clean' file unavailable, make it:
       echo
-      cmde "nres-cdp-trim-oscan -q $image -o $foo"          || exit $?
-      hargs=( $camid BIAS 0.0 $drtag $script_version )
-      cmde "update_output_header $foo ${hargs[*]}"          || exit $?
-      cmde "mv -f $foo $isave"                              || exit $?
+      cmde "nres-cdp-trim-oscan -q $image -o $foo"             || exit $?
+      cmde "record_cal_version $foo -b $script_version"        || exit $?
+      #hargs=( $camid BIAS 0.0 $drtag )
+      cmde "update_output_header $foo $camid BIAS 0.0 $drtag"  || exit $?
+      cmde "mv -f $foo $isave"                                 || exit $?
    done
    timer
 
@@ -282,8 +292,9 @@ else
    # Add stats and identifiers to header:
    cmde "fitsperc -qS $foo"                                 || exit $?
    cmde "kimstat -qSC9 $foo"                                || exit $?
-   hargs=( $camid BIAS 0.0 $drtag $script_version )
-   cmde "update_output_header $foo ${hargs[*]}"             || exit $?
+   cmde "record_cal_version $foo -b $script_version"        || exit $?
+   #hargs=( $camid BIAS 0.0 $drtag )
+   cmde "update_output_header $foo $camid BIAS 0.0 $drtag"  || exit $?
    cmde "mv -f $foo $nite_bias"                             || exit $?
 
    # Preserve files (if requested):
@@ -315,9 +326,8 @@ exit 0
 #
 #  2018-01-05:
 #     -- Increased script_version to 0.55.
-#     -- Current script_version now goes to update_output_header for recording.
+#     -- Current script_version now recorded to BIASVERS keyword.
 #     -- Now use new 'aux' and 'func' locations for common code and routines.
-#     -- Introduced min_version with initial value of 0.55 (current).
 #
 #  2017-08-07:
 #     -- Increased script_version to 0.50.

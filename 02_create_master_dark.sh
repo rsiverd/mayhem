@@ -4,14 +4,14 @@
 #
 # Rob Siverd
 # Created:      2017-07-10
-# Last updated: 2018-08-07
+# Last updated: 2018-01-05
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.55"
+script_version="0.60"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -24,8 +24,9 @@ this_prog="${0##*/}"
 #confirmed=0
 days_prior=0
 days_after=0
-keep_clean=0      # if true (>0), save temporary files in daydir for later use
+keep_clean=0          # if true (>0), save temp files in daydir for later use
 access_mode="symlink" # (symlink|copy) how to access existing 'clean' files
+min_version="0.55"    # force rebuild of data with version older than this
 
 ## Standard scratch files/dirs:
 tmp_name="$(date +%Y%m%d.%H%M%S).$$.$(whoami)"
@@ -100,7 +101,14 @@ EOH
 
 ##--------------------------------------------------------------------------##
 ## Parse command line with getopt (reorders and stores CL args):
-source 00_arg_parsing.sh
+source aux/00_arg_parsing.sh
+
+#aux_files=( `ls aux/??_*.sh 2>/dev/null` )
+#echo "Loading auxiliary files: ${aux_files[*]}"
+#for item in ${aux_files[*]}; do
+#   source $item
+#done
+#exit
 
 ## Check for an appropriate number of arguments:
 if [ -z "$2" ]; then
@@ -204,6 +212,11 @@ if [ $ndark -lt 2 ]; then
 fi
 
 ##--------------------------------------------------------------------------##
+##                Existing Image Removal: Barrier Check                     ##
+##--------------------------------------------------------------------------##
+
+## Load helpers:
+source aux/01_barriers.sh
 
 ## Add fdates to list, one per line:
 nlist="$tmp_dir/nite_list.$$.txt"
@@ -230,7 +243,7 @@ if [ "$bcheck" = "FAIL" ]; then
    rm -rf $tmp_dir
    exit 1
 fi
-
+exit
 
 ##--------------------------------------------------------------------------##
 ## Create master dark (if not present):
@@ -281,7 +294,8 @@ else
       echo "darkexp: $darkexp"
       cmde "fitsarith -qHi $foo -S $use_bias -d $darkexp -o '!$bar'" || exit $?
       cmde "hdrtool $bar --add_hist='use_bias ${use_bias##*/}'"      || exit $?
-      update_output_header $bar $camid DARK 1.0 $drtag               || exit $?
+      hargs=( $camid DARK 1.0 $drtag $script_version )
+      cmde "update_output_header $foo ${hargs[*]}"                   || exit $?
       cmde "mv -f $bar $isave"                                       || exit $?
 
    done
@@ -296,7 +310,8 @@ else
    # Add stats and identifiers to header:
    cmde "fitsperc -qS $foo"                                 || exit $?
    cmde "kimstat -qSC9 $foo"                                || exit $?
-   update_output_header $foo $camid DARK 1.0 $drtag         || exit $?
+   hargs=( $camid DARK 1.0 $drtag $script_version )
+   cmde "update_output_header $foo ${hargs[*]}"             || exit $?
    cmde "mv -f $foo $nite_dark"                             || exit $?
 
    # Preserve stack files (if requested):
@@ -326,6 +341,12 @@ exit 0
 ######################################################################
 # CHANGELOG (02_create_master_dark.sh):
 #---------------------------------------------------------------------
+#
+#  2018-01-05:
+#     -- Increased script_version to 0.60.
+#     -- Current script_version now goes to update_output_header for recording.
+#     -- Now use new 'aux' location for 00_arg_parsing.sh and related.
+#     -- Introduced min_version with initial value of 0.60 (current).
 #
 #  2017-08-07:
 #     -- Increased script_version to 0.55.

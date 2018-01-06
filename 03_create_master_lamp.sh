@@ -4,14 +4,14 @@
 #
 # Rob Siverd
 # Created:      2017-07-24
-# Last updated: 2017-08-07
+# Last updated: 2018-01-05
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.30"
+script_version="0.35"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -24,9 +24,10 @@ this_prog="${0##*/}"
 #confirmed=0
 days_prior=0
 days_after=0
-keep_clean=0      # if true (>0), save temporary files in daydir for later use
-calib_type=""     # name of lamp+calibration channel selected (REQUIRED)
+keep_clean=0          # if true (>0), save temp files in daydir for later use
+calib_type=""         # name of lamp+calibration channel selected (REQUIRED)
 access_mode="symlink" # (symlink|copy) how to access existing 'clean' files
+min_version="0.35"    # force rebuild of data with version older than this
 
 ## Standard scratch files/dirs:
 tmp_name="$(date +%Y%m%d.%H%M%S).$$.$(whoami)"
@@ -107,7 +108,14 @@ EOH
 
 ##--------------------------------------------------------------------------##
 ## Parse command line with getopt (reorders and stores CL args):
-source 00_arg_parsing.sh
+source aux/00_arg_parsing.sh
+
+#aux_files=( `ls aux/??_*.sh 2>/dev/null` )
+#echo "Loading auxiliary files: ${aux_files[*]}"
+#for item in ${aux_files[*]}; do
+#   source $item
+#done
+#exit
 
 ## Check for an appropriate number of arguments:
 if [ -z "$2" ]; then
@@ -239,6 +247,12 @@ if [ $nlamp -lt 2 ]; then
 fi
 
 ##--------------------------------------------------------------------------##
+##                Existing Image Removal: Barrier Check                     ##
+##--------------------------------------------------------------------------##
+
+## Load helpers:
+source aux/01_barriers.sh
+
 ## Add fdates to list, one per line:
 nlist="$tmp_dir/nite_list.$$.txt"
 echo ${fdate_list[*]} | tr ' ' '\n' > $nlist
@@ -326,7 +340,8 @@ else
       cmde "hdrtool $bar --add_hist='use_bias ${use_bias##*/}'"   || exit $?
       cmde "hdrtool $bar --add_hist='use_dark ${use_dark##*/}'"   || exit $?
       cmde "hdrtool $bar -U OBJECTS --value='$lampobj'"           || exit $?
-      update_output_header $bar $camid $obstype $lampexp $drtag   || exit $?
+      hargs=( $camid $obstype $lampexp $drtag $script_version )
+      cmde "update_output_header $foo ${hargs[*]}"                || exit $?
       cmde "mv -f $bar $isave"                                    || exit $?
 
    done
@@ -342,7 +357,8 @@ else
    cmde "fitsperc -qS $foo"                                       || exit $?
    cmde "kimstat -qSC9 $foo"                                      || exit $?
    cmde "hdrtool $foo -U OBJECTS --value='$lampobj'"              || exit $?
-   update_output_header $foo $camid $obstype $lampexp $drtag      || exit $?
+   hargs=( $camid $obstype $lampexp $drtag $script_version )
+   cmde "update_output_header $foo ${hargs[*]}"                   || exit $?
    cmde "mv -f $foo $nite_lampsave"                               || exit $?
 
    # Preserve stack files (if requested):
@@ -371,6 +387,12 @@ exit 0
 ######################################################################
 # CHANGELOG (03_create_master_lamp.sh):
 #---------------------------------------------------------------------
+#
+#  2018-01-05:
+#     -- Increased script_version to 0.35.
+#     -- Current script_version now goes to update_output_header for recording.
+#     -- Now use new 'aux' location for 00_arg_parsing.sh and related.
+#     -- Introduced min_version with initial value of 0.35 (current).
 #
 #  2017-08-07:
 #     -- Increased script_version to 0.30.

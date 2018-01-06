@@ -98,14 +98,7 @@ EOH
 
 ##--------------------------------------------------------------------------##
 ## Parse command line with getopt (reorders and stores CL args):
-#source aux/00_arg_parsing.sh
-#source aux/01_barriers.sh
-aux_files=( `ls aux/??_*.sh 2>/dev/null` )
-echo "Loading auxiliary files: ${aux_files[*]}"
-for item in ${aux_files[*]}; do
-   source $item
-done
-exit
+source aux/00_arg_parsing.sh
 
 ## Check for an appropriate number of arguments:
 if [ -z "$2" ]; then
@@ -117,9 +110,6 @@ fdate="$2"
 
 [ $debug -eq 1 ] && vlevel=3
 [ $vlevel -gt 1 ] && echo "Verbosity: $vlevel" >&2
-
-echo "AT THIS POINT, HAVE keep_clean=$keep_clean"
-exit
 
 ##**************************************************************************##
 ##==========================================================================##
@@ -213,6 +203,9 @@ cmde "mkdir -p $nite_folder" || exit $?
 ##                Existing Image Removal: Barrier Check                     ##
 ##--------------------------------------------------------------------------##
 
+## Load helpers:
+source aux/01_barriers.sh
+
 ## Add fdates to list, one per line:
 nlist="$tmp_dir/nite_list.$$.txt"
 echo ${fdate_list[*]} | tr ' ' '\n' > $nlist
@@ -289,9 +282,8 @@ else
    # Add stats and identifiers to header:
    cmde "fitsperc -qS $foo"                                 || exit $?
    cmde "kimstat -qSC9 $foo"                                || exit $?
-   #update_output_header $foo $camid BIAS 0.0 $drtag         || exit $?
    hargs=( $camid BIAS 0.0 $drtag $script_version )
-   cmde "update_output_header $foo ${hargs[*]}"          || exit $?
+   cmde "update_output_header $foo ${hargs[*]}"             || exit $?
    cmde "mv -f $foo $nite_bias"                             || exit $?
 
    # Preserve files (if requested):

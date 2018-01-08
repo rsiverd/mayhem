@@ -19,9 +19,6 @@ this_prog="${0##*/}"
 # Exit in case of nonzero status (set -e): set -o errexit
 
 ## Program options:
-#save_file=""
-#shuffle=0
-#confirmed=0
 days_prior=0
 days_after=0
 keep_clean=0          # if true (=1), save temp files in daydir for later use
@@ -143,6 +140,18 @@ exec 10>&-
 echo "Known cameras: ${!cam_storage[@]}"
 #echo "cam_storage: ${cam_storage[*]}"
 
+## Verify that clean/stack versions are available:
+if [ ${#min_clean_versions[*]} != 3 ]; then
+   ErrorAbort "min_clean_versions[] not defined!" 99
+fi
+if [ ${#min_stack_versions[*]} != 3 ]; then
+   ErrorAbort "min_stack_versions[] not defined!" 99
+fi
+
+## Set up image version requirements:
+need_clean_versions=( `get_version_subset -b ${min_clean_versions[*]}` )
+need_stack_versions=( `get_version_subset -b ${min_stack_versions[*]}` )
+
 ##--------------------------------------------------------------------------##
 ## Validate camera:
 use_arch="${cam_storage[$camid]}"
@@ -245,10 +254,9 @@ fi
 ##                Existing Image Removal: Version Check                     ##
 ##--------------------------------------------------------------------------##
 
-need_versions=( $min_biasvers )
 if [ -f $nite_bias ]; then
-   echo "min_biasvers: $min_biasvers"
-   if ( cal_version_pass $nite_bias ${need_versions[*]} ); then
+   echo "Stack version requirements: ${need_stack_versions[*]}"
+   if ( cal_version_pass $nite_bias ${need_stack_versions[*]} ); then
       Gecho "Existing $nite_bias passed version check!\n"
    else
       Recho "Existing $nite_bias FAILED version check!\n"
@@ -257,10 +265,6 @@ if [ -f $nite_bias ]; then
 fi
 #exit
 
-#echo "nite_bias: $nite_bias"
-#echo "bias_list:"
-#echo ${bias_list[*]} | tr ' ' '\n'
-#exit 99
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -282,7 +286,7 @@ else
       icheck="$(get_save_folder $image)/$cbase"
       if [ -f $icheck ]; then
          yecho "Checking ${icheck##*/} ... "
-         if ( cal_version_pass $icheck ${need_versions[*]} ); then
+         if ( cal_version_pass $icheck ${need_clean_versions[*]} ); then
             Gecho "version check PASSED!\n"
             gecho "Using existing temp-bias (${access_mode}): ${icheck}\n"
             case $access_mode in
@@ -361,6 +365,7 @@ exit 0
 #
 #  2018-01-07:
 #     -- Increased script_version to 0.56.
+#     -- Implemented separate version requirements for clean and stack data.
 #     -- Added check for in-bounds fdate.
 #     -- BIASVERS in master output file is now the lowest BIASVERS of its
 #           input images.

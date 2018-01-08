@@ -49,6 +49,24 @@ record_cal_version () {
 }
 
 ##--------------------------------------------------------------------------##
+## Select appropriate version dependencies for specified cal type:
+get_version_subset () {
+   [ $# -ne 4 ] && ErrorAbort "Wrong args for record_cal_version() ..." 99
+   case $1 in
+      -b) name="bias"; nkept=1 ;;
+      -d) name="dark"; nkept=2 ;;
+      -l) name="lamp"; nkept=3 ;;
+      *) ErrorAbort "Unhandled argument: '$2'" 99 ;;
+   esac
+   shift
+   keep=()
+   for (( x = 0; x < $nkept; x++ )); do
+      keep+=( $1 ); shift
+   done
+   echo ${keep[*]}
+}
+
+##--------------------------------------------------------------------------##
 ## Find minimum version for an ensemble of images:
 find_min_cal_version () {
    #local image="$1"

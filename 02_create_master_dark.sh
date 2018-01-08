@@ -4,7 +4,7 @@
 #
 # Rob Siverd
 # Created:      2017-07-10
-# Last updated: 2018-01-05
+# Last updated: 2018-01-07
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
@@ -19,9 +19,6 @@ this_prog="${0##*/}"
 # Exit in case of nonzero status (set -e): set -o errexit
 
 ## Program options:
-#save_file=""
-#shuffle=0
-#confirmed=0
 days_prior=0
 days_after=0
 keep_clean=0          # if true (>0), save temp files in daydir for later use
@@ -132,9 +129,11 @@ cams_list="cameras.txt"
 [ -f $cams_list ] || ErrorAbort "Can't find file: $cams_list" 
 cmde "source $conf_file"
 declare -A cam_storage
+declare -A cam_startdate
 exec 10<$cams_list
-while read cam folder <&10; do
+while read cam folder startdate <&10; do
    cam_storage[$cam]="$folder"
+   cam_startdate[$cam]="$startdate"
 done
 exec 10>&-
 
@@ -144,12 +143,32 @@ exec 10>&-
 echo "Known cameras: ${!cam_storage[@]}"
 #echo "cam_storage: ${cam_storage[*]}"
 
+## Verify that clean/stack versions are available:
+if [ ${#min_clean_versions[*]} != 3 ]; then
+   ErrorAbort "min_clean_versions[] not defined!" 99
+fi
+if [ ${#min_stack_versions[*]} != 3 ]; then
+   ErrorAbort "min_stack_versions[] not defined!" 99
+fi
+
+## Set up image version requirements:
+need_clean_versions=( `get_version_subset -d ${min_clean_versions[*]}` )
+need_stack_versions=( `get_version_subset -d ${min_stack_versions[*]}` )
+
 ##--------------------------------------------------------------------------##
 ## Validate camera:
 use_arch="${cam_storage[$camid]}"
 if [ -z "$use_arch" ]; then
    Recho "\nUnrecognized camera: '$camid'\n\n" >&2
    exit 1
+fi
+
+## Validate fdate:
+earliest="${cam_startdate[$camid]}"
+if [ $fdate -lt $earliest ]; then
+   Recho "$fdate is outside the allowed date range for $camid.\n" >&2
+   Recho "Earliest supported data are from: ${earliest}\n\n" >&2
+   exit 99
 fi
 
 ## Check for data folder and input files:
@@ -204,6 +223,10 @@ if [ $ndark -lt 2 ]; then
 fi
 
 ##--------------------------------------------------------------------------##
+##                FIXME: IMPLEMENT CCD TEMPERATURE CHECK                    ##
+##--------------------------------------------------------------------------##
+
+##--------------------------------------------------------------------------##
 ##                Existing Image Removal: Barrier Check                     ##
 ##--------------------------------------------------------------------------##
 
@@ -238,15 +261,14 @@ fi
 ##--------------------------------------------------------------------------##
 
 if [ -f $nite_dark ]; then
-   echo "min_biasvers: $min_biasvers"
-   echo "min_darkvers: $min_darkvers"
-   if ( cal_version_pass $nite_dark $min_biasvers $min_darkvers ); then
+   echo "Stack version requirements: ${need_stack_versions[*]}"
+   if ( cal_version_pass $nite_dark ${need_stack_versions[*]} ); then
       Gecho "Existing $nite_dark passed version check!\n"
    else
       Recho "Existing $nite_dark FAILED version check!\n"
+      cmde "rm $nite_dark"
    fi
 fi
-exit
 
 ##--------------------------------------------------------------------------##
 ## Create master dark (if not present):
@@ -275,35 +297,59 @@ else
       # Use existing cleaned dark if possible:
       icheck="$(get_save_folder $image)/$cbase"
       if [ -f $icheck ]; then
-         gecho "Using existing temp-bias (${access_mode}): ${icheck}\n"
-         case $access_mode in
-            copy)    vcmde "cp -f $icheck $isave" || exit $?  ;;
-            symlink) vcmde "ln -s $icheck $isave" || exit $?  ;;
-            *) ErrorAbort "Unhandled access_mode: '$access_mode'" ;;
-         esac
-         continue
+         yecho "\nChecking ${icheck##*/} ... "
+         if ( cal_version_pass $icheck ${need_clean_versions[*]} ); then
+            Gecho "version check PASSED!\n"
+            gecho "Using existing temp-bias (${access_mode}): ${icheck}\n"
+            case $access_mode in
+               copy)    vcmde "cp -f $icheck $isave" || exit $?  ;;
+               symlink) vcmde "ln -s $icheck $isave" || exit $?  ;;
+               *) ErrorAbort "Unhandled access_mode: '$access_mode'" ;;
+            esac
+            continue
+         else
+            recho "version check FAILED, rebuild!\n\n"
+            #[ $keep_clean -eq 1 ] && cmde "rm $icheck"
+         fi
       fi
-      echo
 
       # --------------------------------------------
       # Otherwise, create cleaned dark for stacking:
       # --------------------------------------------
 
       # Subtract overscan:
-      cmde "nres-cdp-trim-oscan -q $image -o $foo"       || exit $?
+      cmde "nres-cdp-trim-oscan -q $image -o $foo"                   || exit $?
 
       # Subtract bias and divide out exposure time:
       darkexp="$(imhget EXPTIME $foo)"
       echo "darkexp: $darkexp"
       cmde "fitsarith -qHi $foo -S $use_bias -d $darkexp -o '!$bar'" || exit $?
-      cmde "hdrtool $bar --add_hist='use_bias ${use_bias##*/}'"      || exit $?
+      cmde "mv -f $bar $foo"                                         || exit $?
+      cmde "hdrtool $foo --add_hist='use_bias ${use_bias##*/}'"      || exit $?
+      versions=( `get_cal_versions $use_bias` )
+      echo "versions: ${versions[*]}"
+      #biasvers=$(imhget -u $use_bias BIASVERS)
+      cmde "record_cal_version $foo -b ${versions[0]}"               || exit $?
       cmde "record_cal_version $foo -d $script_version"              || exit $?
       #hargs=( $camid DARK 1.0 $drtag )
       cmde "update_output_header $foo $camid DARK 1.0 $drtag"        || exit $?
-      cmde "mv -f $bar $isave"                                       || exit $?
+      #echo "inspect: $foo"
+      #read pause
+      cmde "mv -f $foo $isave"                                       || exit $?
 
+      # Preserve files (if requested):
+      if [ $keep_clean -eq 1 ]; then
+         vcmde "mkdir -p $(dirname $icheck)"                         || exit $?
+         cmde "cp -f $isave $icheck"                                 || exit $?
+      fi
+      echo
    done
    timer
+
+   eff_biasvers=$(find_min_cal_version -b $tmp_dir/clean*fits)
+   echo "eff_biasvers: $eff_biasvers"
+   eff_darkvers=$(find_min_cal_version -d $tmp_dir/clean*fits)
+   echo "eff_darkvers: $eff_darkvers"
 
    # Combine darks with outlier rejection (stack_args in config.sh):
    mecho "\n`RowWrite 75 -`\n"
@@ -314,22 +360,24 @@ else
    # Add stats and identifiers to header:
    cmde "fitsperc -qS $foo"                                 || exit $?
    cmde "kimstat -qSC9 $foo"                                || exit $?
-   cmde "record_cal_version $foo -d $script_version"        || exit $?
+   #cmde "record_cal_version $foo -d $script_version"        || exit $?
+   cmde "record_cal_version $foo -b $eff_biasvers"          || exit $?
+   cmde "record_cal_version $foo -d $eff_darkvers"          || exit $?
    #hargs=( $camid DARK 1.0 $drtag )
    cmde "update_output_header $foo $camid DARK 1.0 $drtag"  || exit $?
    cmde "mv -f $foo $nite_dark"                             || exit $?
 
-   # Preserve stack files (if requested):
-   if [ $keep_clean -eq 1 ]; then
-      yecho "Preserving stack ...\n"
-      for item in $tmp_dir/clean*fits; do
-         dst_file="$(get_save_folder $item)/${item##*/}"
-         if [ ! -f $dst_file ]; then
-            vcmde "mkdir -p $(dirname $dst_file)"           || exit $?
-            cmde "mv -f $item $dst_file"                    || exit $?
-         fi
-      done
-   fi
+   ## Preserve stack files (if requested):
+   #if [ $keep_clean -eq 1 ]; then
+   #   yecho "Preserving stack ...\n"
+   #   for item in $tmp_dir/clean*fits; do
+   #      dst_file="$(get_save_folder $item)/${item##*/}"
+   #      if [ ! -f $dst_file ]; then
+   #         vcmde "mkdir -p $(dirname $dst_file)"           || exit $?
+   #         cmde "mv -f $item $dst_file"                    || exit $?
+   #      fi
+   #   done
+   #fi
    timer
 fi
 
@@ -347,8 +395,16 @@ exit 0
 # CHANGELOG (02_create_master_dark.sh):
 #---------------------------------------------------------------------
 #
-#  2018-01-05:
+#  2018-01-07:
 #     -- Increased script_version to 0.60.
+#     -- Implemented separate version requirements for clean and stack data.
+#     -- Added check for in-bounds fdate.
+#     -- Now check existing master and 'clean' darks for version compliance.
+#           Offending files are automatically removed and rebuilt.
+#
+#  2018-01-05:
+#     -- Increased script_version to 0.58.
+#     -- Now check existing master and 'clean' darks for version compliance.
 #     -- Current script_version now recorded to DARKVERS keyword.
 #     -- Now use new 'aux' and 'func' locations for common code and routines.
 #

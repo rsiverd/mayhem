@@ -262,9 +262,9 @@ if [ -f $nite_bias ]; then
       Recho "Existing $nite_bias FAILED version check!\n"
       cmde "rm $nite_bias"
    fi
+else
+   recho "No existing stacked bias found.\n"
 fi
-#exit
-
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -306,7 +306,6 @@ else
       cmde "nres-cdp-trim-oscan -q $image -o $foo"             || exit $?
       cmde "record_scr_version $foo -b $script_version"        || exit $?
       cmde "record_eff_version $foo -b $script_version"        || exit $?
-      #hargs=( $camid BIAS 0.0 $drtag )
       cmde "update_output_header $foo $camid BIAS 0.0 $drtag"  || exit $?
       cmde "mv -f $foo $isave"                                 || exit $?
 
@@ -331,10 +330,8 @@ else
    # Add stats and identifiers to header:
    cmde "fitsperc -qS $foo"                                 || exit $?
    cmde "kimstat -qSC9 $foo"                                || exit $?
-   #cmde "record_eff_version $foo -b $script_version"        || exit $?
    cmde "record_eff_version $foo -b $eff_biasvers"          || exit $?
    cmde "record_scr_version $foo -b $script_version"        || exit $?
-   #hargs=( $camid BIAS 0.0 $drtag )
    cmde "update_output_header $foo $camid BIAS 0.0 $drtag"  || exit $?
    cmde "mv -f $foo $nite_bias"                             || exit $?
 
@@ -367,6 +364,7 @@ exit 0
 #
 #  2018-01-07:
 #     -- Increased script_version to 0.57.
+#     -- Added message indicating when no stacked bias exists yet.
 #     -- Implemented separate for eff/scr versioning.
 #     -- Increased script_version to 0.56.
 #     -- Implemented separate version requirements for clean and stack data.

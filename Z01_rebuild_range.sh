@@ -4,14 +4,14 @@
 #
 # Rob Siverd
 # Created:      2017-07-20
-# Last updated: 2017-07-23
+# Last updated: 2018-01-07
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.10"
+script_version="0.15"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -134,7 +134,14 @@ done
 ## Process each listed night:
 for fdate in ${fdate_list[*]}; do
    wecho "`RowWrite 75 -`\n"
-   cmde "$run_script $camid $fdate ${cal_args[*]}" #|| exit $?
+   cmde "$run_script $camid $fdate ${cal_args[*]}"; status=$?
+   if [ $status -gt 0 ]; then
+      recho "Got an error ....\n" >&2
+   fi
+   if [ $status -ge 10 ]; then
+      recho "High status encountered ... time to stop.\n" >&2
+      exit $status
+   fi
 done
 
 ##--------------------------------------------------------------------------##
@@ -149,6 +156,10 @@ exit 0
 ######################################################################
 # CHANGELOG (Z01_rebuild_range.sh):
 #---------------------------------------------------------------------
+#
+#  2018-01-07:
+#     -- Increased script_version to 0.15.
+#     -- Now abort processing in case of exit status >= 10.
 #
 #  2017-07-23:
 #     -- Increased script_version to 0.10.

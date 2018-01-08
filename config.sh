@@ -20,7 +20,7 @@ dark_stack_args="-r410 --itable -c5"
 
 ##--------------------------------------------------------------------------##
 ## Calibration version requirements:
-min_biasvers="0.55"     # biases with version older than this are rebuilt
+min_biasvers="0.56"     # biases with version older than this are rebuilt
 min_darkvers="0.60"     #  darks with version older than this are rebuilt
 min_lampvers="0.35"     #  lamps with version older than this are rebuilt
 

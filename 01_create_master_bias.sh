@@ -4,14 +4,14 @@
 #
 # Rob Siverd
 # Created:      2017-07-10
-# Last updated: 2018-01-05
+# Last updated: 2018-01-07
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.55"
+script_version="0.56"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -235,15 +235,17 @@ fi
 ##                Existing Image Removal: Version Check                     ##
 ##--------------------------------------------------------------------------##
 
+need_versions=( $min_biasvers )
 if [ -f $nite_bias ]; then
    echo "min_biasvers: $min_biasvers"
-   if ( cal_version_pass $nite_bias $min_biasvers ); then
+   if ( cal_version_pass $nite_bias ${need_versions[*]} ); then
       Gecho "Existing $nite_bias passed version check!\n"
    else
       Recho "Existing $nite_bias FAILED version check!\n"
+      cmde "rm $nite_bias"
    fi
 fi
-exit
+#exit
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -264,15 +266,22 @@ else
       # Get 'clean' bias (process only if necessary):
       icheck="$(get_save_folder $image)/$cbase"
       if [ -f $icheck ]; then
-         gecho "Using existing temp-bias (${access_mode}): ${icheck}\n"
-         case $access_mode in
-            copy)    vcmde "cp -f $icheck $isave" || exit $?  ;;
-            symlink) vcmde "ln -s $icheck $isave" || exit $?  ;;
-            *) ErrorAbort "Unhandled access_mode: '$access_mode'" ;;
-         esac
-         continue
+         yecho "Checking ${icheck##*/} ... "
+         if ( cal_version_pass $icheck ${need_versions[*]} ); then
+            Gecho "version check PASSED!\n"
+            gecho "Using existing temp-bias (${access_mode}): ${icheck}\n"
+            case $access_mode in
+               copy)    vcmde "cp -f $icheck $isave" || exit $?  ;;
+               symlink) vcmde "ln -s $icheck $isave" || exit $?  ;;
+               *) ErrorAbort "Unhandled access_mode: '$access_mode'" ;;
+            esac
+            continue
+         else
+            recho "version check FAILED, rebuild!\n"
+            #[ $keep_clean -eq 1 ] && cmde "rm $icheck"
+         fi
       fi
-      
+
       # Existing 'clean' file unavailable, make it:
       echo
       cmde "nres-cdp-trim-oscan -q $image -o $foo"             || exit $?
@@ -280,8 +289,20 @@ else
       #hargs=( $camid BIAS 0.0 $drtag )
       cmde "update_output_header $foo $camid BIAS 0.0 $drtag"  || exit $?
       cmde "mv -f $foo $isave"                                 || exit $?
+
+      # Preserve files (if requested):
+      if [ $keep_clean -eq 1 ]; then
+         vcmde "mkdir -p $(dirname $icheck)"                   || exit $?
+         cmde "cp -f $isave $icheck"                           || exit $?
+      fi
+      echo
    done
    timer
+
+   eff_biasvers=$(find_min_cal_version -b $tmp_dir/clean*fits)
+   echo "eff_biasvers: $eff_biasvers"
+   #read pause
+   #exit 99
 
    # Combine biases with outlier rejection (stack-args in config.sh):
    mecho "\n`RowWrite 75 -`\n"
@@ -292,22 +313,23 @@ else
    # Add stats and identifiers to header:
    cmde "fitsperc -qS $foo"                                 || exit $?
    cmde "kimstat -qSC9 $foo"                                || exit $?
-   cmde "record_cal_version $foo -b $script_version"        || exit $?
+   #cmde "record_cal_version $foo -b $script_version"        || exit $?
+   cmde "record_cal_version $foo -b $eff_biasvers"          || exit $?
    #hargs=( $camid BIAS 0.0 $drtag )
    cmde "update_output_header $foo $camid BIAS 0.0 $drtag"  || exit $?
    cmde "mv -f $foo $nite_bias"                             || exit $?
 
-   # Preserve files (if requested):
-   if [ $keep_clean -eq 1 ]; then
-      yecho "Preserving stack ...\n"
-      for item in $tmp_dir/clean*fits; do
-         dst_file="$(get_save_folder $item)/${item##*/}"
-         if [ ! -f $dst_file ]; then
-            vcmde "mkdir -p $(dirname $dst_file)"           || exit $?
-            cmde "mv -f $item $dst_file"                    || exit $?
-         fi
-      done
-   fi
+   ## Preserve files (if requested):
+   #if [ $keep_clean -eq 1 ]; then
+   #   yecho "Preserving stack ...\n"
+   #   for item in $tmp_dir/clean*fits; do
+   #      dst_file="$(get_save_folder $item)/${item##*/}"
+   #      if [ ! -f $dst_file ]; then
+   #         vcmde "mkdir -p $(dirname $dst_file)"           || exit $?
+   #         cmde "mv -f $item $dst_file"                    || exit $?
+   #      fi
+   #   done
+   #fi
    timer
 fi
 
@@ -324,8 +346,15 @@ exit 0
 # CHANGELOG (01_create_master_bias.sh):
 #---------------------------------------------------------------------
 #
+#  2018-01-06:
+#     -- Increased script_version to 0.56.
+#     -- BIASVERS in master output file is now the lowest BIASVERS of its
+#           input images.
+#
 #  2018-01-05:
 #     -- Increased script_version to 0.55.
+#     -- Now check existing master and 'clean' biases for version compliance.
+#           Offending files are automatically removed and rebuilt.
 #     -- Current script_version now recorded to BIASVERS keyword.
 #     -- Now use new 'aux' and 'func' locations for common code and routines.
 #

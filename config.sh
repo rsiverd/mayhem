@@ -53,7 +53,12 @@ get_prev_day () { day_change $1 -1; }
 ##--------------------------------------------------------------------------##
 ## Get destination path for 'clean' files:
 get_save_folder () {
-   hdata=( `imhget TELESCOP DAY-OBS $1` )
+   keys=( "TELESCOP" "DAY-OBS" )
+   nhave=`imhget -c ${keys[*]} $1`
+   if [ $nhave -ne ${#keys[*]} ]; then
+      ErrorAbort "Image $1 missing one of ${keys[*]} keys ..." 99
+   fi
+   hdata=( `imhget ${keys[*]} $1` )
    local camid=${hdata[0]}
    local dayobs=${hdata[1]}
    echo "$save_root/$camid/$dayobs"

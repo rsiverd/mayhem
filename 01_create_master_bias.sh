@@ -256,7 +256,7 @@ fi
 
 if [ -f $nite_bias ]; then
    echo "Stack version requirements: ${need_stack_versions[*]}"
-   if ( cal_version_pass $nite_bias ${need_stack_versions[*]} ); then
+   if ( eff_version_pass $nite_bias ${need_stack_versions[*]} ); then
       Gecho "Existing $nite_bias passed version check!\n"
    else
       Recho "Existing $nite_bias FAILED version check!\n"
@@ -286,7 +286,7 @@ else
       icheck="$(get_save_folder $image)/$cbase"
       if [ -f $icheck ]; then
          yecho "Checking ${icheck##*/} ... "
-         if ( cal_version_pass $icheck ${need_clean_versions[*]} ); then
+         if ( eff_version_pass $icheck ${need_clean_versions[*]} ); then
             Gecho "version check PASSED!\n"
             gecho "Using existing temp-bias (${access_mode}): ${icheck}\n"
             case $access_mode in

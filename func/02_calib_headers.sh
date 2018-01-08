@@ -31,27 +31,55 @@ update_output_header () {
 }
 
 ##--------------------------------------------------------------------------##
-## Set versioning keywords:
-record_cal_version () {
+## Set script version:
+record_scr_version () {
    local image="$1"
    local version="$3"
-   [ -z "$3" ] && ErrorAbort "Too few args for record_cal_version() ..." 99
+   [ -z "$3" ] && ErrorAbort "Too few args for ${FUNCNAME[0]} ..." 99
+   case $2 in
+      -b) caltype="bias"; kword="BSCRIPT" ;;
+      -d) caltype="dark"; kword="DSCRIPT" ;;
+      -l) caltype="lamp"; kword="LSCRIPT" ;;
+      *) ErrorAbort "Unhandled argument: '$2'" 99 ;;
+   esac
+   ctext="$caltype script version"
+   hargs="-U $kword --hdr_data=$version --comment='$ctext'"
+   vcmde "hdrtool $image $hargs" || return $?
+}
+
+## Get script_version:
+get_scr_versions () {
+   results=( `imhget -u $1 BSCRIPT DSCRIPT LSCRIPT` ) || exit $?
+   echo ${results[*]} | sed 's/___/0.0/g'
+}
+
+##--------------------------------------------------------------------------##
+## Set effective data version:
+record_eff_version () {
+   local image="$1"
+   local version="$3"
+   [ -z "$3" ] && ErrorAbort "Too few args for ${FUNCNAME[0]} ..." 99
    case $2 in
       -b) name="bias"; kword="BIASVERS" ;;
       -d) name="dark"; kword="DARKVERS" ;;
       -l) name="lamp"; kword="LAMPVERS" ;;
       *) ErrorAbort "Unhandled argument: '$2'" 99 ;;
    esac
-   ctext="Master $name script version"
+   ctext="effective $name input version"
    hargs="-U $kword --hdr_data=$3 --comment='$ctext'"
-   #echo "hargs: $hargs"
    vcmde "hdrtool $image $hargs" || return $?
+}
+
+## Get effective data version:
+get_eff_versions () {
+   results=( `imhget -u $1 BIASVERS DARKVERS LAMPVERS` ) || exit $?
+   echo ${results[*]} | sed 's/___/0.0/g'
 }
 
 ##--------------------------------------------------------------------------##
 ## Select appropriate version dependencies for specified cal type:
 get_version_subset () {
-   [ $# -ne 4 ] && ErrorAbort "Wrong args for record_cal_version() ..." 99
+   [ $# -ne 4 ] && ErrorAbort "Wrong args for ${FUNCNAME[0]} ..." 99
    case $1 in
       -b) name="bias"; nkept=1 ;;
       -d) name="dark"; nkept=2 ;;
@@ -72,7 +100,7 @@ find_min_cal_version () {
    #local image="$1"
    #local version="$3"
    [ -z "$tmp_dir" ] && ErrorAbort "Temp directory unknown!!" 99
-   [ -z "$2" ] && ErrorAbort "Too few args for record_cal_version() ..." 99
+   [ -z "$2" ] && ErrorAbort "Too few args for ${FUNCNAME[0]} ..." 99
    case $1 in
       -b) name="bias"; kword="BIASVERS" ;;
       -d) name="dark"; kword="DARKVERS" ;;
@@ -94,19 +122,13 @@ find_min_cal_version () {
 }
 
 ##--------------------------------------------------------------------------##
-## Get calib versions:
-get_cal_versions () {
-   results=( `imhget -u $1 BIASVERS DARKVERS LAMPVERS` ) || exit $?
-   echo ${results[*]} | sed 's/___/0.0/g'
-}
-
 ## Check calib versions:
-cal_version_pass () {
-   [ -z "$2" ] && ErrorAbort "Too few args for cal_version_pass() ..." 99
-   [ $# -gt 4 ] && ErrorAbort "Too many args for cal_version_pass() ..." 99
+eff_version_pass () {
+   [ -z "$2" ] && ErrorAbort "Too few args for ${FUNCNAME[0]} ..." 99
+   [ $# -gt 4 ] && ErrorAbort "Too many args for ${FUNCNAME[0]} ..." 99
    local image=$1; shift
    needvers=( $* )
-   versions=( `get_cal_versions $image` )
+   versions=( `get_eff_versions $image` )
    for (( i = 0; i < $#; i++ )); do
       need="${needvers[i]}"
       have="${versions[i]}"
@@ -119,8 +141,20 @@ cal_version_pass () {
 
 ##--------------------------------------------------------------------------##
 ## Collect unique input image history from a set of input images:
-collect_input_histories () {
-   echo "NOT YET IMPLEMENTED!"
+append_input_histories () {
+   local dst_image="$1"; shift
+   [ -z "$tmp_dir" ] && ErrorAbort "Temp directory unknown!!" 99
+   tmp_hist="$tmp_dir/input_histories_${now_sec}.txt"
+   for image in $*; do
+      vcmde "listhead $image | grep '^HISTORY use_' | colrm 1 8 >> $tmp_hist"
+   done
+   exec 10<$tmp_hist
+   while read item <&10; do
+      vcmde "hdrtool $foo --add_hist='$item'" || return $?
+   done
+   exec 10>&-
+   vcmde "hdrtool -d $foo" || return $?
+   vcmde "rm $tmp_hist"
 }
 
 
@@ -129,6 +163,11 @@ collect_input_histories () {
 #---------------------------------------------------------------------
 #
 #  2018-01-07:
+#     -- Changes to improve clarity and distinguish script/data versions:
+#           --> record_cal_version() now called record_eff_version()
+#           --> get_cal_versions() now called get_eff_versions()
+#           --> cal_version_pass() now called eff_version_pass()
+#     -- Created record_scr_version() and get_scr_versions() routines.
 #     -- Created find_min_cal_version() function. This retrieves the requested
 #           version (bias/dark/lamp) from a set of FITS files and returns the
 #           lowest number seen.

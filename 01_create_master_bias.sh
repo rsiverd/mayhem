@@ -129,9 +129,11 @@ cams_list="cameras.txt"
 [ -f $cams_list ] || ErrorAbort "Can't find file: $cams_list" 
 cmde "source $conf_file"
 declare -A cam_storage
+declare -A cam_startdate
 exec 10<$cams_list
-while read cam folder <&10; do
+while read cam folder startdate <&10; do
    cam_storage[$cam]="$folder"
+   cam_startdate[$cam]="$startdate"
 done
 exec 10>&-
 
@@ -147,6 +149,14 @@ use_arch="${cam_storage[$camid]}"
 if [ -z "$use_arch" ]; then
    Recho "\nUnrecognized camera: '$camid'\n\n" >&2
    exit 1
+fi
+
+## Validate fdate:
+earliest="${cam_startdate[$camid]}"
+if [ $fdate -lt $earliest ]; then
+   Recho "$fdate is outside the allowed date range for $camid.\n" >&2
+   Recho "Earliest supported data are from: ${earliest}\n\n" >&2
+   exit 99
 fi
 
 ## Check for data folder and input files:
@@ -247,6 +257,11 @@ if [ -f $nite_bias ]; then
 fi
 #exit
 
+#echo "nite_bias: $nite_bias"
+#echo "bias_list:"
+#echo ${bias_list[*]} | tr ' ' '\n'
+#exit 99
+
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 ## Create master bias (if not present):
@@ -301,8 +316,6 @@ else
 
    eff_biasvers=$(find_min_cal_version -b $tmp_dir/clean*fits)
    echo "eff_biasvers: $eff_biasvers"
-   #read pause
-   #exit 99
 
    # Combine biases with outlier rejection (stack-args in config.sh):
    mecho "\n`RowWrite 75 -`\n"
@@ -346,8 +359,9 @@ exit 0
 # CHANGELOG (01_create_master_bias.sh):
 #---------------------------------------------------------------------
 #
-#  2018-01-06:
+#  2018-01-07:
 #     -- Increased script_version to 0.56.
+#     -- Added check for in-bounds fdate.
 #     -- BIASVERS in master output file is now the lowest BIASVERS of its
 #           input images.
 #

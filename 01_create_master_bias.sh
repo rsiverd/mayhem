@@ -11,7 +11,7 @@
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.56"
+script_version="0.57"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -304,7 +304,8 @@ else
       # Existing 'clean' file unavailable, make it:
       echo
       cmde "nres-cdp-trim-oscan -q $image -o $foo"             || exit $?
-      cmde "record_cal_version $foo -b $script_version"        || exit $?
+      cmde "record_scr_version $foo -b $script_version"        || exit $?
+      cmde "record_eff_version $foo -b $script_version"        || exit $?
       #hargs=( $camid BIAS 0.0 $drtag )
       cmde "update_output_header $foo $camid BIAS 0.0 $drtag"  || exit $?
       cmde "mv -f $foo $isave"                                 || exit $?
@@ -330,8 +331,9 @@ else
    # Add stats and identifiers to header:
    cmde "fitsperc -qS $foo"                                 || exit $?
    cmde "kimstat -qSC9 $foo"                                || exit $?
-   #cmde "record_cal_version $foo -b $script_version"        || exit $?
-   cmde "record_cal_version $foo -b $eff_biasvers"          || exit $?
+   #cmde "record_eff_version $foo -b $script_version"        || exit $?
+   cmde "record_eff_version $foo -b $eff_biasvers"          || exit $?
+   cmde "record_scr_version $foo -b $script_version"        || exit $?
    #hargs=( $camid BIAS 0.0 $drtag )
    cmde "update_output_header $foo $camid BIAS 0.0 $drtag"  || exit $?
    cmde "mv -f $foo $nite_bias"                             || exit $?
@@ -364,6 +366,8 @@ exit 0
 #---------------------------------------------------------------------
 #
 #  2018-01-07:
+#     -- Increased script_version to 0.57.
+#     -- Implemented separate for eff/scr versioning.
 #     -- Increased script_version to 0.56.
 #     -- Implemented separate version requirements for clean and stack data.
 #     -- Added check for in-bounds fdate.

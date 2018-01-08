@@ -4,14 +4,14 @@
 #
 # Rob Siverd
 # Created:      2017-07-24
-# Last updated: 2018-01-05
+# Last updated: 2018-01-07
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.35"
+script_version="0.36"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -19,9 +19,6 @@ this_prog="${0##*/}"
 # Exit in case of nonzero status (set -e): set -o errexit
 
 ## Program options:
-#save_file=""
-#shuffle=0
-#confirmed=0
 days_prior=0
 days_after=0
 keep_clean=0          # if true (>0), save temp files in daydir for later use
@@ -139,9 +136,11 @@ cams_list="cameras.txt"
 [ -f $cams_list ] || ErrorAbort "Can't find file: $cams_list" 
 cmde "source $conf_file"
 declare -A cam_storage
+declare -A cam_startdate
 exec 10<$cams_list
-while read cam folder <&10; do
+while read cam folder startdate <&10; do
    cam_storage[$cam]="$folder"
+   cam_startdate[$cam]="$startdate"
 done
 exec 10>&-
 
@@ -150,6 +149,18 @@ exec 10>&-
 
 echo "Known cameras: ${!cam_storage[@]}"
 #echo "cam_storage: ${cam_storage[*]}"
+
+## Verify that clean/stack versions are available:
+if [ ${#min_clean_versions[*]} != 3 ]; then
+   ErrorAbort "min_clean_versions[] not defined!" 99
+fi
+if [ ${#min_stack_versions[*]} != 3 ]; then
+   ErrorAbort "min_stack_versions[] not defined!" 99
+fi
+
+## Set up image version requirements:
+need_clean_versions=( `get_version_subset -l ${min_clean_versions[*]}` )
+need_stack_versions=( `get_version_subset -l ${min_stack_versions[*]}` )
 
 ##--------------------------------------------------------------------------##
 
@@ -189,6 +200,14 @@ use_arch="${cam_storage[$camid]}"
 if [ -z "$use_arch" ]; then
    Recho "\nUnrecognized camera: '$camid'\n\n" >&2
    exit 1
+fi
+
+## Validate fdate:
+earliest="${cam_startdate[$camid]}"
+if [ $fdate -lt $earliest ]; then
+   Recho "$fdate is outside the allowed date range for $camid.\n" >&2
+   Recho "Earliest supported data are from: ${earliest}\n\n" >&2
+   exit 99
 fi
 
 ## Check for data folder and input files:
@@ -246,6 +265,10 @@ if [ $nlamp -lt 2 ]; then
 fi
 
 ##--------------------------------------------------------------------------##
+##                FIXME: IMPLEMENT CCD TEMPERATURE CHECK                    ##
+##--------------------------------------------------------------------------##
+
+##--------------------------------------------------------------------------##
 ##                Existing Image Removal: Barrier Check                     ##
 ##--------------------------------------------------------------------------##
 
@@ -280,17 +303,14 @@ fi
 ##--------------------------------------------------------------------------##
 
 if [ -f $nite_lampsave ]; then
-   echo "min_biasvers: $min_biasvers"
-   echo "min_darkvers: $min_darkvers"
-   echo "min_lampvers: $min_lampvers"
-   need_these=( $min_biasvers $min_darkvers $min_lampvers )
-   if ( cal_version_pass $nite_lampsave ${need_these[*]} ); then
+   echo "Stack version requirements: ${need_stack_versions[*]}"
+   if ( cal_version_pass $nite_lampsave ${need_stack_versions[*]} ); then
       Gecho "Existing $nite_lampsave passed version check!\n"
    else
       Recho "Existing $nite_lampsave FAILED version check!\n"
+      cmde "rm $nite_lampsave"
    fi
 fi
-exit
 
 ##--------------------------------------------------------------------------##
 ## Create master dark (if not present):
@@ -403,8 +423,18 @@ exit 0
 # CHANGELOG (03_create_master_lamp.sh):
 #---------------------------------------------------------------------
 #
+#  2018-01-07:
+#     -- Increased script_version to 0.36.
+#     -- Implemented separate version requirements for clean and stack data.
+#     -- Added check for in-bounds fdate.
+#
 #  2018-01-05:
 #     -- Increased script_version to 0.35.
+#     -- Now check existing master and 'clean' images for version compliance.
+#           Offending files are automatically removed and rebuilt.
+#
+#  2018-01-05:
+#     -- Increased script_version to 0.33.
 #     -- Current script_version now recorded to LAMPVERS keyword.
 #     -- Now use new 'aux' and 'func' locations for common code and routines.
 #

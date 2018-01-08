@@ -117,6 +117,13 @@ cal_version_pass () {
    return 0 # everything passed
 }
 
+##--------------------------------------------------------------------------##
+## Collect unique input image history from a set of input images:
+collect_input_histories () {
+   echo "NOT YET IMPLEMENTED!"
+}
+
+
 ######################################################################
 # CHANGELOG (02_calib_headers.sh):
 #---------------------------------------------------------------------

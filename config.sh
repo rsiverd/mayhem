@@ -24,6 +24,12 @@ min_biasvers="0.56"     # biases with version older than this are rebuilt
 min_darkvers="0.60"     #  darks with version older than this are rebuilt
 min_lampvers="0.35"     #  lamps with version older than this are rebuilt
 
+## Image version requirements for 'clean' images:
+min_clean_versions=( 0.56 0.60 0.35 )  # bias, dark, lamp
+
+## Image version requirements for stacked data:
+min_stack_versions=( 0.56 0.60 0.35 )  # bias, dark, lamp
+
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##

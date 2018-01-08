@@ -1,4 +1,4 @@
 #nres     /archive/engineering/bpl/nres
-nres01   /archive/engineering/lsc/nres01
-nres02   /archive/engineering/elp/nres02
-nres03   /archive/engineering/cpt/nres03
+nres01   /archive/engineering/lsc/nres01  20170701
+nres02   /archive/engineering/elp/nres02  20170925
+nres03   /archive/engineering/cpt/nres03  20171117

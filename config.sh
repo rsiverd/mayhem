@@ -25,10 +25,10 @@ dark_stack_args="-r410 --itable -c5"
 #min_lampvers="0.35"     #  lamps with version older than this are rebuilt
 
 ## Image version requirements for 'clean' images:
-min_clean_versions=( 0.56 0.60 0.36 )  # bias, dark, lamp
+min_clean_versions=( 0.57 0.60 0.36 )  # bias, dark, lamp
 
 ## Image version requirements for stacked data:
-min_stack_versions=( 0.56 0.60 0.36 )  # bias, dark, lamp
+min_stack_versions=( 0.57 0.61 0.36 )  # bias, dark, lamp
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##

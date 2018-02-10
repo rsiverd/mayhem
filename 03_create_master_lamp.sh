@@ -4,14 +4,14 @@
 #
 # Rob Siverd
 # Created:      2017-07-24
-# Last updated: 2018-01-07
+# Last updated: 2018-02-09
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.36"
+script_version="0.40"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -151,16 +151,16 @@ echo "Known cameras: ${!cam_storage[@]}"
 #echo "cam_storage: ${cam_storage[*]}"
 
 ## Verify that clean/stack versions are available:
-if [ ${#min_clean_versions[*]} != 3 ]; then
-   ErrorAbort "min_clean_versions[] not defined!" 99
+if [ ${#min_data_versions[*]} != 3 ]; then
+   ErrorAbort "min_data_versions[] not defined!" 99
 fi
-if [ ${#min_stack_versions[*]} != 3 ]; then
-   ErrorAbort "min_stack_versions[] not defined!" 99
+if [ ${#min_code_versions[*]} != 3 ]; then
+   ErrorAbort "min_code_versions[] not defined!" 99
 fi
 
 ## Set up image version requirements:
-need_clean_versions=( `get_version_subset -l ${min_clean_versions[*]}` )
-need_stack_versions=( `get_version_subset -l ${min_stack_versions[*]}` )
+need_data_versions=( `get_version_subset -l ${min_data_versions[*]}` )
+need_code_versions=( `get_version_subset -l ${min_code_versions[*]}` )
 
 ##--------------------------------------------------------------------------##
 
@@ -303,8 +303,11 @@ fi
 ##--------------------------------------------------------------------------##
 
 if [ -f $nite_lampsave ]; then
-   echo "Stack version requirements: ${need_stack_versions[*]}"
-   if ( cal_version_pass $nite_lampsave ${need_stack_versions[*]} ); then
+   echo "Data version requirements: ${need_data_versions[*]}"
+   echo "Code version requirements: ${need_code_versions[*]}"
+   if ( data_version_pass $nite_lampsave ${need_data_versions[*]} ) && \
+      ( code_version_pass $nite_lampsave ${need_code_versions[*]} ); then
+      # image is OK!
       Gecho "Existing $nite_lampsave passed version check!\n"
    else
       Recho "Existing $nite_lampsave FAILED version check!\n"
@@ -363,6 +366,16 @@ else
       # Otherwise, create cleaned file for stacking:
       # --------------------------------------------
 
+      # Versions from input images:
+      min_bias_data_vers=$(find_min_cal_version -b $use_bias $use_dark)
+      min_bias_code_vers=$(find_min_cal_version -B $use_bias $use_dark)
+      min_dark_data_vers=$(find_min_cal_version -d $use_dark)
+      min_dark_code_vers=$(find_min_cal_version -D $use_dark)
+      echo "min_bias_data_vers: $min_bias_data_vers"
+      echo "min_bias_code_vers: $min_bias_code_vers"
+      echo "min_dark_data_vers: $min_dark_data_vers"
+      echo "min_dark_code_vers: $min_dark_code_vers"
+
       # Subtract overscan:
       cmde "nres-cdp-trim-oscan -q $image -o $foo"       || exit $?
       lampexp="$(imhget EXPTIME $foo)"
@@ -373,39 +386,77 @@ else
       cmde "hdrtool $bar --add_hist='use_bias ${use_bias##*/}'"   || exit $?
       cmde "hdrtool $bar --add_hist='use_dark ${use_dark##*/}'"   || exit $?
       cmde "hdrtool $bar -U OBJECTS --value='$lampobj'"           || exit $?
-      cmde "record_cal_version $foo -l $script_version"           || exit $?
+
+      # Store version information:
+      cmde "record_code_version $bar -b $min_bias_code_vers"      || exit $?
+      cmde "record_code_version $bar -d $min_dark_code_vers"      || exit $?
+      cmde "record_code_version $bar -l ${script_version}"        || exit $?
+      cmde "record_data_version $bar -b $min_bias_data_vers"      || exit $?
+      cmde "record_data_version $bar -d $min_dark_data_vers"      || exit $?
+      cmde "record_data_version $bar -l ${script_version}"        || exit $?
+
+      #cmde "record_cal_version $foo -l $script_version"           || exit $?
       hargs=( $camid $obstype $lampexp $drtag )
       cmde "update_output_header $foo ${hargs[*]}"                || exit $?
       cmde "mv -f $bar $isave"                                    || exit $?
 
+      # Preserve files (if requested):
+      if [ $keep_clean -eq 1 ]; then
+         vcmde "mkdir -p $(dirname $icheck)"                      || exit $?
+         cmde "cp -f $isave $icheck"                              || exit $?
+      fi
+      echo
    done
    timer
+
+   # Identify minimum code/data versions from input file collection:
+   min_bias_data_vers=$(find_min_cal_version -b $tmp_dir/clean*fits)
+   min_bias_code_vers=$(find_min_cal_version -B $tmp_dir/clean*fits)
+   min_dark_data_vers=$(find_min_cal_version -d $tmp_dir/clean*fits)
+   min_dark_code_vers=$(find_min_cal_version -D $tmp_dir/clean*fits)
+   min_lamp_data_vers=$(find_min_cal_version -l $tmp_dir/clean*fits)
+   min_lamp_code_vers=$(find_min_cal_version -L $tmp_dir/clean*fits)
+   echo "min_bias_data_vers: $min_bias_data_vers"
+   echo "min_bias_code_vers: $min_bias_code_vers"
+   echo "min_dark_data_vers: $min_dark_data_vers"
+   echo "min_dark_code_vers: $min_dark_code_vers"
+   echo "min_lamp_data_vers: $min_lamp_data_vers"
+   echo "min_lamp_code_vers: $min_lamp_code_vers"
 
    # Combine darks with outlier rejection (stack_args in config.sh):
    mecho "\n`RowWrite 75 -`\n"
    opts="$dark_stack_args"
-   cmde "medianize $opts $tmp_dir/clean*fits -o '!$foo'"          || exit $?
+   cmde "medianize $opts $tmp_dir/clean*fits -o '!$foo'"    || exit $?
    timer
 
    # Add stats and identifiers to header:
-   cmde "fitsperc -qS $foo"                                       || exit $?
-   cmde "kimstat -qSC9 $foo"                                      || exit $?
-   cmde "hdrtool $foo -U OBJECTS --value='$lampobj'"              || exit $?
-   cmde "record_cal_version $foo -l $script_version"              || exit $?
+   cmde "fitsperc -qS $foo"                                 || exit $?
+   cmde "kimstat -qSC9 $foo"                                || exit $?
+   cmde "hdrtool $foo -U OBJECTS --value='$lampobj'"        || exit $?
+   #cmde "record_cal_version $foo -l $script_version"        || exit $?
+
+   cmde "record_data_version $foo -b $min_bias_data_vers"   || exit $?
+   cmde "record_code_version $foo -b $min_bias_code_vers"   || exit $?
+   cmde "record_data_version $foo -d $min_dark_data_vers"   || exit $?
+   cmde "record_code_version $foo -d $min_dark_code_vers"   || exit $?
+   cmde "record_data_version $foo -l $min_lamp_data_vers"   || exit $?
+   #cmde "record_code_version $foo -l $min_lamp_code_vers"   || exit $?
+   cmde "record_code_version $foo -l $script_version"       || exit $?
+
    hargs=( $camid $obstype $lampexp $drtag )
    cmde "update_output_header $foo ${hargs[*]}"                   || exit $?
    cmde "mv -f $foo $nite_lampsave"                               || exit $?
 
-   # Preserve stack files (if requested):
-   if [ $keep_clean -eq 1 ]; then
-      yecho "Preserving stack ...\n"
-      for item in $tmp_dir/clean*fits; do
-         dst_file="$(get_save_folder $item)/${item##*/}"
-         if [ ! -f $dst_file ]; then
-            cmde "mv -f $item $dst_file" || exit $?
-         fi
-      done
-   fi
+   ## Preserve stack files (if requested):
+   #if [ $keep_clean -eq 1 ]; then
+   #   yecho "Preserving stack ...\n"
+   #   for item in $tmp_dir/clean*fits; do
+   #      dst_file="$(get_save_folder $item)/${item##*/}"
+   #      if [ ! -f $dst_file ]; then
+   #         cmde "mv -f $item $dst_file" || exit $?
+   #      fi
+   #   done
+   #fi
    timer
 fi
 
@@ -422,6 +473,11 @@ exit 0
 ######################################################################
 # CHANGELOG (03_create_master_lamp.sh):
 #---------------------------------------------------------------------
+#
+#  2018-02-09:
+#     -- Increased script_version to 0.40.
+#     -- Implemented data/code version propagation scheme.
+#     -- Implemented dual code/data check on existing stacked and clean images.
 #
 #  2018-01-07:
 #     -- Increased script_version to 0.36.

@@ -4,14 +4,14 @@
 #
 # Rob Siverd
 # Created:      2017-07-10
-# Last updated: 2018-01-07
+# Last updated: 2018-02-09
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.60"
+script_version="0.62"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -144,16 +144,16 @@ echo "Known cameras: ${!cam_storage[@]}"
 #echo "cam_storage: ${cam_storage[*]}"
 
 ## Verify that clean/stack versions are available:
-if [ ${#min_clean_versions[*]} != 3 ]; then
-   ErrorAbort "min_clean_versions[] not defined!" 99
+if [ ${#min_data_versions[*]} != 3 ]; then
+   ErrorAbort "min_data_versions[] not defined!" 99
 fi
-if [ ${#min_stack_versions[*]} != 3 ]; then
-   ErrorAbort "min_stack_versions[] not defined!" 99
+if [ ${#min_code_versions[*]} != 3 ]; then
+   ErrorAbort "min_code_versions[] not defined!" 99
 fi
 
 ## Set up image version requirements:
-need_clean_versions=( `get_version_subset -d ${min_clean_versions[*]}` )
-need_stack_versions=( `get_version_subset -d ${min_stack_versions[*]}` )
+need_data_versions=( `get_version_subset -d ${min_data_versions[*]}` )
+need_code_versions=( `get_version_subset -d ${min_code_versions[*]}` )
 
 ##--------------------------------------------------------------------------##
 ## Validate camera:
@@ -261,8 +261,10 @@ fi
 ##--------------------------------------------------------------------------##
 
 if [ -f $nite_dark ]; then
-   echo "Stack version requirements: ${need_stack_versions[*]}"
-   if ( cal_version_pass $nite_dark ${need_stack_versions[*]} ); then
+   echo "Data version requirements: ${need_data_versions[*]}"
+   echo "Code version requirements: ${need_code_versions[*]}"
+   if ( data_version_pass $nite_dark ${need_data_versions[*]} ) && \
+      ( code_version_pass $nite_dark ${need_code_versions[*]} ); then
       Gecho "Existing $nite_dark passed version check!\n"
    else
       Recho "Existing $nite_dark FAILED version check!\n"
@@ -298,9 +300,10 @@ else
       icheck="$(get_save_folder $image)/$cbase"
       if [ -f $icheck ]; then
          yecho "\nChecking ${icheck##*/} ... "
-         if ( cal_version_pass $icheck ${need_clean_versions[*]} ); then
+         if ( data_version_pass $icheck ${need_data_versions[*]} ) && \
+            ( code_version_pass $icheck ${need_code_versions[*]} ); then
             Gecho "version check PASSED!\n"
-            gecho "Using existing temp-bias (${access_mode}): ${icheck}\n"
+            gecho "Using existing temp-dark (${access_mode}): ${icheck}\n"
             case $access_mode in
                copy)    vcmde "cp -f $icheck $isave" || exit $?  ;;
                symlink) vcmde "ln -s $icheck $isave" || exit $?  ;;
@@ -326,11 +329,16 @@ else
       cmde "fitsarith -qHi $foo -S $use_bias -d $darkexp -o '!$bar'" || exit $?
       cmde "mv -f $bar $foo"                                         || exit $?
       cmde "hdrtool $foo --add_hist='use_bias ${use_bias##*/}'"      || exit $?
-      versions=( `get_cal_versions $use_bias` )
-      echo "versions: ${versions[*]}"
+      data_versions=( `get_data_versions $use_bias` )                || exit $?
+      code_versions=( `get_code_versions $use_bias` )
+      echo "data_versions: ${data_versions[*]}"
+      echo "code_versions: ${code_versions[*]}"
       #biasvers=$(imhget -u $use_bias BIASVERS)
-      cmde "record_cal_version $foo -b ${versions[0]}"               || exit $?
-      cmde "record_cal_version $foo -d $script_version"              || exit $?
+      cmde "record_code_version $foo -b ${code_versions[0]}"         || exit $?
+      cmde "record_code_version $foo -d ${script_version}"           || exit $?
+      cmde "record_data_version $foo -b ${data_versions[0]}"         || exit $?
+      cmde "record_data_version $foo -d ${script_version}"           || exit $?
+
       #hargs=( $camid DARK 1.0 $drtag )
       cmde "update_output_header $foo $camid DARK 1.0 $drtag"        || exit $?
       #echo "inspect: $foo"
@@ -346,23 +354,30 @@ else
    done
    timer
 
-   eff_biasvers=$(find_min_cal_version -b $tmp_dir/clean*fits)
-   echo "eff_biasvers: $eff_biasvers"
-   eff_darkvers=$(find_min_cal_version -d $tmp_dir/clean*fits)
-   echo "eff_darkvers: $eff_darkvers"
+   min_bias_data_vers=$(find_min_cal_version -b $tmp_dir/clean*fits)
+   echo "min_bias_data_vers: $min_bias_data_vers"
+   min_bias_code_vers=$(find_min_cal_version -B $tmp_dir/clean*fits)
+   echo "min_bias_code_vers: $min_bias_code_vers"
+   min_dark_data_vers=$(find_min_cal_version -d $tmp_dir/clean*fits)
+   echo "min_dark_data_vers: $min_dark_data_vers"
+   min_dark_code_vers=$(find_min_cal_version -D $tmp_dir/clean*fits)
+   echo "min_dark_code_vers: $min_dark_code_vers"
 
    # Combine darks with outlier rejection (stack_args in config.sh):
    mecho "\n`RowWrite 75 -`\n"
    opts="$dark_stack_args"
    cmde "medianize $opts $tmp_dir/clean*fits -o '!$foo'"    || exit $?
+   append_input_histories $foo $tmp_dir/clean*fits          || exit $?
    timer
 
    # Add stats and identifiers to header:
    cmde "fitsperc -qS $foo"                                 || exit $?
    cmde "kimstat -qSC9 $foo"                                || exit $?
-   #cmde "record_cal_version $foo -d $script_version"        || exit $?
-   cmde "record_cal_version $foo -b $eff_biasvers"          || exit $?
-   cmde "record_cal_version $foo -d $eff_darkvers"          || exit $?
+   cmde "record_data_version $foo -b $min_bias_data_vers"   || exit $?
+   cmde "record_code_version $foo -b $min_bias_code_vers"   || exit $?
+   cmde "record_data_version $foo -d $min_dark_data_vers"   || exit $?
+   #cmde "record_code_version $foo -d $min_dark_code_vers"   || exit $?
+   cmde "record_code_version $foo -d $script_version"       || exit $?
    #hargs=( $camid DARK 1.0 $drtag )
    cmde "update_output_header $foo $camid DARK 1.0 $drtag"  || exit $?
    cmde "mv -f $foo $nite_dark"                             || exit $?
@@ -395,7 +410,14 @@ exit 0
 # CHANGELOG (02_create_master_dark.sh):
 #---------------------------------------------------------------------
 #
+#  2018-02-09:
+#     -- Increased script_version to 0.62.
+#     -- Switched to latest script/data version header udpate routines.
+#
 #  2018-01-07:
+#     -- Increased script_version to 0.61.
+#     -- Changes to names of version get/set routines for eff and scr keywords.
+#     -- Implemented appending of input histories into stacked dark.
 #     -- Increased script_version to 0.60.
 #     -- Implemented separate version requirements for clean and stack data.
 #     -- Added check for in-bounds fdate.

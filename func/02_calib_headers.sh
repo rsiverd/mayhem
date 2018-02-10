@@ -29,8 +29,28 @@ update_output_header () {
 }
 
 ##--------------------------------------------------------------------------##
+## Set calib (data or script) version:
+#record_cal_version () {
+#   local image="$1"
+#   local version="$3"
+#   [ -z "$3" ] && ErrorAbort "Too few args for ${FUNCNAME[0]} ..." 99
+#   case $2 in
+#      -B) caltype="bias"; kword="BSCRIPT" ;;
+#      -D) caltype="dark"; kword="DSCRIPT" ;;
+#      -L) caltype="lamp"; kword="LSCRIPT" ;;
+#      -b) caltype="bias"; kword="BIASVERS" ;;
+#      -d) caltype="dark"; kword="DARKVERS" ;;
+#      -l) caltype="lamp"; kword="LAMPVERS" ;;
+#      *) ErrorAbort "Unhandled argument: '$2'" 99 ;;
+#   esac
+#   ctext="$caltype script version"
+#   hargs="-U $kword --hdr_data=$version --comment='$ctext'"
+#   vcmde "hdrtool $image $hargs" || return $?
+#}
+
+##--------------------------------------------------------------------------##
 ## Set script version:
-record_scr_version () {
+record_code_version () {
    local image="$1"
    local version="$3"
    [ -z "$3" ] && ErrorAbort "Too few args for ${FUNCNAME[0]} ..." 99
@@ -46,14 +66,14 @@ record_scr_version () {
 }
 
 ## Get script_version:
-get_scr_versions () {
+get_code_versions () {
    results=( `imhget -u $1 BSCRIPT DSCRIPT LSCRIPT` ) || exit $?
    echo ${results[*]} | sed 's/___/0.0/g'
 }
 
 ##--------------------------------------------------------------------------##
 ## Set effective data version:
-record_eff_version () {
+record_data_version () {
    local image="$1"
    local version="$3"
    [ -z "$3" ] && ErrorAbort "Too few args for ${FUNCNAME[0]} ..." 99
@@ -69,7 +89,7 @@ record_eff_version () {
 }
 
 ## Get effective data version:
-get_eff_versions () {
+get_data_versions () {
    results=( `imhget -u $1 BIASVERS DARKVERS LAMPVERS` ) || exit $?
    echo ${results[*]} | sed 's/___/0.0/g'
 }
@@ -123,13 +143,31 @@ find_min_cal_version () {
 }
 
 ##--------------------------------------------------------------------------##
-## Check calib versions:
-eff_version_pass () {
+## Check script/stack calibration versions:
+code_version_pass () {
    [ -z "$2" ] && ErrorAbort "Too few args for ${FUNCNAME[0]} ..." 99
    [ $# -gt 4 ] && ErrorAbort "Too many args for ${FUNCNAME[0]} ..." 99
    local image=$1; shift
    needvers=( $* )
-   versions=( `get_eff_versions $image` )
+   versions=( `get_code_versions $image` )
+   for (( i = 0; i < $#; i++ )); do
+      need="${needvers[i]}"
+      have="${versions[i]}"
+      okay=`bc <<< "$have >= $need"`
+      #echo "i: $i, need: $need, have: $have, okay: $okay"
+      [ $okay -eq 0 ] && return 1
+   done
+   return 0 # everything passed
+}
+
+##--------------------------------------------------------------------------##
+## Check calib data versions:
+data_version_pass () {
+   [ -z "$2" ] && ErrorAbort "Too few args for ${FUNCNAME[0]} ..." 99
+   [ $# -gt 4 ] && ErrorAbort "Too many args for ${FUNCNAME[0]} ..." 99
+   local image=$1; shift
+   needvers=( $* )
+   versions=( `get_data_versions $image` )
    for (( i = 0; i < $#; i++ )); do
       need="${needvers[i]}"
       have="${versions[i]}"
@@ -164,8 +202,10 @@ append_input_histories () {
 #---------------------------------------------------------------------
 #
 #  2018-02-09:
+#     -- Changed 'eff' --> 'data' and 'scr' --> 'code' for clarity throughout.
+#     -- Added code_version_pass() routine.
+#     -- For clarity, eff_version_pass() is now data_version_pass().
 #     -- find_min_cal_version() now works for script version, not just data.
-#     -- Changes to improve clarity and distinguish script/data versions:
 #
 #  2018-01-07:
 #     -- Added dividers to start/end of update_output_header().

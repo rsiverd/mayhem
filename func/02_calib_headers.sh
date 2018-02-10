@@ -5,7 +5,7 @@
 #
 # Rob Siverd
 # Created:      2018-01-05
-# Last updated: 2018-01-07
+# Last updated: 2018-02-09
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
@@ -18,16 +18,14 @@ update_output_header () {
    local obstype="$3"
    local exptime="$4"
    local drtag="$5"
-   #local mversion="$6"
-   vcmde "hdrtool $image  -U OBSTYPE  --value='$obstype'"   || return $?
-   vcmde "hdrtool $image  -U EXPTIME  --value='$exptime'"   || return $?
-   vcmde "hdrtool $image  -U CAMID    --value='$camid'"     || return $?
-   vcmde "hdrtool $image  -U DRTAG    --value='$drtag'"     || return $?
-   #vcmde "hdrtool $image  -U MVERSION --value='$mversion'"  || return $?
-   #vcmde "hdrtool $image  -U BDRTAG   --value='$bdr_tag'"   || return $?
-   #vcmde "hdrtool $image  -U DDRTAG   --value='$ddr_tag'"   || return $?
-   vcmde "hdrtool $image  -U EXTNAME  --value='SPECTRUM'"   || return $?
-   vcmde "hdrtool $image -CU TELESCOP --value='$camid'"     || return $?
+   vcmde "hdrtool $image -d"                                || return $?
+   vcmde "hdrtool $image -U OBSTYPE  --value='$obstype'"    || return $?
+   vcmde "hdrtool $image -U EXPTIME  --value='$exptime'"    || return $?
+   vcmde "hdrtool $image -U CAMID    --value='$camid'"      || return $?
+   vcmde "hdrtool $image -U DRTAG    --value='$drtag'"      || return $?
+   vcmde "hdrtool $image -U EXTNAME  --value='SPECTRUM'"    || return $?
+   vcmde "hdrtool $image -U TELESCOP --value='$camid'"      || return $?
+   vcmde "hdrtool $image -Cd"                               || return $?
 }
 
 ##--------------------------------------------------------------------------##
@@ -105,6 +103,9 @@ find_min_cal_version () {
       -b) name="bias"; kword="BIASVERS" ;;
       -d) name="dark"; kword="DARKVERS" ;;
       -l) name="lamp"; kword="LAMPVERS" ;;
+      -B) name="bias"; kword="BSCRIPT"  ;;
+      -D) name="dark"; kword="DSCRIPT"  ;;
+      -L) name="lamp"; kword="LSCRIPT"  ;;
       *) ErrorAbort "Unhandled argument: '$2'" 99 ;;
    esac
    shift
@@ -162,7 +163,12 @@ append_input_histories () {
 # CHANGELOG (02_calib_headers.sh):
 #---------------------------------------------------------------------
 #
+#  2018-02-09:
+#     -- find_min_cal_version() now works for script version, not just data.
+#     -- Changes to improve clarity and distinguish script/data versions:
+#
 #  2018-01-07:
+#     -- Added dividers to start/end of update_output_header().
 #     -- Changes to improve clarity and distinguish script/data versions:
 #           --> record_cal_version() now called record_eff_version()
 #           --> get_cal_versions() now called get_eff_versions()

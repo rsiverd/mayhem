@@ -320,6 +320,8 @@ else
 
    eff_biasvers=$(find_min_cal_version -b $tmp_dir/clean*fits)
    echo "eff_biasvers: $eff_biasvers"
+   #scr_biasvers=$(find_min_cal_version -B $tmp_dir/clean*fits)
+   #echo "scr_biasvers: $scr_biasvers"
 
    # Combine biases with outlier rejection (stack-args in config.sh):
    mecho "\n`RowWrite 75 -`\n"

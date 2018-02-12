@@ -4,14 +4,14 @@
 #
 # Rob Siverd
 # Created:      2017-07-24
-# Last updated: 2018-02-09
+# Last updated: 2018-02-11
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.40"
+script_version="0.41"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -243,6 +243,14 @@ rm $lamp_files 2>/dev/null
 for nite in ${fdate_list[*]}; do
    ls $use_arch/$nite/raw/*${fsuffix}.fits* 2>/dev/null >> $lamp_files
 done
+nfiles=$(cat $lamp_files | wc -l)
+if [ $nfiles -lt 2 ]; then
+   recho "Not enough calibration files to build master!\n"
+   vcmde "rm -rf $tmp_dir"
+   exit 0
+fi
+
+## Extract OBJECTS keyword:
 lamp_list=( `imhget -l $lamp_files OBJECTS \
    | awk -v want=$lampobj '{ if ($2 == want) print $1 }'` )
 
@@ -257,7 +265,7 @@ nite_lampsave="$nite_folder/med_${calib_type}_${fdate}_${drtag}.fits"
 cmde "mkdir -p $nite_folder" || exit $?
 
 ##--------------------------------------------------------------------------##
-## Stop here if too few darks:
+## Stop here if too few lamp calibs:
 if [ $nlamp -lt 2 ]; then
    recho "Too few calibs found, nothing to process!\n"
    vcmde "rm -rf $tmp_dir"
@@ -325,6 +333,37 @@ else
    timer start
    yecho "Overscan correction and bias/dark subtraction ...\n"
    for image in "${lamp_list[@]}"; do
+      # Temporary 'clean' file name (includes DRTAG of associated calibs):
+      ibase="${image##*/}"
+      ifits="${ibase%.fz}"
+      cbase="clean_${drtag}_${ifits}"
+      isave="$tmp_dir/$cbase"
+
+      # Use existing cleaned lamp if possible:
+      icheck="$(get_save_folder $image)/$cbase"
+      if [ -f $icheck ]; then
+         yecho "\nChecking ${icheck##*/} ... "
+         if ( data_version_pass $icheck ${need_data_versions[*]} ) && \
+            ( code_version_pass $icheck ${need_code_versions[*]} ); then
+            Gecho "version check PASSED!\n"
+            gecho "Using existing temp-lamp (${access_mode}): ${icheck}\n"
+            case $access_mode in
+               copy)    vcmde "cp -f $icheck $isave" || exit $?  ;;
+               symlink) vcmde "ln -s $icheck $isave" || exit $?  ;;
+               *) ErrorAbort "Unhandled access_mode: '$access_mode'" ;;
+            esac
+            continue
+         else
+            recho "version check FAILED, rebuild!\n\n"
+            #[ $keep_clean -eq 1 ] && cmde "rm $icheck"
+         fi
+      fi
+
+
+      # --------------------------------------------
+      # Otherwise, create cleaned file for stacking:
+      # --------------------------------------------
+
       # Identify best current bias frame:
       yecho "Selecting good bias ... "
       use_bias=$(pick_best_bdcal $image $camid bias --prev) || exit $?
@@ -346,25 +385,6 @@ else
       fi
       gecho "done.\n"
       echo "use_dark: $use_dark"
-
-      # Temporary 'clean' file name (includes DRTAG of associated calibs):
-      ibase="${image##*/}"
-      ifits="${ibase%.fz}"
-      cbase="clean_${drtag}_${ifits}"
-      isave="$tmp_dir/$cbase"
-
-      # Use existing cleaned dark if possible:
-      icheck="$(get_save_folder $image)/$cbase"
-      if [ -f $icheck ]; then
-         gecho "Using existing temp-dark (symlink)!\n"
-         cmde "ln -s $icheck $isave" || exit $?
-         continue
-      fi
-      echo
-
-      # --------------------------------------------
-      # Otherwise, create cleaned file for stacking:
-      # --------------------------------------------
 
       # Versions from input images:
       min_bias_data_vers=$(find_min_cal_version -b $use_bias $use_dark)
@@ -473,6 +493,11 @@ exit 0
 ######################################################################
 # CHANGELOG (03_create_master_lamp.sh):
 #---------------------------------------------------------------------
+#
+#  2018-02-11:
+#     -- Increased script_version to 0.41.
+#     -- Added additional check and sensible messages in case of no (or few)
+#           calibrations found of *any* type (before OBJECTS selection).
 #
 #  2018-02-09:
 #     -- Increased script_version to 0.40.

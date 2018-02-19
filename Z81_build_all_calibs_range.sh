@@ -90,22 +90,25 @@ for item in $fdate1 $fdate2 ; do
 done
 
 ##--------------------------------------------------------------------------##
-## DAY-OBS manipulation:
+## Date/time manipulation:
+date_funcs="func/01_time_and_date.sh"
+[ -f $date_funcs ] || ErrorAbort "Can't find file: $date_funcs"
+vcmde "source $date_funcs"
 
-## Convert between FDATE and UNIX seconds:
-fdate2unix () { date +%s --date=$1; }
-unix2fdate () { date +%Y%m%d --date="@$1"; }
-
-day_change () {
-   local old_fdate="$1"
-   local day_delta="$2"
-   unixtime_old=$(fdate2unix $old_fdate)
-   unixtime_new=$(( unixtime_old + $day_delta * 86400 ))
-   unix2fdate $unixtime_new
-}
-
-get_next_day () { day_change $1  1; }
-get_prev_day () { day_change $1 -1; }
+### Convert between FDATE and UNIX seconds:
+#fdate2unix () { date +%s --date=$1; }
+#unix2fdate () { date +%Y%m%d --date="@$1"; }
+#
+#day_change () {
+#   local old_fdate="$1"
+#   local day_delta="$2"
+#   unixtime_old=$(fdate2unix $old_fdate)
+#   unixtime_new=$(( unixtime_old + $day_delta * 86400 ))
+#   unix2fdate $unixtime_new
+#}
+#
+#get_next_day () { day_change $1  1; }
+#get_prev_day () { day_change $1 -1; }
 
 
 ##**************************************************************************##

@@ -7,14 +7,14 @@
 #
 # Rob Siverd
 # Created:      2017-08-14
-# Last updated: 2019-02-18
+# Last updated: 2019-02-19
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.15"
+script_version="0.20"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -50,7 +50,7 @@ trap "$jnk_cleanup" EXIT
 
 ## Required programs:
 declare -a need_exec
-need_exec+=( awk cat choose-dayobs FuncDef sed tr )
+need_exec+=( awk cat pipeline-dayobs-logic FuncDef sed tr )
 #need_exec+=( shuf shuffle sort ) # for randomization
 for need in ${need_exec[*]}; do
    if ! ( /usr/bin/which $need >& /dev/null ); then
@@ -87,9 +87,19 @@ date_funcs="func/01_time_and_date.sh"
 [ -f $date_funcs ] || ErrorAbort "Can't find file: $date_funcs"
 vcmde "source $date_funcs"
 
+## Post-restart time buffer (number of hours spent taking arcs/flats):
+buff_hrs=6
+
+## Disk/CPU kindness:
+prefix="nice -19 ionice -c3"
+
 ##**************************************************************************##
 ##==========================================================================##
 ##--------------------------------------------------------------------------##
+
+## Calib-builder script is required:
+cal_script="Z81_build_all_calibs_range.sh"
+[ -f $cal_script ] || ErrorAbort "Can't find file: $cal_script"
 
 ## Load site<-->camera mapplings:
 site_cams="aux/site_camera_mappings.sh"
@@ -102,44 +112,23 @@ eval "$(cat $site_cams)"
 lsite=${site_from_camera[$camid]}
 echo "Selected camera:  $camid"
 echo "LCO network site: $lsite"
+echo "Cal buffer hours: $buff_hrs"
 
-### Run choose-dayobs and process dict() output:
-#choose-dayobs -q -s $lsite | tr -d \{ | tr -d \} | tr ',' '\n' \
-#   | tr -d ' ' | tr -d \' > $foo
-##cmde "cat $foo"
-#proc_fdate=$(grep process_fdate $foo | cut -d: -f2)
-##echo "rstring: $rstring"
-#echo $rstring | tr ',' '\n' | tr -d ' ' | tr -d "'"
-
-## Run choose-dayobs and process dict() output:
-#arrname="dchoice"
-#eval "$(choose-dayobs -q -s lsc \
-#   | sed -e "s/^{'/'/" -e "s/'}$/'/" -e "s/', '/'\n'/g" \
-#   | awk -v arr="$arrname" -F\' '
-#   BEGIN { printf "declare -A %s\n", arr }
-#   { 
-#      printf "%s+=( [\"%s\"]=\"%s\" )\n", arr, $2,$4
-#   }')"
-#echo "dchoice:"
-#for i in "${!dchoice[@]}"; do
-#   printf "%20s:%20s\n" $i ${dchoice[$i]}
-#done
-
-## Ingest results from choose-dayobs:
+## Ingest results from choose-dayobs. The proc_fdate result should be the
+## most recent fdate that meets 'done' criteria for the specified camera:
 arrname="dchoice"
-eval "$(choose-dayobs -q -s $lsite --bash dchoice)"
+pdl_opts="-q --nres-cal-delay $buff_hrs -s $lsite --bash dchoice"
+#eval "$(pipeline-dayobs-logic -q -b $buff_hrs -s $lsite --bash dchoice)"
+eval "$(pipeline-dayobs-logic $pdl_opts)"
+final_fdate="${dchoice[latest_nres_cal_fdate]}"
+#echo "final_fdate: $final_fdate"
+start_fdate=$(day_change $final_fdate -$ndays)
+echo "Building date range: $start_fdate ... $final_fdate"
+sleep 5
 
-proc_fdate="${dchoice[process_fdate]}"
-echo "proc_fdate: $proc_fdate"
-
-
-## List of recent nights:
-declare -a nite_list
-for (( x = $ndays; x >= 1; x-- )); do
-   nite_list+=( $(date -u +%Y%m%d --date="$x days ago") )
-done
-
-echo "nite_list: ${nite_list[*]}"
+## Build all calibrations for the specified range:
+echo
+cmde "$prefix ./$cal_script $camid $start_fdate $final_fdate"
 
 ##--------------------------------------------------------------------------##
 ## Clean up:
@@ -153,6 +142,10 @@ exit 0
 ######################################################################
 # CHANGELOG (Z90_auto_build_recent_calibs.sh):
 #---------------------------------------------------------------------
+#
+#  2018-02-19:
+#     -- Increased script_version to 0.20.
+#     -- Script essentially works as intended. Hooray!
 #
 #  2018-02-18:
 #     -- Increased script_version to 0.15.

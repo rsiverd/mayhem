@@ -282,14 +282,6 @@ else
    timer start
    yecho "Overscan correction and bias subtraction ...\n"
    for image in "${dark_list[@]}"; do
-      # Identify best current bias frame:
-      use_bias=$(pick_best_bdcal $image $camid bias) || exit $?
-      bdr_tag=$(imhget DRTAG $use_bias)
-      if [ -z "$use_bias" ] || [ ! -f $use_bias ]; then
-         Recho "Blank name or file missing: '$use_bias'\n\n" >&2
-         exit 1
-      fi
-
       # Temporary 'clean' file name (includes DRTAG of associated bias):
       ibase="${image##*/}"
       ifits="${ibase%.fz}"
@@ -319,6 +311,14 @@ else
       # --------------------------------------------
       # Otherwise, create cleaned dark for stacking:
       # --------------------------------------------
+
+      # Identify best current bias frame:
+      use_bias=$(pick_best_bdcal $image $camid bias) || exit $?
+      bdr_tag=$(imhget DRTAG $use_bias)
+      if [ -z "$use_bias" ] || [ ! -f $use_bias ]; then
+         Recho "Blank name or file missing: '$use_bias'\n\n" >&2
+         exit 1
+      fi
 
       # Subtract overscan:
       cmde "nres-cdp-trim-oscan -q $image -o $foo"                   || exit $?
@@ -412,6 +412,7 @@ exit 0
 #
 #  2018-02-09:
 #     -- Increased script_version to 0.62.
+#     -- Moved check for best bias frame *after* check for existing 'clean'.
 #     -- Switched to latest script/data version header udpate routines.
 #
 #  2018-01-07:

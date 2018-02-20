@@ -60,7 +60,8 @@ for need in ${need_exec[*]}; do
 done
 
 ## Helper function definitions:
-fd_args="--argchk --nocolors --cmde --echo"
+export FUNCDEF="--nocolors"
+fd_args="--argchk --colors --cmde --echo"
 #fd_args+=" --Critical"
 fd_args+=" --rowwrite"
 #fd_args+=" --timers"

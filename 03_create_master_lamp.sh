@@ -4,14 +4,14 @@
 #
 # Rob Siverd
 # Created:      2017-07-24
-# Last updated: 2018-02-11
+# Last updated: 2018-08-03
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.41"
+script_version="0.42"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -493,6 +493,11 @@ exit 0
 ######################################################################
 # CHANGELOG (03_create_master_lamp.sh):
 #---------------------------------------------------------------------
+#
+#  2018-08-03:
+#     -- Increased script_version to 0.42.
+#     -- Gain is now corrected in nres-cdp-trim-overscan.py. Calib build
+#           script versions are increased to force data rebuild.
 #
 #  2018-02-11:
 #     -- Increased script_version to 0.41.

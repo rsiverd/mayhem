@@ -4,14 +4,14 @@
 #
 # Rob Siverd
 # Created:      2017-07-10
-# Last updated: 2018-04-30
+# Last updated: 2018-08-03
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.62"
+script_version="0.63"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -432,6 +432,11 @@ exit 0
 ######################################################################
 # CHANGELOG (02_create_master_dark.sh):
 #---------------------------------------------------------------------
+#
+#  2018-08-03:
+#     -- Increased script_version to 0.63.
+#     -- Gain is now corrected in nres-cdp-trim-overscan.py. Calib build
+#           script versions are increased to force data rebuild.
 #
 #  2018-02-09:
 #     -- Increased script_version to 0.62.

@@ -4,7 +4,7 @@
 #
 # Rob Siverd
 # Created:      2017-07-10
-# Last updated: 2018-02-09
+# Last updated: 2018-04-30
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
@@ -273,6 +273,28 @@ if [ -f $nite_dark ]; then
 fi
 
 ##--------------------------------------------------------------------------##
+##             Existing Image Removal: Better Data Available                ##
+##--------------------------------------------------------------------------##
+
+# After multiple iterations calibration build procedures, newer versions of
+# some files may appear. The purpose of this section is two-fold:
+# 1) For each listed dark, remove non-current 'clean' intermediate files. This
+#     ensures there is only one cleaned copy of each image.
+# 2) If a nite_dark already exists, check its content (the 'quality' of cleaned
+#     images that went into making it) against clean images available now. If
+#     today's files are different and *sufficiently* better, the existing
+#     master should be removed and rebuilt using these superior files.
+
+echo 
+echo
+echo
+echo "dark_list:"
+echo "${dark_list[@]}"
+echo
+echo
+#exit
+
+##--------------------------------------------------------------------------##
 ## Create master dark (if not present):
 if [ -f $nite_dark ]; then
    Gecho "$nite_dark already exists!\n"
@@ -282,7 +304,16 @@ else
    timer start
    yecho "Overscan correction and bias subtraction ...\n"
    for image in "${dark_list[@]}"; do
-      # Temporary 'clean' file name (includes DRTAG of associated bias):
+
+      # FIRST, identify best available bias frame for this dark:
+      use_bias=$(pick_best_bdcal $image $camid bias) || exit $?
+      bdr_tag=$(imhget DRTAG $use_bias)
+      if [ -z "$use_bias" ] || [ ! -f $use_bias ]; then
+         Recho "Blank name or file missing: '$use_bias'\n\n" >&2
+         exit 1
+      fi
+
+      # Temporary 'clean' file name (includes DRTAG of best-available bias):
       ibase="${image##*/}"
       ifits="${ibase%.fz}"
       cbase="clean_${bdr_tag}_${ifits}"
@@ -311,14 +342,6 @@ else
       # --------------------------------------------
       # Otherwise, create cleaned dark for stacking:
       # --------------------------------------------
-
-      # Identify best current bias frame:
-      use_bias=$(pick_best_bdcal $image $camid bias) || exit $?
-      bdr_tag=$(imhget DRTAG $use_bias)
-      if [ -z "$use_bias" ] || [ ! -f $use_bias ]; then
-         Recho "Blank name or file missing: '$use_bias'\n\n" >&2
-         exit 1
-      fi
 
       # Subtract overscan:
       cmde "nres-cdp-trim-oscan -q $image -o $foo"                   || exit $?

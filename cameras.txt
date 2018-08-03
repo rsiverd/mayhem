@@ -2,3 +2,4 @@
 nres01   /archive/engineering/lsc/nres01  20170701
 nres02   /archive/engineering/elp/nres02  20170925
 nres03   /archive/engineering/cpt/nres03  20171117
+nres04   /archive/engineering/tlv/nres04  20180710

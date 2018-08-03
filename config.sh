@@ -25,14 +25,18 @@ dark_stack_args="-r410 --itable -c5"
 #min_lampvers="0.35"     #  lamps with version older than this are rebuilt
 
 ## Image data version requirements for 'clean' images:
-min_data_versions=( 0.57 0.62 0.40 )  # bias, dark, lamp
+min_data_versions=( 0.58 0.63 0.42 )  # bias, dark, lamp
 
 ## Image code version requirements for stacked data:
-min_code_versions=( 0.57 0.62 0.40 )  # bias, dark, lamp
+min_code_versions=( 0.58 0.63 0.42 )  # bias, dark, lamp
 
 ######################################################################
 # CHANGELOG (config.sh):
 #---------------------------------------------------------------------
+#
+#  2018-08-03:
+#     -- Increased min_data_versions and min_code_versions to force rebuild
+#           of all old data now that nres-cdp-trim-oscan corrects gain.
 #
 #  2018-02-19:
 #     -- After testing, removed commented-out code that had been moved.

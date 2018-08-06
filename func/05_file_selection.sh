@@ -6,7 +6,7 @@
 #
 # Rob Siverd
 # Created:      2018-02-19
-# Last updated: 2018-02-19
+# Last updated: 2018-08-06
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
@@ -98,7 +98,7 @@ pick_best_bdcal () {
       fi
 
       # list available files, report latest-and-greatest:
-      hits=( `ls $cal_folder/med_${ctype}_${cal_day}_*.fits 2>/dev/null` )
+      hits=( `ls $cal_folder/med_${camid}_${ctype}_${cal_day}_*.fits 2>/dev/null` )
       nfound=${#hits[*]}
       #echo "nfound: $nfound" >&2
       if [ $nfound -gt 0 ]; then
@@ -121,6 +121,9 @@ pick_best_bdcal () {
 ######################################################################
 # CHANGELOG (05_file_selection.sh):
 #---------------------------------------------------------------------
+#
+#  2018-08-06:
+#     -- pick_best_bdcal now knows to check for camid in file name.
 #
 #  2018-02-19:
 #     -- Imported most of the functions from config.sh.

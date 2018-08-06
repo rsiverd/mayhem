@@ -4,14 +4,14 @@
 #
 # Rob Siverd
 # Created:      2017-07-24
-# Last updated: 2018-08-03
+# Last updated: 2018-08-06
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.42"
+script_version="0.43"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -261,7 +261,7 @@ echo "nlamp: $nlamp"
 
 ## Output files:
 nite_folder="$save_root/$camid/$fdate"
-nite_lampsave="$nite_folder/med_${calib_type}_${fdate}_${drtag}.fits"
+nite_lampsave="$nite_folder/med_${camid}_${calib_type}_${fdate}_${drtag}.fits"
 cmde "mkdir -p $nite_folder" || exit $?
 
 ##--------------------------------------------------------------------------##
@@ -493,6 +493,10 @@ exit 0
 ######################################################################
 # CHANGELOG (03_create_master_lamp.sh):
 #---------------------------------------------------------------------
+#
+#  2018-08-06:
+#     -- Increased script_version to 0.43.
+#     -- Output master/stacked file names now include camid.
 #
 #  2018-08-03:
 #     -- Increased script_version to 0.42.

@@ -4,14 +4,14 @@
 #
 # Rob Siverd
 # Created:      2017-07-10
-# Last updated: 2018-08-03
+# Last updated: 2018-08-06
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.63"
+script_version="0.64"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -211,7 +211,7 @@ echo "ndark: $ndark"
 
 ## Output files:
 nite_folder="$save_root/$camid/$fdate"
-nite_dark="$nite_folder/med_dark_${fdate}_${drtag}.fits"
+nite_dark="$nite_folder/med_${camid}_dark_${fdate}_${drtag}.fits"
 cmde "mkdir -p $nite_folder" || exit $?
 
 ##--------------------------------------------------------------------------##
@@ -432,6 +432,10 @@ exit 0
 ######################################################################
 # CHANGELOG (02_create_master_dark.sh):
 #---------------------------------------------------------------------
+#
+#  2018-08-06:
+#     -- Increased script_version to 0.64.
+#     -- Added camid to stacked master dark output file name.
 #
 #  2018-08-03:
 #     -- Increased script_version to 0.63.

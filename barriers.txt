@@ -12,3 +12,6 @@ nres01    lamp      20170830      20170831   # ThAr slave lamp swap
 nres01    bias      20170831      20170901   # recovered temperature control (A/C shutoff)
 nres01    dark      20170831      20170901   # recovered temperature control (A/C shutoff)
 nres01    lamp      20170901      20170902   # recovered temperature control (A/C shutoff)
+nres03    lamp      20180730      20180731   # fixed sticky shutter to domc / AGU_B
+nres03    thar12    20180730      20180731   # fixed sticky shutter to domc / AGU_B
+nres03    tung12    20180730      20180731   # fixed sticky shutter to domc / AGU_B

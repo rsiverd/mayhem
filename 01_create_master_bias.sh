@@ -257,7 +257,7 @@ fi
 if [ -f $nite_bias ]; then
    echo "Data version requirements: ${need_data_versions[*]}"
    echo "Code version requirements: ${need_code_versions[*]}"
-   if ( header_gain_is_unity $icheck ) && \
+   if ( header_gain_is_unity $nite_bias ) && \
       ( data_version_pass $nite_bias ${need_data_versions[*]} ) && \
       ( code_version_pass $nite_bias ${need_code_versions[*]} ); then
       Gecho "Existing $nite_bias passed version check!\n"

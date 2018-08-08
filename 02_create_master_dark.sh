@@ -263,7 +263,7 @@ fi
 if [ -f $nite_dark ]; then
    echo "Data version requirements: ${need_data_versions[*]}"
    echo "Code version requirements: ${need_code_versions[*]}"
-   if ( header_gain_is_unity $icheck ) && \
+   if ( header_gain_is_unity $nite_dark ) && \
       ( data_version_pass $nite_dark ${need_data_versions[*]} ) && \
       ( code_version_pass $nite_dark ${need_code_versions[*]} ); then
       Gecho "Existing $nite_dark passed version check!\n"

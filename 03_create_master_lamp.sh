@@ -313,7 +313,7 @@ fi
 if [ -f $nite_lampsave ]; then
    echo "Data version requirements: ${need_data_versions[*]}"
    echo "Code version requirements: ${need_code_versions[*]}"
-   if ( header_gain_is_unity $icheck ) && \
+   if ( header_gain_is_unity $nite_lampsave ) && \
       ( data_version_pass $nite_lampsave ${need_data_versions[*]} ) && \
       ( code_version_pass $nite_lampsave ${need_code_versions[*]} ); then
       # image is OK!

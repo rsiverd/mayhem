@@ -5,7 +5,7 @@
 #
 # Rob Siverd
 # Created:      2018-01-05
-# Last updated: 2018-02-09
+# Last updated: 2018-08-07
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
@@ -19,6 +19,7 @@ update_output_header () {
    local exptime="$4"
    local drtag="$5"
    vcmde "hdrtool $image -d"                                || return $?
+   vcmde "hdrtool $image -U GAIN     --value='1.0'"         || return $?
    vcmde "hdrtool $image -U OBSTYPE  --value='$obstype'"    || return $?
    vcmde "hdrtool $image -U EXPTIME  --value='$exptime'"    || return $?
    vcmde "hdrtool $image -U CAMID    --value='$camid'"      || return $?
@@ -200,6 +201,9 @@ append_input_histories () {
 ######################################################################
 # CHANGELOG (02_calib_headers.sh):
 #---------------------------------------------------------------------
+#
+#  2018-08-07:
+#     -- Now assert GAIN=1.0 in output image header.
 #
 #  2018-02-09:
 #     -- Changed 'eff' --> 'data' and 'scr' --> 'code' for clarity throughout.

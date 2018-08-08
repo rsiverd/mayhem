@@ -180,6 +180,25 @@ data_version_pass () {
 }
 
 ##--------------------------------------------------------------------------##
+## Check whether image has unity gain:
+header_gain_is_unity () {
+   local image=$1
+   local igain=$(imhget $image GAIN | sed 's/___/999/g')
+   if [ `bc <<< "$igain == 1.0"` -eq 1 ]; then
+      return 0    # yes equal (pass)
+   else
+      return 1    # not equal (fail)
+   fi
+}
+
+
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+
+
+##--------------------------------------------------------------------------##
 ## Collect unique input image history from a set of input images:
 append_input_histories () {
    local dst_image="$1"; shift
@@ -203,7 +222,9 @@ append_input_histories () {
 #---------------------------------------------------------------------
 #
 #  2018-08-07:
-#     -- Now assert GAIN=1.0 in output image header.
+#     -- Added header_gain_is_unity() test function to help spot images
+#           in need of reprocessing.
+#     -- Now assert GAIN=1.0 in update_output_header().
 #
 #  2018-02-09:
 #     -- Changed 'eff' --> 'data' and 'scr' --> 'code' for clarity throughout.

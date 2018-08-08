@@ -257,7 +257,8 @@ fi
 if [ -f $nite_bias ]; then
    echo "Data version requirements: ${need_data_versions[*]}"
    echo "Code version requirements: ${need_code_versions[*]}"
-   if ( data_version_pass $nite_bias ${need_data_versions[*]} ) && \
+   if ( header_gain_is_unity $icheck ) && \
+      ( data_version_pass $nite_bias ${need_data_versions[*]} ) && \
       ( code_version_pass $nite_bias ${need_code_versions[*]} ); then
       Gecho "Existing $nite_bias passed version check!\n"
    else
@@ -371,7 +372,8 @@ exit 0
 #
 #  2018-08-07:
 #     -- Increased script_version to 0.60.
-#     -- Now check for GAIN=1.0 along with code/data version requirements.
+#     -- Now check for GAIN=1.0 along with code/data version requirements in
+#           both clean_ image inspection and for existing image removal.
 #
 #  2018-08-06:
 #     -- Increased script_version to 0.59.

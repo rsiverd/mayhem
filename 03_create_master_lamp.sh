@@ -4,14 +4,14 @@
 #
 # Rob Siverd
 # Created:      2017-07-24
-# Last updated: 2018-08-06
+# Last updated: 2018-08-07
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.43"
+script_version="0.44"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -313,7 +313,8 @@ fi
 if [ -f $nite_lampsave ]; then
    echo "Data version requirements: ${need_data_versions[*]}"
    echo "Code version requirements: ${need_code_versions[*]}"
-   if ( data_version_pass $nite_lampsave ${need_data_versions[*]} ) && \
+   if ( header_gain_is_unity $icheck ) && \
+      ( data_version_pass $nite_lampsave ${need_data_versions[*]} ) && \
       ( code_version_pass $nite_lampsave ${need_code_versions[*]} ); then
       # image is OK!
       Gecho "Existing $nite_lampsave passed version check!\n"
@@ -343,7 +344,8 @@ else
       icheck="$(get_save_folder $image)/$cbase"
       if [ -f $icheck ]; then
          yecho "\nChecking ${icheck##*/} ... "
-         if ( data_version_pass $icheck ${need_data_versions[*]} ) && \
+         if ( header_gain_is_unity $icheck ) && \
+            ( data_version_pass $icheck ${need_data_versions[*]} ) && \
             ( code_version_pass $icheck ${need_code_versions[*]} ); then
             Gecho "version check PASSED!\n"
             gecho "Using existing temp-lamp (${access_mode}): ${icheck}\n"
@@ -493,6 +495,11 @@ exit 0
 ######################################################################
 # CHANGELOG (03_create_master_lamp.sh):
 #---------------------------------------------------------------------
+#
+#  2018-08-07:
+#     -- Increased script_version to 0.44.
+#     -- Now check for GAIN=1.0 along with code/data version requirements in
+#           both clean_ image inspection and for existing image removal.
 #
 #  2018-08-06:
 #     -- Increased script_version to 0.43.

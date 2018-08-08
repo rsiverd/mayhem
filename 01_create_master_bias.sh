@@ -4,14 +4,14 @@
 #
 # Rob Siverd
 # Created:      2017-07-10
-# Last updated: 2018-08-06
+# Last updated: 2018-08-07
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.59"
+script_version="0.60"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -288,7 +288,8 @@ else
       icheck="$(get_save_folder $image)/$cbase"
       if [ -f $icheck ]; then
          yecho "Checking ${icheck##*/} ... "
-         if ( data_version_pass $icheck ${need_data_versions[*]} ) && \
+         if ( header_gain_is_unity $icheck ) && \
+            ( data_version_pass $icheck ${need_data_versions[*]} ) && \
             ( code_version_pass $icheck ${need_code_versions[*]} ); then
             Gecho "version check PASSED!\n"
             gecho "Using existing temp-bias (${access_mode}): ${icheck}\n"
@@ -367,6 +368,10 @@ exit 0
 ######################################################################
 # CHANGELOG (01_create_master_bias.sh):
 #---------------------------------------------------------------------
+#
+#  2018-08-07:
+#     -- Increased script_version to 0.60.
+#     -- Now check for GAIN=1.0 along with code/data version requirements.
 #
 #  2018-08-06:
 #     -- Increased script_version to 0.59.

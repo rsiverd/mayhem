@@ -24,15 +24,32 @@ except NameError:
 
 ## Modules:
 import argparse
-#import shutil
+import shutil
+import errno
 import os
 import sys
 import time
 import numpy as np
-#from functools import partial
-#np.set_printoptions(suppress=True, linewidth=160)
-#import itertools as itt
 import requests
+
+## Time conversion:
+try:
+    import astropy.time as astt
+except ImportError:
+    sys.stderr.write("\nError: astropy module not found!\n"
+           "Please install and try again.\n\n")
+    sys.exit(1)
+
+## LCO site information:
+try:
+    import lco_site_info
+    reload(lco_site_info)
+except ImportError:
+    sys.stderr.write("\nError: lco_site_info not found! Install and retry.\n")
+    sys.exit(1)
+lsi = lco_site_info.info
+nres_sites = [x for x in lsi if lsi[x]['nres_spec']]
+nres_cam_map = dict([(x, lsi[x]['nres_spec'][0]['cam']) for x in nres_sites])
 
 ## LCO API requests:
 auth_token = '2de3ffb5590fe7411e426d1d28d04376e77d05d1'
@@ -70,373 +87,212 @@ halfdiv = "----------------------------------------"
 fulldiv = halfdiv + halfdiv
 
 ##--------------------------------------------------------------------------##
-## Save FITS image with clobber (astropy / pyfits):
-#def qsave(iname, idata, header=None, padkeys=1000, **kwargs):
-#    this_func = sys._getframe().f_code.co_name
-#    sys.stderr.write("Writing to '%s' ... " % iname)
-#    if header:
-#        while (len(header) < padkeys):
-#            header.append() # pad header
-#    if os.path.isfile(iname):
-#        os.remove(iname)
-#    pf.writeto(iname, idata, header=header, **kwargs)
-#    sys.stderr.write("done.\n")
+## Recursive directory creation (emulates `mkdir -p`):
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc:  # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
 
 ##--------------------------------------------------------------------------##
-## Save FITS image with clobber (fitsio):
-#def qsave(iname, idata, header=None, **kwargs):
-#    this_func = sys._getframe().f_code.co_name
-#    sys.stderr.write("Writing to '%s' ... " % iname)
-#    #if os.path.isfile(iname):
-#    #    os.remove(iname)
-#    fitsio.write(iname, idata, clobber=True, header=header, **kwargs)
-#    sys.stderr.write("done.\n")
-
 ##--------------------------------------------------------------------------##
-def ldmap(things):
-    return dict(zip(things, range(len(things))))
-
-def argnear(vec, val):
-    return (np.abs(vec - val)).argmin()
-
-## Robust location/scale estimate using median/MAD:
-def calc_ls_med_MAD(a, axis=None):
-    """Return median and median absolute deviation of *a* (scaled to normal)."""
-    med_val = np.median(a, axis=axis)
-    sig_hat = (1.482602218 * np.median(np.abs(a - med_val), axis=axis))
-    return (med_val, sig_hat)
-
-## Robust location/scale estimate using median/IQR:
-def calc_ls_med_IQR(a, axis=None):
-    """Return median and inter-quartile range of *a* (scaled to normal)."""
-    pctiles = np.percentile(a, [25, 50, 75], axis=axis)
-    med_val = pctiles[1]
-    sig_hat = (0.741301109 * (pctiles[2] - pctiles[0]))
-    return (med_val, sig_hat)
-
-## Select inliners given specified sigma threshold:
-def pick_inliers(data, sig_thresh):
-    med, sig = calc_ls_med_IQR(data)
-    return ((np.abs(data - med) / sig) <= sig_thresh)
-
-
-
-
 ##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+
 ## Parse arguments and run script:
-#class MyParser(argparse.ArgumentParser):
-#    def error(self, message):
-#        sys.stderr.write('error: %s\n' % message)
-#        self.print_help()
-#        sys.exit(2)
-#
-### Enable raw text AND display of defaults:
-#class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter,
-#                        argparse.RawDescriptionHelpFormatter):
-#    pass
-#
-### Parse the command line:
-#if __name__ == '__main__':
-#
-#    # ------------------------------------------------------------------
-#    descr_txt = """
-#    PUT DESCRIPTION HERE.
-#    
-#    Version: %s
-#    """ % __version__
-#    parser = argparse.ArgumentParser(
-#            prog='PROGRAM_NAME_HERE',
-#            prog=os.path.basename(__file__),
-#            #formatter_class=argparse.RawTextHelpFormatter)
-#            description='PUT DESCRIPTION HERE.')
-#            #description=descr_txt)
-#    parser = MyParser(prog=os.path.basename(__file__), description=descr_txt)
-#                          #formatter_class=argparse.RawTextHelpFormatter)
-#    parser.add_argument('firstpos', help='first positional argument')
-#    parser.add_argument('-s', '--site',
-#            help='Site to retrieve data for', required=True)
-#    parser.add_argument('-n', '--number_of_days', default=1,
-#            help='Number of days of data to retrieve.')
-#    parser.add_argument('-o', '--output_file', 
-#            default='observations.csv', help='Output filename.')
-#    parser.add_argument("--start", type=str, default=None, 
-#            help="Start time for date range query.")
-#    parser.add_argument("--end", type=str, default=None,
-#            help="End time for date range query.")
-#    parser.add_argument('-d', '--dayshift', required=False, default=0,
-#            help='Switch between days (1=tom, 0=today, -1=yest', type=int)
-#    parser.add_argument('-e', '--encl', nargs=1, required=False,
-#            help='Encl to make URL for', choices=all_encls, default=all_encls)
-#    parser.add_argument('-s', '--site', nargs=1, required=False,
-#            help='Site to make URL for', choices=all_sites, default=all_sites)
-#    parser.add_argument('-q', '--quiet', action='count', default=0,
-#            help='less progress/status reporting')
-#    parser.add_argument('-v', '--verbose', action='count', default=0,
-#            help='more progress/status reporting')
-#    parser.add_argument('--debug', dest='debug', default=False,
-#            help='Enable extra debugging messages', action='store_true')
-#    parser.add_argument('remainder', help='other stuff', nargs='*')
-#    parser.set_defaults(thing='value')
-#    # ------------------------------------------------------------------
-#    # ------------------------------------------------------------------
-#    ofgroup = parser.add_argument_group('Output format')
-#    fmtparse = ofgroup.add_mutually_exclusive_group()
-#    fmtparse.add_argument('--python', required=False, dest='output_mode',
-#            help='Return Python dictionary with results [default]',
-#            default='pydict', action='store_const', const='pydict')
-#    bash_var = 'ARRAY_NAME'
-#    bash_msg = 'output Bash code snippet (use with eval) to declare '
-#    bash_msg += 'an associative array %s containing results' % bash_var
-#    fmtparse.add_argument('--bash', required=False, default=None,
-#            help=bash_msg, dest='bash_array', metavar=bash_var)
-#    fmtparse.set_defaults(output_mode='pydict')
-#    # ------------------------------------------------------------------
-#
-#    context = parser.parse_args()
-#    #context.vlevel = context.verbose - context.quiet
-#    context.vlevel = 99 if context.debug else (context.verbose-context.quiet)
-#
-##--------------------------------------------------------------------------##
+class MyParser(argparse.ArgumentParser):
+    def error(self, message):
+        sys.stderr.write('error: %s\n' % message)
+        self.print_help()
+        sys.exit(2)
+
+## Enable raw text AND display of defaults:
+class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter,
+                        argparse.RawDescriptionHelpFormatter):
+    pass
+
+## Parse the command line:
+if __name__ == '__main__':
+    allowed_sites = ['lsc', 'elp', 'cpt', 'tlv']
+
+    # ------------------------------------------------------------------
+    descr_txt = """
+    Retrieve NRES data from LCO archive.
+    
+    Version: %s
+    """ % __version__
+    parser = MyParser(prog=os.path.basename(__file__), description=descr_txt,
+                          formatter_class=argparse.RawTextHelpFormatter)
+    #parser.add_argument('firstpos', help='first positional argument')
+    parser.add_argument('-q', '--quiet', action='count', default=0,
+            help='less progress/status reporting')
+    parser.add_argument('-v', '--verbose', action='count', default=0,
+            help='more progress/status reporting')
+    parser.add_argument('--debug', dest='debug', default=False,
+            help='Enable extra debugging messages', action='store_true')
+    #parser.add_argument('remainder', help='other stuff', nargs='*')
+    #parser.set_defaults(thing='value')
+    # ------------------------------------------------------------------
+    # ------------------------------------------------------------------
+    typegroup = parser.add_argument_group('NRES Data Types')
+    typegroup = typegroup.add_mutually_exclusive_group()
+    typegroup.add_argument('--cal_only', required=False, default=False,
+            dest='cal_only', action='store_true',
+            help='only fetch NRES calibration data')
+    typegroup.add_argument('--sci_only', required=False, default=False,
+            dest='sci_only', action='store_true',
+            help='only fetch NRES science data')
+
+    parser.set_defaults(data_rlevel=0, do_download=True)
+
+    ordergroup = parser.add_argument_group('Download Order')
+    ordergroup = ordergroup.add_mutually_exclusive_group()
+    ordergroup.add_argument('--new-first', required=False, default=False,
+            action='store_false', dest='oldest_first',
+            help='download in reverse chrono order (newest files first)')
+    ordergroup.add_argument('--old-first', required=False, default=False,
+            action='store_true', dest='oldest_first',
+            help='download in chrono order (oldest files first)')
+
+    datagroup = parser.add_argument_group('Data Type and Site Choice')
+    #datagroup.add_argument('--token', required=True, default=None,
+    #        help='LCO API/Archive authentication token')
+
+    authgroup = parser.add_argument_group('Accounts and Authentication')
+    #authgroup.add_argument('--token', required=True, default=None,
+    authgroup.add_argument('--token', required=False,
+            default='2de3ffb5590fe7411e426d1d28d04376e77d05d1',
+            help='LCO API/Archive authentication token')
+
+    filegroup = parser.add_argument_group('Local File I/O')
+    filegroup.add_argument('-o', '--save_root', required=True, default=None,
+            help='data storage root (i.e., /archive/engineering)')
+
+    miscgroup = parser.add_argument_group('Miscellany')
+    miscgroup.add_argument('--max_depth', required=False, default=5,
+            type=int, help='max search iterations')
+    miscgroup.add_argument('--max_files', required=False, default=500,
+            type=int, help='max files per search iteration')
+    # ------------------------------------------------------------------
+
+    context = parser.parse_args()
+    context.vlevel = 99 if context.debug else (context.verbose-context.quiet)
+
 
 ##--------------------------------------------------------------------------##
-## New-style string formatting (more at https://pyformat.info/):
+##------------------ Sanity Checks and Option Consequences  ----------------##
+##--------------------------------------------------------------------------##
 
-#oldway = '%s %s' % ('one', 'two')
-#newway = '{} {}'.format('one', 'two')
+## Slim down options in debug mode:
+if context.debug:
+    sys.stderr.write("Slimming down frames list for debug mode!\n")
+    context.max_depth = 1
+    context.max_files = 50
+    context.do_download = False
 
-#oldway = '%d %d' % (1, 2)
-#newway = '{} {}'.format(1, 2)
+## Root output folder must already exist:
+if not os.path.isdir(context.save_root):
+    sys.stderr.write("Error: output folder not found:\n"
+                    + "--> %s\n\n" % context.save_root)
 
-# With padding:
-#oldway = '%10s' % ('test',)        # right-justified
-#newway = '{:>10}'.format('test')   # right-justified
-#oldway = '%-10s' % ('test',)       #  left-justified
-#newway = '{:10}'.format('test')    #  left-justified
-
-# Ordinally:
-#newway = '{1} {}0'.format('one', 'two')     # prints "two one"
-
-# Dictionarily:
-#newway = '{lastname}, {firstname}'.format(firstname='Rob', lastname='Siverd')
-
-# Centered (new-only):
-#newctr = '{:^10}'.format('test')      # prints "   test   "
-
-# Numbers:
-#oldway = '%06.2f' % (3.141592653589793,)
-#newway = '{:06.2f}'.format(3.141592653589793)
+## Frame RLEVEL must be one of the allowed values:
+rlevel_dirs = {0:'raw', 91:'specproc'}
+if not context.data_rlevel in rlevel_dirs.keys():
+    sys.stderr.write("\n"
+                    + "Unrecognized RLEVEL: %d\n\n" % context.data_rlevel
+                    + "You should not see this ... please fix!!\n\n")
+    sys.exit(1)
 
 ##--------------------------------------------------------------------------##
-## Quick ASCII I/O:
-#data_file = 'data.txt'
-#all_data = np.genfromtxt(data_file, dtype=None)
-#all_data = np.genfromtxt(data_file, dtype=None, names=True, autostrip=True)
-#all_data = np.genfromtxt(data_file, dtype=None, names=True, autostrip=True,
-#                 delimiter='|', comments='%0%0%0%0')
-#                 loose=True, invalid_raise=False)
-#all_data = aia.read(data_file)
-#all_data = pd.read_csv(data_file)
-#all_data = pd.read_table(data_file, delim_whitespace=True)
-#all_data = pd.read_table(data_file, sep='|')
-#fields = all_data.dtype.names
-#if not fields:
-#    x = all_data[:, 0]
-#    y = all_data[:, 1]
-#else:
-#    x = all_data[fields[0]]
-#    y = all_data[fields[1]]
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+
+## Frame look-up:
+headers = {'Authorization': 'Token ' + context.token}
+base_url = 'https://archive-api.lco.global/'
+frame_url = base_url + 'frames/'
+params = {'limit':context.max_files}
+params['RLEVEL'] = context.data_rlevel
+params['basename'] = 'nrs'              # only NRES files!!
+#params['OBSTYPE'] = 'EXPOSE'
+#params[ 'covers'] = lcoreq.wkt_from_coord((314.809246, +43.629033))
+if context.cal_only:
+    params['PROPID'] = 'calibrate'
+if context.sci_only:
+    params['OBSTYPE'] = 'TARGET'
+
+
+## Fetch frames (gets newest first):
+get_cmd = {'url':frame_url, 'headers':headers, 'params':params}
+results = []
+depth, rcount = lcoreq.recursive_request(get_cmd, results, 
+        maxdepth=context.max_depth) #, maxdepth=1)
+first = results[0]
+nhits = len(results)
+
+## Optionally reverse list (to oldest first):
+if context.oldest_first:
+    results.reverse()
+
+## Ensure all sites are actually NRES sites:
+for frame in results:
+    if not (frame['SITEID'] in nres_sites):
+        sys.stderr.write("Error: unsupported site: %s\n" % frame['SITEID'])
+        sys.exit(1)
 
 ##--------------------------------------------------------------------------##
-## Timestamp modification:
-#def time_warp(jdutc, jd_offset, scale):
-#    return (jdutc - jd_offset) * scale
+## LCO path conventions:
+def make_rel_daydir(frame):
+    lsite = frame['SITEID']
+    nrcam = nres_cam_map.get(lsite, None)
+    if not nrcam:
+        return (False, None)
+    ibase = os.path.basename(frame['filename'])
+    obs_day = ibase.split('-')[2]
+    return os.path.join(lsite, nrcam, obs_day)
+    #sub_dir = os.path.join(lsite, nrcam, obs_day)
+    #return (success, sub_dir)
 
-## Self-consistent time-modification for plotting:
-#tfudge = partial(time_warp, jd_offset=tstart.jd, scale=24.0)    # relative hrs
-#tfudge = partial(time_warp, jd_offset=tstart.jd, scale=1440.0)  # relative min
+## Download files:
+sys.stderr.write("Vet the results list ...\n")
+#sys.exit(0)
+ndownloaded = 0
+for i,frame in enumerate(results, 1):
+    ibase = os.path.basename(frame['filename'])
+    lsite = frame['SITEID']
+    sys.stderr.write("\rFetching %s (%d of %d) ... " % (ibase, i, nhits))
 
-##--------------------------------------------------------------------------##
-## Quick FITS I/O:
-#data_file = 'image.fits'
-#img_vals = pf.getdata(data_file)
-#hdr_keys = pf.getheader(data_file)
-#img_vals, hdr_keys = pf.getdata(data_file, header=True)
-#img_vals, hdr_keys = pf.getdata(data_file, header=True, uint=True) # USHORT
-#img_vals, hdr_keys = fitsio.read(data_file, header=True)
+    # Make output path:
+    daydir_path = os.path.join(context.save_root, make_rel_daydir(frame))
+    #sys.stderr.write("\ndaydir_path:\n--> %s\n" % daydir_path)
+    save_folder = os.path.join(daydir_path, rlevel_dirs[frame['RLEVEL']])
+    #sys.stderr.write("\nsave_folder:\n--> %s\n" % save_folder)
+    mkdir_p(save_folder)    # ensure existence
+    #continue
 
-#date_obs = hdr_keys['DATE-OBS']
-#site_lat = hdr_keys['LATITUDE']
-#site_lon = hdr_keys['LONGITUD']
+    isave = os.path.join(save_folder, ibase)
+    if os.path.isfile(isave):
+        sys.stderr.write("already retrieved!   ")
+        continue
+    itemp = 'dltemp_' + ibase
+    #sys.stderr.write("isave: %s\n" % isave)
 
-## Initialize time:
-#img_time = astt.Time(hdr_keys['DATE-OBS'], scale='utc', format='isot')
-#img_time += astt.TimeDelta(0.5 * hdr_keys['EXPTIME'], format='sec')
-#jd_image = img_time.jd
+    sys.stderr.write("not yet downloaded!  \nDownloading ... ")
+    if context.do_download:
+        with open(itemp, 'wb') as f:
+            f.write(requests.get(frame['url']).content)
+        sys.stderr.write("moving ... ")
+        shutil.move(itemp, isave)
+        sys.stderr.write("done.\n")
+    else:
+        sys.stderr.write("skipped (download disabled)!\n") 
+    ndownloaded += 1
 
-## Initialize location:
-#observer = ephem.Observer()
-#observer.lat = np.radians(site_lat)
-#observer.lon = np.radians(site_lon)
-#observer.date = img_time.datetime
-
-#pf.writeto('new.fits', img_vals)
-#qsave('new.fits', img_vals)
-#qsave('new.fits', img_vals, header=hdr_keys)
-
-## Star extraction:
-#pse.set_image(img_vals, gain=3.6)
-#objlist = pse.analyze(sigthresh=5.0)
-
-##--------------------------------------------------------------------------##
-## Misc:
-#def log_10_product(x, pos):
-#   """The two args are the value and tick position.
-#   Label ticks with the product of the exponentiation."""
-#   return '%.2f' % (x)  # floating-point
-#
-#formatter = plt.FuncFormatter(log_10_product) # wrap function for use
-
-## Convenient, percentile-based plot limits:
-#def nice_limits(vec, pctiles=[1,99], pad=1.2):
-#    ends = np.percentile(vec, pctiles)
-#    middle = np.average(ends)
-#    return (middle + pad * (ends - middle))
-
-## Convenient plot limits for datetime/astropy.Time content:
-#def nice_time_limits(tvec, buffer=0.05):
-#    lower = tvec.min()
-#    upper = tvec.max()
-#    ndays = upper - lower
-#    return ((lower - 0.05*ndays).datetime, (upper + 0.05*ndays).datetime)
-
-## Convenient limits for datetime objects:
-#def dt_limits(vec, pad=0.1):
-#    tstart, tstop = vec.min(), vec.max()
-#    trange = (tstop - tstart).total_seconds()
-#    tpad = dt.timedelta(seconds=pad*trange)
-#    return (tstart - tpad, tstop + tpad)
-
-##--------------------------------------------------------------------------##
-## Solve prep:
-#ny, nx = img_vals.shape
-#x_list = (0.5 + np.arange(nx)) / nx - 0.5            # relative (centered)
-#y_list = (0.5 + np.arange(ny)) / ny - 0.5            # relative (centered)
-#xx, yy = np.meshgrid(x_list, y_list)                 # relative (centered)
-#xx, yy = np.meshgrid(nx*x_list, ny*y_list)           # absolute (centered)
-#xx, yy = np.meshgrid(np.arange(nx), np.arange(ny))   # absolute
-#yy, xx = np.meshgrid(np.arange(ny), np.arange(nx), indexing='ij') # absolute
-#yy, xx = np.nonzero(np.ones_like(img_vals))          # absolute
-#yy, xx = np.mgrid[0:ny,   0:nx].astype('uint16')     # absolute (array)
-#yy, xx = np.mgrid[1:ny+1, 1:nx+1].astype('uint16')   # absolute (pixel)
-
-## 1-D vectors:
-#x_pix, y_pix, ivals = xx.flatten(), yy.flatten(), img_vals.flatten()
-#w_vec = np.ones_like(ivals)            # start with uniform weights
-#design_matrix = np.column_stack((np.ones(x_pix.size), x_pix, y_pix))
-
-## Image fitting (statsmodels etc.):
-#data = sm.datasets.stackloss.load()
-#ols_res = sm.OLS(ivals, design_matrix).fit()
-#rlm_res = sm.RLM(ivals, design_matrix).fit()
-#rlm_model = sm.RLM(ivals, design_matrix, M=sm.robust.norms.HuberT())
-#rlm_res = rlm_model.fit()
-#data = pd.DataFrame({'xpix':x_pix, 'ypix':y_pix})
-#rlm_model = sm.RLM.from_formula("ivals ~ xpix + ypix", data)
-
-##--------------------------------------------------------------------------##
-## Theil-Sen line-fitting:
-#model = ts.linefit(xvals, yvals)
-#icept, slope = ts.linefit(xvals, yvals)
-
-##--------------------------------------------------------------------------##
-## KDE:
-#kde_pnts, kde_vals = mk.go(data_vec)
-
-##--------------------------------------------------------------------------##
-## Vaex plotting:
-#ds = vaex.open('big_file.hdf5')
-#ds = vaex.from_arrays(x=x, y=y)     # load from arrays
-#ds = vaex.from_csv('mydata.csv')
-
-## Stats:
-#ds.mean("x"), ds.std("x"), ds.correlation("vx**2+vy**2+vz**2", "E")
-#ds.plot(....)
-#http://vaex.astro.rug.nl/latest/tutorial_ipython_notebook.html
-
-##--------------------------------------------------------------------------##
-## Plot config:
-
-# gridspec examples:
-# https://matplotlib.org/users/gridspec.html
-
-#gs1 = gridspec.GridSpec(4, 4)
-#gs1.update(wspace=0.025, hspace=0.05)  # set axis spacing
-
-##--------------------------------------------------------------------------##
-fig_dims = (12, 10)
-fig = plt.figure(1, figsize=fig_dims)
-plt.gcf().clf()
-#fig, axs = plt.subplots(2, 2, sharex=True, figsize=fig_dims, num=1)
-# sharex='col' | sharex='row'
-#fig.frameon = False # disable figure frame drawing
-#fig.subplots_adjust(left=0.07, right=0.95)
-#ax1 = plt.subplot(gs[0, 0])
-#ax1 = fig.add_subplot(111)
-#ax1 = fig.add_axes([0, 0, 1, 1])
-#ax1.patch.set_facecolor((0.8, 0.8, 0.8))
-#ax1.grid(True)
-#ax1.axis('off')
-
-## Disable axis offsets:
-#ax1.xaxis.get_major_formatter().set_useOffset(False)
-#ax1.yaxis.get_major_formatter().set_useOffset(False)
-
-#ax1.plot(kde_pnts, kde_vals)
-
-#blurb = "some text"
-#ax1.text(0.5, 0.5, blurb, transform=ax1.transAxes)
-#ax1.text(0.5, 0.5, blurb, transform=ax1.transAxes,
-#      va='top', ha='left', bbox=dict(facecolor='white', pad=10.0))
-#      fontdict={'family':'monospace'}) # fixed-width
-
-#colors = cm.rainbow(np.linspace(0, 1, len(plot_list)))
-#for camid, c in zip(plot_list, colors):
-#    cam_data = subsets[camid]
-#    xvalue = cam_data['CCDATEMP']
-#    yvalue = cam_data['PIX_MED']
-#    yvalue = cam_data['IMEAN']
-#    ax1.scatter(xvalue, yvalue, color=c, lw=0, label=camid)
-
-#mtickpos = [2,5,7]
-#ndecades = 1.0   # for symlog, set width of linear portion in units of dex
-#nonposx='mask' | nonposx='clip' | nonposy='mask' | nonposy='clip'
-#ax1.set_xscale('log', basex=10, nonposx='mask', subsx=mtickpos)
-#ax1.set_xscale('log', nonposx='clip', subsx=[3])
-#ax1.set_yscale('symlog', basey=10, linthreshy=0.1, linscaley=ndecades)
-#ax1.xaxis.set_major_formatter(formatter) # re-format x ticks
-#ax1.set_ylim(ax1.get_ylim()[::-1])
-#ax1.set_xlabel('whatever', labelpad=30)  # push X label down 
-
-#ax1.set_xticks([1.0, 3.0, 10.0, 30.0, 100.0])
-#ax1.set_xticks([1, 2, 3], ['Jan', 'Feb', 'Mar'])
-#for label in ax1.get_xticklabels():
-#    label.set_rotation(30)
-
-#ax1.set_xlim(nice_limits(xvec, pctiles=[1,99], pad=1.2))
-#ax1.set_ylim(nice_limits(yvec, pctiles=[1,99], pad=1.2))
-
-#spts = ax1.scatter(x, y, lw=0, s=5)
-#cbar = fig.colorbar(spts, orientation='vertical')
-#cbar.formatter.set_useOffset(False)
-#cbar.update_ticks()
-
-#fig.tight_layout() # adjust boundaries sensibly, matplotlib v1.1+
-#plt.draw()
-#fig.savefig(plot_name, bbox_inches='tight')
-
-# cyclical colormap ... cmocean.cm.phase
-# cmocean: https://matplotlib.org/cmocean/
-
+sys.stderr.write("\nAll downloads completed.\n")
 
 
 
@@ -445,6 +301,6 @@ plt.gcf().clf()
 #---------------------------------------------------------------------
 #
 #  2018-09-05:
-#     -- Increased __version__ to 0.0.1.
+#     -- Increased __version__ to 0.1.0.
 #     -- First created bin/fetch-nres-data.py.
 #

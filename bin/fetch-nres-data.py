@@ -32,14 +32,6 @@ import time
 import numpy as np
 import requests
 
-## Time conversion:
-try:
-    import astropy.time as astt
-except ImportError:
-    sys.stderr.write("\nError: astropy module not found!\n"
-           "Please install and try again.\n\n")
-    sys.exit(1)
-
 ## LCO site information:
 try:
     import lco_site_info
@@ -56,6 +48,25 @@ auth_token = '2de3ffb5590fe7411e426d1d28d04376e77d05d1'
 import lco_api_helper
 reload(lco_api_helper)
 lcoreq = lco_api_helper.LcoRequest(auth_token)
+
+## Fancy/pretty file downloading:
+_fancy_downloading = False
+try:
+    import downloading
+    reload(downloading)
+    _fancy_downloading = True
+    fdl = downloading.Downloader()
+except ImportError:
+    sys.stderr.write("\nRequired 'downloading' module not found!\n"
+                    "Progress messages and rate limiting will be disabled.\n")
+
+## Time conversion:
+try:
+    import astropy.time as astt
+except ImportError:
+    sys.stderr.write("\nError: astropy module not found!\n"
+           "Please install and try again.\n\n")
+    sys.exit(1)
 
 ##--------------------------------------------------------------------------##
 ## Colors for fancy terminal output:
@@ -102,6 +113,18 @@ def mkdir_p(path):
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 
+## ISO date format checker:
+def date_is_iso(datestr):
+    try:
+        when = astt.Time(datestr, scale='utc', format='iso')
+        return True
+    except:
+        return False
+
+## Promote to full ISO date (including hh:mm:ss):
+def promote_full_iso(datestr):
+    return astt.Time(datestr).iso
+
 ## Parse arguments and run script:
 class MyParser(argparse.ArgumentParser):
     def error(self, message):
@@ -146,6 +169,14 @@ if __name__ == '__main__':
             dest='sci_only', action='store_true',
             help='only fetch NRES science data')
 
+    timegroup = parser.add_argument_group('Data Time Range')
+    timegroup.add_argument('-N', '--ndays', required=False, default=0.0,
+            type=float, help='restrict search to data from past N days')
+    timegroup.add_argument('--start', required=False, default=None, type=str,
+            help='start of time window (YYYY-MM-DD [hh:mm:ss])')
+    timegroup.add_argument('--end', required=False, default=None, type=str,
+            help='end of time window (YYYY-MM-DD [hh:mm:ss])')
+
     parser.set_defaults(data_rlevel=0, do_download=True)
 
     ordergroup = parser.add_argument_group('Download Order')
@@ -172,7 +203,7 @@ if __name__ == '__main__':
             help='data storage root (i.e., /archive/engineering)')
 
     miscgroup = parser.add_argument_group('Miscellany')
-    miscgroup.add_argument('--max_depth', required=False, default=5,
+    miscgroup.add_argument('--max_depth', required=False, default=0,
             type=int, help='max search iterations')
     miscgroup.add_argument('--max_files', required=False, default=500,
             type=int, help='max files per search iteration')
@@ -181,6 +212,22 @@ if __name__ == '__main__':
     context = parser.parse_args()
     context.vlevel = 99 if context.debug else (context.verbose-context.quiet)
 
+##--------------------------------------------------------------------------##
+
+## Halt in case of negative NDAYS lookback:
+if (context.ndays < 0.0):
+    sys.stderr.write("Error: NDAYS must be positive!\n")
+    sys.exit(1)
+
+## Halt in case of non-ISO start/end:
+for datestr in (context.start, context.end):
+    if datestr and not date_is_iso(datestr):
+        sys.stderr.write("\nError: non-ISO date string: '%s'\n" % datestr)
+        sys.exit(1)
+
+## Time range precedence warning:
+if (context.ndays > 0.0) and context.start:
+    sys.stderr.write("WARNING: option --ndays supercedes --start\n")
 
 ##--------------------------------------------------------------------------##
 ##------------------ Sanity Checks and Option Consequences  ----------------##
@@ -207,6 +254,10 @@ if not context.data_rlevel in rlevel_dirs.keys():
     sys.exit(1)
 
 ##--------------------------------------------------------------------------##
+
+
+
+##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -225,13 +276,24 @@ if context.cal_only:
 if context.sci_only:
     params['OBSTYPE'] = 'TARGET'
 
+## Optional data time range (NOTE: --ndays supercedes --start):
+if date_is_iso(context.end):
+    params['end'  ] = promote_full_iso(context.end)
+if date_is_iso(context.start):
+    params['start'] = promote_full_iso(context.start)
+if (context.ndays > 0.0):
+    look_back = astt.TimeDelta(context.ndays, format='jd')
+    params['start'] = (astt.Time.now() - look_back).iso
+
+## Initial pass to get total frame count:
+get_cmd = {'url':frame_url, 'headers':headers, 'params':params}
+total   = lcoreq.count_results(get_cmd)
+sys.stderr.write("Search identified %d frames in the LCO archive.\n" % total)
 
 ## Fetch frames (gets newest first):
-get_cmd = {'url':frame_url, 'headers':headers, 'params':params}
 results = []
 depth, rcount = lcoreq.recursive_request(get_cmd, results, 
         maxdepth=context.max_depth) #, maxdepth=1)
-first = results[0]
 nhits = len(results)
 
 ## Optionally reverse list (to oldest first):
@@ -244,6 +306,9 @@ for frame in results:
         sys.stderr.write("Error: unsupported site: %s\n" % frame['SITEID'])
         sys.exit(1)
 
+## Pre-download summary:
+sys.stderr.write("Retrieved frame list with %d entries.\n\n" % nhits)
+
 ##--------------------------------------------------------------------------##
 ## LCO path conventions:
 def make_rel_daydir(frame):
@@ -254,12 +319,8 @@ def make_rel_daydir(frame):
     ibase = os.path.basename(frame['filename'])
     obs_day = ibase.split('-')[2]
     return os.path.join(lsite, nrcam, obs_day)
-    #sub_dir = os.path.join(lsite, nrcam, obs_day)
-    #return (success, sub_dir)
 
 ## Download files:
-sys.stderr.write("Vet the results list ...\n")
-#sys.exit(0)
 ndownloaded = 0
 for i,frame in enumerate(results, 1):
     ibase = os.path.basename(frame['filename'])
@@ -268,23 +329,22 @@ for i,frame in enumerate(results, 1):
 
     # Make output path:
     daydir_path = os.path.join(context.save_root, make_rel_daydir(frame))
-    #sys.stderr.write("\ndaydir_path:\n--> %s\n" % daydir_path)
     save_folder = os.path.join(daydir_path, rlevel_dirs[frame['RLEVEL']])
-    #sys.stderr.write("\nsave_folder:\n--> %s\n" % save_folder)
     mkdir_p(save_folder)    # ensure existence
-    #continue
 
     isave = os.path.join(save_folder, ibase)
     if os.path.isfile(isave):
         sys.stderr.write("already retrieved!   ")
         continue
     itemp = 'dltemp_' + ibase
-    #sys.stderr.write("isave: %s\n" % isave)
 
     sys.stderr.write("not yet downloaded!  \nDownloading ... ")
     if context.do_download:
-        with open(itemp, 'wb') as f:
-            f.write(requests.get(frame['url']).content)
+        if _fancy_downloading:
+            fdl.fetch(frame['url'], itemp, resume=True, progress=True)
+        else:
+            with open(itemp, 'wb') as f:
+                f.write(requests.get(frame['url']).content)
         sys.stderr.write("moving ... ")
         shutil.move(itemp, isave)
         sys.stderr.write("done.\n")

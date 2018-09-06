@@ -1,0 +1,39 @@
+
+cd /scratch/rsiverd/mayhem/nres01/20170811
+
+
+import astropy.io.fits as pf
+import os, sys, time
+
+handydir = '/home/rsiverd/NRES/handy'
+tungdata = pf.getdata('med_tung01_20170811_03d_02b_00a.fits')
+yprofile = pf.getdata(os.path.join(handydir, 'spec_yprofile_med.fits.fz'))
+baffmask = pf.getdata(os.path.join(handydir, 'synthetic_baffle_mask_border.fits.fz'))
+baffsafe = ~np.bool_(baffmask)
+
+tungnorm = tungdata / yprofile
+tungsafe = np.copy(tungnorm)
+g3_sobel = pf.getdata('ggg.fits')
+scitrace = tungnorm * g3_sobel
+sci_vals = scitrace[~np.isnan(scitrace)]
+knee_val = np.median(sci_vals)
+
+pf.writeto('trace_div.fits', scitrace / knee_val, clobber=True)
+pf.writeto('trace_sub.fits', scitrace - knee_val, clobber=True)
+
+# -----------------------------------------------------------------------
+# data fetch:
+
+./bin/fetch-nres-data.py -o /net/shredder/hd1/siverd/arch_eng --debug
+
+./bin/fetch-nres-data.py -o /net/shredder/hd1/siverd/arch_eng --old-first --cal_only --start 2018-01-01 --end 2018-02-01
+./bin/fetch-nres-data.py -o /net/shredder/hd1/siverd/arch_eng --old-first --cal_only --start 2018-02-01 --end 2018-03-01
+./bin/fetch-nres-data.py -o /net/shredder/hd1/siverd/arch_eng --old-first --cal_only --start 2018-03-01 --end 2018-04-01
+./bin/fetch-nres-data.py -o /net/shredder/hd1/siverd/arch_eng --old-first --cal_only --start 2018-04-01 --end 2018-05-01
+./bin/fetch-nres-data.py -o /net/shredder/hd1/siverd/arch_eng --old-first --cal_only --start 2018-05-01 --end 2018-06-01
+./bin/fetch-nres-data.py -o /net/shredder/hd1/siverd/arch_eng --old-first --cal_only --start 2018-06-01 --end 2018-07-01
+./bin/fetch-nres-data.py -o /net/shredder/hd1/siverd/arch_eng --old-first --cal_only --start 2018-07-01 --end 2018-08-01
+./bin/fetch-nres-data.py -o /net/shredder/hd1/siverd/arch_eng --old-first --cal_only --start 2018-08-01 --end 2018-09-01
+./bin/fetch-nres-data.py -o /net/shredder/hd1/siverd/arch_eng --old-first --cal_only --start 2018-09-01 --end 2018-10-01
+
+

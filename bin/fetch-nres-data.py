@@ -330,24 +330,6 @@ depth, rcount = lcoreq.recursive_request(get_cmd, results,
         maxdepth=context.max_depth) #, maxdepth=1)
 nhits = len(results)
 
-### Count frames site-by-site:
-#sys.stderr.write("\nInitial frame count:\n")
-#total = 0
-#for qsite in context.want_sites:
-#    tparams = copy.deepcopy(params)
-#    tparams['SITEID'] = qsite
-#    get_cmd = {'url':frame_url, 'headers':headers, 'params':tparams}
-#    nfound  = lcoreq.count_results(get_cmd)
-#    sys.stderr.write("%s: %5d found\n" % (qsite, nfound))
-#    total += nfound
-#
-### Fetch frames site-by-site:
-#results = []
-#for qsite in context.want_sites:
-#depth, rcount = lcoreq.recursive_request(get_cmd, results, 
-#        maxdepth=context.max_depth) #, maxdepth=1)
-#nhits = len(results)
-
 ## Order by observation date:
 results.sort(key=lambda x:x['DATE_OBS'])
 
@@ -361,14 +343,8 @@ for frame in results:
         sys.stderr.write("Error: unsupported site: %s\n" % frame['SITEID'])
         sys.exit(1)
 
-## Drop sites on exclusion list:
-#if context.skipped_sites:
-#    pass
-
 ## Pre-download summary:
 sys.stderr.write("Final frame list has %d entries.\n\n" % nhits)
-#sys.exit(0)
-
 
 ##--------------------------------------------------------------------------##
 ## LCO path conventions:

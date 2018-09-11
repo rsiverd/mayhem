@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2018-09-05
-# Last modified: 2018-09-05
+# Last modified: 2018-09-11
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.1.0"
+__version__ = "0.1.5"
 
 ## Python version-agnostic module reloading:
 try:
@@ -28,6 +28,7 @@ import shutil
 import errno
 import os
 import sys
+import copy
 import time
 import numpy as np
 import requests
@@ -139,7 +140,7 @@ class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter,
 
 ## Parse the command line:
 if __name__ == '__main__':
-    allowed_sites = ['lsc', 'elp', 'cpt', 'tlv']
+    #allowed_sites = ['lsc', 'elp', 'cpt', 'tlv']
 
     # ------------------------------------------------------------------
     descr_txt = """
@@ -202,6 +203,19 @@ if __name__ == '__main__':
     filegroup.add_argument('-o', '--save_root', required=True, default=None,
             help='data storage root (i.e., /archive/engineering)')
 
+    sitegroup = parser.add_argument_group('Site Selection')
+    sitegroup = sitegroup.add_mutually_exclusive_group()
+    #sitegroup.add_argument('--skip-site', required=False, dest='skip_sites',
+    #        choices=nres_sites, action='append', default=[],
+    #        help='do not download files from SITE')
+    sitegroup.add_argument('-a', '--all-sites', required=False, default=False,
+            dest='all_sites', action='store_true',
+            help='retrieve data for all NRES sites')
+    sitegroup.add_argument('-s', '--site', required=False, dest='one_site',
+            choices=nres_sites, default=None,
+            help='retrieve data for specific site')
+            #help='add site to retrieval list (works multiple times)')
+
     miscgroup = parser.add_argument_group('Miscellany')
     miscgroup.add_argument('--max_depth', required=False, default=0,
             type=int, help='max search iterations')
@@ -212,7 +226,22 @@ if __name__ == '__main__':
     context = parser.parse_args()
     context.vlevel = 99 if context.debug else (context.verbose-context.quiet)
 
+    #if context.all_sites:
+    #    context.want_sites = copy.deepcopy(nres_sites)
+
 ##--------------------------------------------------------------------------##
+
+### Double-check valid site selection:
+#if context.one_site and context.skipped_sites:
+#    sys.stderr.write("Error: can't skip AND choose sits ...\n")
+#    sys.exit(1)
+
+### Some site specification is required:
+#if not context.want_sites:
+#    sys.stderr.write(BRED + "\nError: no site(s) specified!\n" + ENDC)
+#    sys.stderr.write("\nTry `%s --help` for more information.\n\n"
+#            % os.path.basename(__file__))
+#    sys.exit(1)
 
 ## Halt in case of negative NDAYS lookback:
 if (context.ndays < 0.0):
@@ -271,6 +300,11 @@ params['RLEVEL'] = context.data_rlevel
 params['basename'] = 'nrs'              # only NRES files!!
 #params['OBSTYPE'] = 'EXPOSE'
 #params[ 'covers'] = lcoreq.wkt_from_coord((314.809246, +43.629033))
+
+## Optionally restrict search to single site:
+params['SITEID'] = context.one_site
+
+## Cheesy selection of calibration or science data:
 if context.cal_only:
     params['PROPID'] = 'calibrate'
 if context.sci_only:
@@ -296,8 +330,29 @@ depth, rcount = lcoreq.recursive_request(get_cmd, results,
         maxdepth=context.max_depth) #, maxdepth=1)
 nhits = len(results)
 
+### Count frames site-by-site:
+#sys.stderr.write("\nInitial frame count:\n")
+#total = 0
+#for qsite in context.want_sites:
+#    tparams = copy.deepcopy(params)
+#    tparams['SITEID'] = qsite
+#    get_cmd = {'url':frame_url, 'headers':headers, 'params':tparams}
+#    nfound  = lcoreq.count_results(get_cmd)
+#    sys.stderr.write("%s: %5d found\n" % (qsite, nfound))
+#    total += nfound
+#
+### Fetch frames site-by-site:
+#results = []
+#for qsite in context.want_sites:
+#depth, rcount = lcoreq.recursive_request(get_cmd, results, 
+#        maxdepth=context.max_depth) #, maxdepth=1)
+#nhits = len(results)
+
+## Order by observation date:
+results.sort(key=lambda x:x['DATE_OBS'])
+
 ## Optionally reverse list (to oldest first):
-if context.oldest_first:
+if not context.oldest_first:
     results.reverse()
 
 ## Ensure all sites are actually NRES sites:
@@ -306,8 +361,14 @@ for frame in results:
         sys.stderr.write("Error: unsupported site: %s\n" % frame['SITEID'])
         sys.exit(1)
 
+## Drop sites on exclusion list:
+#if context.skipped_sites:
+#    pass
+
 ## Pre-download summary:
-sys.stderr.write("Retrieved frame list with %d entries.\n\n" % nhits)
+sys.stderr.write("Final frame list has %d entries.\n\n" % nhits)
+#sys.exit(0)
+
 
 ##--------------------------------------------------------------------------##
 ## LCO path conventions:
@@ -359,6 +420,10 @@ sys.stderr.write("\nAll downloads completed.\n")
 ######################################################################
 # CHANGELOG (bin/fetch-nres-data.py):
 #---------------------------------------------------------------------
+#
+#  2018-09-11:
+#     -- Increased __version__ to 0.1.5.
+#     -- Added site selection options -s, --site and --skip-site.
 #
 #  2018-09-05:
 #     -- Increased __version__ to 0.1.0.

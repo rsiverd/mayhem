@@ -165,6 +165,8 @@ if __name__ == '__main__':
             help='less progress/status reporting')
     parser.add_argument('-v', '--verbose', action='count', default=0,
             help='more progress/status reporting')
+    parser.add_argument('--cronjob', default=False, action='store_true',
+            help='use cron-friendly output messages')
     parser.add_argument('--debug', dest='debug', default=False,
             help='Enable extra debugging messages', action='store_true')
     #parser.add_argument('remainder', help='other stuff', nargs='*')
@@ -240,6 +242,9 @@ if __name__ == '__main__':
     #    context.want_sites = copy.deepcopy(nres_sites)
 
 ##--------------------------------------------------------------------------##
+## Disable progress reporting in 'cronjob' mode:
+if context.cronjob:
+    _fancy_downloading = False
 
 ### Double-check valid site selection:
 #if context.one_site and context.skipped_sites:

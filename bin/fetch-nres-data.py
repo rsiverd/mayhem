@@ -24,6 +24,7 @@ except NameError:
 
 ## Modules:
 import argparse
+import signal
 import shutil
 import errno
 import os
@@ -33,6 +34,15 @@ import time
 import numpy as np
 import requests
 
+##--------------------------------------------------------------------------##
+## Catch interruption cleanly:
+def signal_handler(signum, frame):
+    sys.stderr.write("\nInterrupted!\n\n")
+    sys.exit(1)
+
+signal.signal(signal.SIGINT, signal_handler)
+
+##--------------------------------------------------------------------------##
 ## LCO site information:
 try:
     import lco_site_info
@@ -321,13 +331,21 @@ if (context.ndays > 0.0):
 
 ## Initial pass to get total frame count:
 get_cmd = {'url':frame_url, 'headers':headers, 'params':params}
-total   = lcoreq.count_results(get_cmd)
+try:
+    total = lcoreq.count_results(get_cmd)
+except:
+    sys.stderr.write("Error: frame count failed!\n")
+    sys.exit(1)
 sys.stderr.write("Search identified %d frames in the LCO archive.\n" % total)
 
 ## Fetch frames (gets newest first):
 results = []
-depth, rcount = lcoreq.recursive_request(get_cmd, results, 
-        maxdepth=context.max_depth) #, maxdepth=1)
+try:
+    depth, rcount = lcoreq.recursive_request(get_cmd, results, 
+            maxdepth=context.max_depth)
+except:
+    sys.stderr.write("Error: recursive frame retrieval failed!\n")
+    sys.exit(1)
 nhits = len(results)
 
 ## Order by observation date:

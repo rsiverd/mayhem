@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2018-09-05
-# Last modified: 2018-09-11
+# Last modified: 2018-09-18
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.1.5"
+__version__ = "0.2.0"
 
 ## Python version-agnostic module reloading:
 try:
@@ -347,6 +347,36 @@ for frame in results:
 sys.stderr.write("Final frame list has %d entries.\n\n" % nhits)
 
 ##--------------------------------------------------------------------------##
+## Multi-method download wrapper with built-in retry:
+def attempt_download(frame, filename, tmpfile):
+    if _fancy_downloading:
+        try:
+            fdl.fetch(frame['url'], tmpfile, resume=True, progress=True)
+        except:
+            return False
+    else:
+        try:
+            with open(tmpfile, 'wb') as f:
+                f.write(requests.get(frame['url']).content)
+        except:
+            return False
+    sys.stderr.write("moving ... ")
+    shutil.move(tmpfile, filename)
+    sys.stderr.write("done.\n")
+    return True
+
+def download_with_retry(frame, filename, tmpfile, maxtry=5):
+    n_iters = 0
+    success = False
+    while not success:
+        success = attempt_download(frame, filename, tmpfile)
+        n_iters += 1
+        if (n_iters >= maxtry):
+            return False
+        pass
+    return True
+
+##--------------------------------------------------------------------------##
 ## LCO path conventions:
 def make_rel_daydir(frame):
     lsite = frame['SITEID']
@@ -377,14 +407,17 @@ for i,frame in enumerate(results, 1):
 
     sys.stderr.write("not yet downloaded!  \nDownloading ... ")
     if context.do_download:
-        if _fancy_downloading:
-            fdl.fetch(frame['url'], itemp, resume=True, progress=True)
-        else:
-            with open(itemp, 'wb') as f:
-                f.write(requests.get(frame['url']).content)
-        sys.stderr.write("moving ... ")
-        shutil.move(itemp, isave)
-        sys.stderr.write("done.\n")
+        if not download_with_retry(frame, isave, itemp):
+            sys.stderr.write("Trouble downloading ... move on!\n")
+            continue
+        #if _fancy_downloading:
+        #    fdl.fetch(frame['url'], itemp, resume=True, progress=True)
+        #else:
+        #    with open(itemp, 'wb') as f:
+        #        f.write(requests.get(frame['url']).content)
+        #sys.stderr.write("moving ... ")
+        #shutil.move(itemp, isave)
+        #sys.stderr.write("done.\n")
     else:
         sys.stderr.write("skipped (download disabled)!\n") 
     ndownloaded += 1

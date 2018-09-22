@@ -410,37 +410,44 @@ def make_rel_daydir(frame):
     obs_day = ibase.split('-')[2]
     return os.path.join(lsite, nrcam, obs_day)
 
+## Assemble local full path for specified frame:
+def get_local_path_from_frame(frame, local_root):
+    ibase = os.path.basename(frame['filename'])
+    daydir_path = os.path.join(context.save_root, make_rel_daydir(frame))
+    rlevel_path = os.path.join(daydir_path, rlevel_dirs[frame['RLEVEL']])
+    return os.path.join(rlevel_path, ibase)
+
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+
 ## Download files:
 ndownloaded = 0
 for i,frame in enumerate(results, 1):
+
+    # Get local path, check for file:
     ibase = os.path.basename(frame['filename'])
-    lsite = frame['SITEID']
+    isave = get_local_path_from_frame(frame, context.save_root)
     sys.stderr.write("\rFetching %s (%d of %d) ... " % (ibase, i, nhits))
-
-    # Make output path:
-    daydir_path = os.path.join(context.save_root, make_rel_daydir(frame))
-    save_folder = os.path.join(daydir_path, rlevel_dirs[frame['RLEVEL']])
-    mkdir_p(save_folder)    # ensure existence
-
-    isave = os.path.join(save_folder, ibase)
     if os.path.isfile(isave):
         sys.stderr.write("already retrieved!   ")
         continue
-    itemp = 'dltemp_' + ibase
+
+    # Ensure output folder exists:
+    save_folder = os.path.dirname(isave)
+    #daydir_path = os.path.join(context.save_root, make_rel_daydir(frame))
+    #save_folder = os.path.join(daydir_path, rlevel_dirs[frame['RLEVEL']])
+    mkdir_p(save_folder)    # ensure existence
+
+    #isave = os.path.join(save_folder, ibase)
 
     sys.stderr.write("not yet downloaded!  \nDownloading ... ")
+    itemp = 'dltemp_' + ibase
     if context.do_download:
         if not download_with_retry(frame, isave, itemp):
             sys.stderr.write("Trouble downloading ... move on!\n")
             continue
-        #if _fancy_downloading:
-        #    fdl.fetch(frame['url'], itemp, resume=True, progress=True)
-        #else:
-        #    with open(itemp, 'wb') as f:
-        #        f.write(requests.get(frame['url']).content)
-        #sys.stderr.write("moving ... ")
-        #shutil.move(itemp, isave)
-        #sys.stderr.write("done.\n")
     else:
         sys.stderr.write("skipped (download disabled)!\n") 
     ndownloaded += 1

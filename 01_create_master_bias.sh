@@ -4,14 +4,14 @@
 #
 # Rob Siverd
 # Created:      2017-07-10
-# Last updated: 2018-08-07
+# Last updated: 2018-09-28
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.60"
+script_version="0.61"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -28,7 +28,7 @@ access_mode="symlink" # (symlink|copy) how to access existing 'clean' files
 tmp_name="$(date +%Y%m%d.%H%M%S).$$.$(whoami)"
 tmp_root="/tmp"
 [ -d /dev/shm ] && [ -w /dev/shm ] && tmp_root="/dev/shm"
-tmp_dir="$tmp_root"
+#tmp_dir="$tmp_root"
 tmp_dir="$tmp_root/$tmp_name"
 mkdir -p $tmp_dir
 foo="$tmp_dir/foo_$$.fits"
@@ -122,15 +122,17 @@ done
 ## Load configuration files:
 conf_file="config.sh"
 cams_list="cameras.txt"
+good_cams="$tmp_dir/cleaned_camera_list.txt"
 [ -f $conf_file ] || ErrorAbort "Can't find file: $conf_file"
 [ -f $cams_list ] || ErrorAbort "Can't find file: $cams_list" 
 cmde "source $conf_file"
 declare -A cam_storage
 declare -A cam_startdate
-exec 10<$cams_list
-while read cam folder startdate <&10; do
-   cam_storage[$cam]="$folder"
-   cam_startdate[$cam]="$startdate"
+grep -v '^#' $cams_list > $good_cams   # remove comments
+exec 10<$good_cams
+while read cam subfolder startdate <&10; do
+   cam_storage[$cam]="${arch_root}/${subfolder}"
+   cam_startdate[$cam]="${startdate}"
 done
 exec 10>&-
 

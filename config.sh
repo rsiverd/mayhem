@@ -1,6 +1,14 @@
 
-arch_root="/archive/engineering"
-save_root="/scratch/rsiverd/mayhem"
+## LCO paths:
+#arch_root="/archive/engineering"
+#save_root="/scratch/rsiverd/mayhem"
+
+## Vanderbilt paths:
+shredder_hd1="/net/shredder.phy.vanderbilt.edu/hd1"
+arch_root="${shredder_hd1}/siverd/arch_eng"
+save_root="${shredder_hd1}/siverd/mayhem_proc"
+
+## Other configuration files:
 calib_conf="./calib_types.txt"
 barrier_list="./barriers.txt"
 

@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2018-09-05
-# Last modified: 2018-09-18
+# Last modified: 2018-10-03
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.2.0"
+__version__ = "0.2.2"
 
 ## Python version-agnostic module reloading:
 try:
@@ -413,9 +413,33 @@ def make_rel_daydir(frame):
 ## Assemble local full path for specified frame:
 def get_local_path_from_frame(frame, local_root):
     ibase = os.path.basename(frame['filename'])
-    daydir_path = os.path.join(context.save_root, make_rel_daydir(frame))
+    daydir_path = os.path.join(local_root, make_rel_daydir(frame))
     rlevel_path = os.path.join(daydir_path, rlevel_dirs[frame['RLEVEL']])
     return os.path.join(rlevel_path, ibase)
+
+## Check if local frame copy exists:
+def already_have_frame(frame, local_root):
+    return os.path.isfile(get_local_path_from_frame(frame, local_root))
+
+def frame_not_found(frame, local_root):
+    return (not os.path.isfile(get_local_path_from_frame(frame, local_root)))
+
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+
+## Identify not-yet-fetched images:
+sys.stderr.write("Identify remaining frames ... ")
+still_need = [x for x in results if frame_not_found(x, context.save_root)]
+sys.stderr.write("done.\n")
+sys.stderr.write("Frames remaining: %d\n" % len(still_need))
+
+## Stop if nothing to fetch:
+if not still_need:
+    #sys.stderr.write("No new frames to retrieve!\n")
+    sys.stderr.write("Nothing to do!\n")
+    sys.exit(0)
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -424,7 +448,7 @@ def get_local_path_from_frame(frame, local_root):
 
 ## Download files:
 ndownloaded = 0
-for i,frame in enumerate(results, 1):
+for i,frame in enumerate(still_need, 1):
 
     # Get local path, check for file:
     ibase = os.path.basename(frame['filename'])
@@ -436,8 +460,6 @@ for i,frame in enumerate(results, 1):
 
     # Ensure output folder exists:
     save_folder = os.path.dirname(isave)
-    #daydir_path = os.path.join(context.save_root, make_rel_daydir(frame))
-    #save_folder = os.path.join(daydir_path, rlevel_dirs[frame['RLEVEL']])
     mkdir_p(save_folder)    # ensure existence
 
     #isave = os.path.join(save_folder, ibase)

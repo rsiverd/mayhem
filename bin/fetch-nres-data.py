@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2018-09-05
-# Last modified: 2018-10-03
+# Last modified: 2018-10-08
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.2.2"
+__version__ = "0.2.3"
 
 ## Python version-agnostic module reloading:
 try:
@@ -171,16 +171,24 @@ if __name__ == '__main__':
             help='Enable extra debugging messages', action='store_true')
     #parser.add_argument('remainder', help='other stuff', nargs='*')
     #parser.set_defaults(thing='value')
+    parser.set_defaults(data_rlevel=0, do_download=True)
     # ------------------------------------------------------------------
     # ------------------------------------------------------------------
     typegroup = parser.add_argument_group('NRES Data Types')
-    typegroup = typegroup.add_mutually_exclusive_group()
-    typegroup.add_argument('--cal_only', required=False, default=False,
+    calib_sci = typegroup.add_mutually_exclusive_group()
+    calib_sci.add_argument('--cal_only', required=False, default=False,
             dest='cal_only', action='store_true',
             help='only fetch NRES calibration data')
-    typegroup.add_argument('--sci_only', required=False, default=False,
+    calib_sci.add_argument('--sci_only', required=False, default=False,
             dest='sci_only', action='store_true',
             help='only fetch NRES science data')
+    rdx_level = typegroup.add_mutually_exclusive_group()
+    rdx_level.add_argument('--raw', required=False, dest='data_rlevel',
+            action='store_const', const=0,
+            help='only retrieve raw data (RLEVEL 00)')
+    rdx_level.add_argument('--proc', required=False, dest='data_rlevel',
+            action='store_const', const=91,
+            help='only retrieve processed data (RLEVEL 91)')
 
     timegroup = parser.add_argument_group('Data Time Range')
     timegroup.add_argument('-N', '--ndays', required=False, default=0.0,
@@ -190,7 +198,6 @@ if __name__ == '__main__':
     timegroup.add_argument('--end', required=False, default=None, type=str,
             help='end of time window (YYYY-MM-DD [hh:mm:ss])')
 
-    parser.set_defaults(data_rlevel=0, do_download=True)
 
     ordergroup = parser.add_argument_group('Download Order')
     ordergroup = ordergroup.add_mutually_exclusive_group()
@@ -311,10 +318,13 @@ headers = {'Authorization': 'Token ' + context.token}
 base_url = 'https://archive-api.lco.global/'
 frame_url = base_url + 'frames/'
 params = {'limit':context.max_files}
-params['RLEVEL'] = context.data_rlevel
 params['basename'] = 'nrs'              # only NRES files!!
 #params['OBSTYPE'] = 'EXPOSE'
 #params[ 'covers'] = lcoreq.wkt_from_coord((314.809246, +43.629033))
+
+## Specific RLEVEL (if provided):
+if (context.data_rlevel != None):
+    params['RLEVEL'] = context.data_rlevel
 
 ## Optionally restrict search to single site:
 params['SITEID'] = context.one_site

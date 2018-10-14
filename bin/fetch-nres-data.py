@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2018-09-05
-# Last modified: 2018-10-08
+# Last modified: 2018-10-13
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.2.3"
+__version__ = "0.2.4"
 
 ## Python version-agnostic module reloading:
 try:
@@ -457,13 +457,14 @@ if not still_need:
 ##--------------------------------------------------------------------------##
 
 ## Download files:
+total = len(still_need)
 ndownloaded = 0
 for i,frame in enumerate(still_need, 1):
 
     # Get local path, check for file:
     ibase = os.path.basename(frame['filename'])
     isave = get_local_path_from_frame(frame, context.save_root)
-    sys.stderr.write("\rFetching %s (%d of %d) ... " % (ibase, i, nhits))
+    sys.stderr.write("\rFetching %s (%d of %d) ... " % (ibase, i, total))
     if os.path.isfile(isave):
         sys.stderr.write("already retrieved!   ")
         continue

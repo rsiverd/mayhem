@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2018-09-05
-# Last modified: 2018-10-13
+# Last modified: 2018-10-16
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.2.4"
+__version__ = "0.2.5"
 
 ## Python version-agnostic module reloading:
 try:
@@ -36,11 +36,11 @@ import requests
 
 ##--------------------------------------------------------------------------##
 ## Catch interruption cleanly:
-def signal_handler(signum, frame):
-    sys.stderr.write("\nInterrupted!\n\n")
-    sys.exit(1)
-
-signal.signal(signal.SIGINT, signal_handler)
+#def signal_handler(signum, frame):
+#    sys.stderr.write("\nInterrupted!\n\n")
+#    sys.exit(1)
+#
+#signal.signal(signal.SIGINT, signal_handler)
 
 ##--------------------------------------------------------------------------##
 ## LCO site information:
@@ -391,6 +391,9 @@ def attempt_download(frame, filename, tmpfile):
         try:
             with open(tmpfile, 'wb') as f:
                 f.write(requests.get(frame['url']).content)
+        except (KeyboardInterrupt, SystemExit):
+            sys.stderr.write("Exit requested ...\n")
+            sys.exit(1)
         except:
             return False
     sys.stderr.write("moving ... ")

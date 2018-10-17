@@ -171,7 +171,7 @@ if __name__ == '__main__':
             help='Enable extra debugging messages', action='store_true')
     #parser.add_argument('remainder', help='other stuff', nargs='*')
     #parser.set_defaults(thing='value')
-    parser.set_defaults(data_rlevel=0, do_download=True)
+    parser.set_defaults(data_rlevel=None, do_download=True)
     # ------------------------------------------------------------------
     # ------------------------------------------------------------------
     typegroup = parser.add_argument_group('NRES Data Types')
@@ -298,11 +298,12 @@ if not os.path.isdir(context.save_root):
 
 ## Frame RLEVEL must be one of the allowed values:
 rlevel_dirs = {0:'raw', 91:'specproc'}
-if not context.data_rlevel in rlevel_dirs.keys():
-    sys.stderr.write("\n"
-                    + "Unrecognized RLEVEL: %d\n\n" % context.data_rlevel
-                    + "You should not see this ... please fix!!\n\n")
-    sys.exit(1)
+if (context.data_rlevel != None):
+    if not context.data_rlevel in rlevel_dirs.keys():
+        sys.stderr.write("\n"
+                        + "Unrecognized RLEVEL: %d\n\n" % context.data_rlevel
+                        + "You should not see this ... please fix!!\n\n")
+        sys.exit(1)
 
 ##--------------------------------------------------------------------------##
 

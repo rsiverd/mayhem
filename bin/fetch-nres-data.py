@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2018-09-05
-# Last modified: 2018-10-16
+# Last modified: 2018-10-31
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.2.5"
+__version__ = "0.3.0"
 
 ## Python version-agnostic module reloading:
 try:
@@ -386,36 +386,36 @@ sys.stderr.write("Final frame list has %d entries.\n\n" % nhits)
 
 ##--------------------------------------------------------------------------##
 ## Multi-method download wrapper with built-in retry:
-def attempt_download(frame, filename, tmpfile):
-    if _fancy_downloading:
-        try:
-            fdl.fetch(frame['url'], tmpfile, resume=True, progress=True)
-        except:
-            return False
-    else:
-        try:
-            with open(tmpfile, 'wb') as f:
-                f.write(requests.get(frame['url']).content)
-        except (KeyboardInterrupt, SystemExit):
-            sys.stderr.write("Exit requested ...\n")
-            sys.exit(1)
-        except:
-            return False
-    sys.stderr.write("moving ... ")
-    shutil.move(tmpfile, filename)
-    sys.stderr.write("done.\n")
-    return True
+#def attempt_download(frame, filename, tmpfile):
+#    if _fancy_downloading:
+#        try:
+#            fdl.fetch(frame['url'], tmpfile, resume=True, progress=True)
+#        except:
+#            return False
+#    else:
+#        try:
+#            with open(tmpfile, 'wb') as f:
+#                f.write(requests.get(frame['url']).content)
+#        except (KeyboardInterrupt, SystemExit):
+#            sys.stderr.write("Exit requested ...\n")
+#            sys.exit(1)
+#        except:
+#            return False
+#    sys.stderr.write("moving ... ")
+#    shutil.move(tmpfile, filename)
+#    sys.stderr.write("done.\n")
+#    return True
 
-def download_with_retry(frame, filename, tmpfile, maxtry=5):
-    n_iters = 0
-    success = False
-    while not success:
-        success = attempt_download(frame, filename, tmpfile)
-        n_iters += 1
-        if (n_iters >= maxtry):
-            return False
-        pass
-    return True
+#def download_with_retry(frame, filename, tmpfile, maxtry=5):
+#    n_iters = 0
+#    success = False
+#    while not success:
+#        success = attempt_download(frame, filename, tmpfile)
+#        n_iters += 1
+#        if (n_iters >= maxtry):
+#            return False
+#        pass
+#    return True
 
 ##--------------------------------------------------------------------------##
 ## LCO path conventions:

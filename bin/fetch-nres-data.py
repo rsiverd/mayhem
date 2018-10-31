@@ -253,6 +253,7 @@ if __name__ == '__main__':
 if context.cronjob:
     _fancy_downloading = False
 
+
 ### Double-check valid site selection:
 #if context.one_site and context.skipped_sites:
 #    sys.stderr.write("Error: can't skip AND choose sits ...\n")
@@ -290,6 +291,9 @@ if context.debug:
     context.max_depth = 1
     context.max_files = 50
     context.do_download = False
+
+## Disable downloads if requested (debugging):
+fdl.allow_download(context.do_download)
 
 ## Root output folder must already exist:
 if not os.path.isdir(context.save_root):
@@ -459,6 +463,37 @@ if not still_need:
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
+
+
+## Make spec list for download:
+fetch_specs = []
+for frame in still_need:
+    full_save = get_local_path_from_frame(frame, context.save_root)
+    temp_save = os.path.basename(full_save)
+    fetch_specs.append((frame['url'], full_save, temp_save))
+
+## Enable/skip downloads:
+fdl.allow_download(context.do_download)
+
+## Download files:
+try:
+    outcome = fdl.smart_fetch_bulk(fetch_specs)
+except KeyboardInterrupt as exc:
+    sys.stderr.write("Caught interrupt!\n")
+    sys.exit(1)
+except SystemExit as exc:
+    sys.stderr.write("Caught system exit!\n")
+    sys.exit(1)
+except:
+    sys.stderr.write("Unspecified failure ...\n")
+    sys.exit(1)
+
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+
+sys.exit(0)
 
 ## Download files:
 total = len(still_need)

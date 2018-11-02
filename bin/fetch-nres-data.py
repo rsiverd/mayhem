@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2018-09-05
-# Last modified: 2018-10-31
+# Last modified: 2018-11-01
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.3.0"
+__version__ = "0.3.5"
 
 ## Python version-agnostic module reloading:
 try:
@@ -56,9 +56,9 @@ nres_cam_map = dict([(x, lsi[x]['nres_spec'][0]['cam']) for x in nres_sites])
 
 ## LCO API requests:
 auth_token = '2de3ffb5590fe7411e426d1d28d04376e77d05d1'
-import lco_api_helper
-reload(lco_api_helper)
-lcoreq = lco_api_helper.LcoRequest(auth_token)
+import lco_api_tools
+reload(lco_api_tools)
+lcofrm = lco_api_tools.LCO_Frames(auth_token)
 
 ## Fancy/pretty file downloading:
 _fancy_downloading = False
@@ -110,14 +110,14 @@ fulldiv = halfdiv + halfdiv
 
 ##--------------------------------------------------------------------------##
 ## Recursive directory creation (emulates `mkdir -p`):
-def mkdir_p(path):
-    try:
-        os.makedirs(path)
-    except OSError as exc:  # Python >2.5
-        if exc.errno == errno.EEXIST and os.path.isdir(path):
-            pass
-        else:
-            raise
+#def mkdir_p(path):
+#    try:
+#        os.makedirs(path)
+#    except OSError as exc:  # Python >2.5
+#        if exc.errno == errno.EEXIST and os.path.isdir(path):
+#            pass
+#        else:
+#            raise
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -325,7 +325,7 @@ frame_url = base_url + 'frames/'
 params = {'limit':context.max_files}
 params['basename'] = 'nrs'              # only NRES files!!
 #params['OBSTYPE'] = 'EXPOSE'
-#params[ 'covers'] = lcoreq.wkt_from_coord((314.809246, +43.629033))
+#params[ 'covers'] = lcofrm.wkt_from_coord((314.809246, +43.629033))
 
 ## Specific RLEVEL (if provided):
 if (context.data_rlevel != None):
@@ -352,7 +352,7 @@ if (context.ndays > 0.0):
 ## Initial pass to get total frame count:
 get_cmd = {'url':frame_url, 'headers':headers, 'params':params}
 try:
-    total = lcoreq.count_results(get_cmd)
+    total = lcofrm.count_results(get_cmd)
 except:
     sys.stderr.write("Error: frame count failed!\n")
     sys.exit(1)
@@ -361,7 +361,7 @@ sys.stderr.write("Search identified %d frames in the LCO archive.\n" % total)
 ## Fetch frames (gets newest first):
 results = []
 try:
-    depth, rcount = lcoreq.recursive_request(get_cmd, results, 
+    depth, rcount = lcofrm.recursive_request(get_cmd, results, 
             maxdepth=context.max_depth)
 except:
     sys.stderr.write("Error: recursive frame retrieval failed!\n")
@@ -493,38 +493,38 @@ except:
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 
-sys.exit(0)
-
-## Download files:
-total = len(still_need)
-ndownloaded = 0
-for i,frame in enumerate(still_need, 1):
-
-    # Get local path, check for file:
-    ibase = os.path.basename(frame['filename'])
-    isave = get_local_path_from_frame(frame, context.save_root)
-    sys.stderr.write("\rFetching %s (%d of %d) ... " % (ibase, i, total))
-    if os.path.isfile(isave):
-        sys.stderr.write("already retrieved!   ")
-        continue
-
-    # Ensure output folder exists:
-    save_folder = os.path.dirname(isave)
-    mkdir_p(save_folder)    # ensure existence
-
-    #isave = os.path.join(save_folder, ibase)
-
-    sys.stderr.write("not yet downloaded!  \nDownloading ... ")
-    itemp = 'dltemp_' + ibase
-    if context.do_download:
-        if not download_with_retry(frame, isave, itemp):
-            sys.stderr.write("Trouble downloading ... move on!\n")
-            continue
-    else:
-        sys.stderr.write("skipped (download disabled)!\n") 
-    ndownloaded += 1
-
-sys.stderr.write("\nAll downloads completed.\n")
+#sys.exit(0)
+#
+### Download files:
+#total = len(still_need)
+#ndownloaded = 0
+#for i,frame in enumerate(still_need, 1):
+#
+#    # Get local path, check for file:
+#    ibase = os.path.basename(frame['filename'])
+#    isave = get_local_path_from_frame(frame, context.save_root)
+#    sys.stderr.write("\rFetching %s (%d of %d) ... " % (ibase, i, total))
+#    if os.path.isfile(isave):
+#        sys.stderr.write("already retrieved!   ")
+#        continue
+#
+#    # Ensure output folder exists:
+#    save_folder = os.path.dirname(isave)
+#    mkdir_p(save_folder)    # ensure existence
+#
+#    #isave = os.path.join(save_folder, ibase)
+#
+#    sys.stderr.write("not yet downloaded!  \nDownloading ... ")
+#    itemp = 'dltemp_' + ibase
+#    if context.do_download:
+#        if not download_with_retry(frame, isave, itemp):
+#            sys.stderr.write("Trouble downloading ... move on!\n")
+#            continue
+#    else:
+#        sys.stderr.write("skipped (download disabled)!\n") 
+#    ndownloaded += 1
+#
+#sys.stderr.write("\nAll downloads completed.\n")
 
 
 

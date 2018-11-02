@@ -70,6 +70,7 @@ try:
 except ImportError:
     sys.stderr.write("\nRequired 'downloading' module not found!\n"
                     "Progress messages and rate limiting will be disabled.\n")
+    sys.exit(1)
 
 ## Time conversion:
 try:

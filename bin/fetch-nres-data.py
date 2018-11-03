@@ -61,11 +61,11 @@ reload(lco_api_tools)
 lcofrm = lco_api_tools.LCO_Frames(auth_token)
 
 ## Fancy/pretty file downloading:
-_fancy_downloading = False
+#_fancy_downloading = False
 try:
     import downloading
     reload(downloading)
-    _fancy_downloading = True
+    #_fancy_downloading = True
     fdl = downloading.Downloader()
 except ImportError:
     sys.stderr.write("\nRequired 'downloading' module not found!\n"
@@ -252,7 +252,8 @@ if __name__ == '__main__':
 ##--------------------------------------------------------------------------##
 ## Disable progress reporting in 'cronjob' mode:
 if context.cronjob:
-    _fancy_downloading = False
+    #_fancy_downloading = False
+    fdl.noprogress()
 
 
 ### Double-check valid site selection:

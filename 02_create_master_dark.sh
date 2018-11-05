@@ -4,14 +4,14 @@
 #
 # Rob Siverd
 # Created:      2017-07-10
-# Last updated: 2018-09-28
+# Last updated: 2018-11-05
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.66"
+script_version="0.67"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -398,7 +398,7 @@ else
    timer
 
    # Add stats and identifiers to header:
-   cmde "fitsperc -qS $foo"                                 || exit $?
+   cmde "fitsperc -qS $foo --parallel3"                     || exit $?
    cmde "kimstat -qSC9 $foo"                                || exit $?
    cmde "record_data_version $foo -b $min_bias_data_vers"   || exit $?
    cmde "record_code_version $foo -b $min_bias_code_vers"   || exit $?

@@ -213,7 +213,7 @@ echo "ndark: $ndark"
 
 ## Output files:
 nite_folder="$save_root/$camid/$fdate"
-nite_dark="$nite_folder/med_${camid}_dark_${fdate}_${drtag}.fits"
+nite_dark="$nite_folder/med_${camid}_dark_${fdate}_${drtag}.fits.fz"
 cmde "mkdir -p $nite_folder" || exit $?
 
 ##--------------------------------------------------------------------------##
@@ -319,7 +319,7 @@ else
       # Temporary 'clean' file name (includes DRTAG of best-available bias):
       ibase="${image##*/}"
       ifits="${ibase%.fz}"
-      cbase="clean_${bdr_tag}_${ifits}"
+      cbase="clean_${bdr_tag}_${ifits}.fz"
       isave="$tmp_dir/$cbase"
 
       # Use existing cleaned dark if possible:
@@ -370,6 +370,7 @@ else
       cmde "update_output_header $foo $camid DARK 1.0 $drtag"        || exit $?
       #echo "inspect: $foo"
       #read pause
+      cmde "fpack -F -Y -qt 32 $foo"                                 || exit $?
       cmde "mv -f $foo $isave"                                       || exit $?
 
       # Preserve files (if requested):
@@ -381,20 +382,20 @@ else
    done
    timer
 
-   min_bias_data_vers=$(find_min_cal_version -b $tmp_dir/clean*fits)
+   min_bias_data_vers=$(find_min_cal_version -b $tmp_dir/clean*fits.fz)
    echo "min_bias_data_vers: $min_bias_data_vers"
-   min_bias_code_vers=$(find_min_cal_version -B $tmp_dir/clean*fits)
+   min_bias_code_vers=$(find_min_cal_version -B $tmp_dir/clean*fits.fz)
    echo "min_bias_code_vers: $min_bias_code_vers"
-   min_dark_data_vers=$(find_min_cal_version -d $tmp_dir/clean*fits)
+   min_dark_data_vers=$(find_min_cal_version -d $tmp_dir/clean*fits.fz)
    echo "min_dark_data_vers: $min_dark_data_vers"
-   min_dark_code_vers=$(find_min_cal_version -D $tmp_dir/clean*fits)
+   min_dark_code_vers=$(find_min_cal_version -D $tmp_dir/clean*fits.fz)
    echo "min_dark_code_vers: $min_dark_code_vers"
 
    # Combine darks with outlier rejection (stack_args in config.sh):
    mecho "\n`RowWrite 75 -`\n"
    opts="$dark_stack_args"
-   cmde "medianize $opts $tmp_dir/clean*fits -o '!$foo'"    || exit $?
-   append_input_histories $foo $tmp_dir/clean*fits          || exit $?
+   cmde "medianize $opts $tmp_dir/clean*fits.fz -o '!$foo'" || exit $?
+   append_input_histories $foo $tmp_dir/clean*fits.fz       || exit $?
    timer
 
    # Add stats and identifiers to header:
@@ -407,6 +408,7 @@ else
    cmde "record_code_version $foo -d $script_version"       || exit $?
    #hargs=( $camid DARK 1.0 $drtag )
    cmde "update_output_header $foo $camid DARK 1.0 $drtag"  || exit $?
+   cmde "fpack -D -F -qt 32 $foo"                           || exit $?
    cmde "mv -f $foo $nite_dark"                             || exit $?
 
    ## Preserve stack files (if requested):

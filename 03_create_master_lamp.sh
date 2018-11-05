@@ -263,7 +263,7 @@ echo "nlamp: $nlamp"
 
 ## Output files:
 nite_folder="$save_root/$camid/$fdate"
-nite_lampsave="$nite_folder/med_${camid}_${calib_type}_${fdate}_${drtag}.fits"
+nite_lampsave="$nite_folder/med_${camid}_${calib_type}_${fdate}_${drtag}.fits.fz"
 cmde "mkdir -p $nite_folder" || exit $?
 
 ##--------------------------------------------------------------------------##
@@ -339,7 +339,7 @@ else
       # Temporary 'clean' file name (includes DRTAG of associated calibs):
       ibase="${image##*/}"
       ifits="${ibase%.fz}"
-      cbase="clean_${drtag}_${ifits}"
+      cbase="clean_${drtag}_${ifits}.fz"
       isave="$tmp_dir/$cbase"
 
       # Use existing cleaned lamp if possible:
@@ -434,12 +434,12 @@ else
    timer
 
    # Identify minimum code/data versions from input file collection:
-   min_bias_data_vers=$(find_min_cal_version -b $tmp_dir/clean*fits)
-   min_bias_code_vers=$(find_min_cal_version -B $tmp_dir/clean*fits)
-   min_dark_data_vers=$(find_min_cal_version -d $tmp_dir/clean*fits)
-   min_dark_code_vers=$(find_min_cal_version -D $tmp_dir/clean*fits)
-   min_lamp_data_vers=$(find_min_cal_version -l $tmp_dir/clean*fits)
-   min_lamp_code_vers=$(find_min_cal_version -L $tmp_dir/clean*fits)
+   min_bias_data_vers=$(find_min_cal_version -b $tmp_dir/clean*fits.fz)
+   min_bias_code_vers=$(find_min_cal_version -B $tmp_dir/clean*fits.fz)
+   min_dark_data_vers=$(find_min_cal_version -d $tmp_dir/clean*fits.fz)
+   min_dark_code_vers=$(find_min_cal_version -D $tmp_dir/clean*fits.fz)
+   min_lamp_data_vers=$(find_min_cal_version -l $tmp_dir/clean*fits.fz)
+   min_lamp_code_vers=$(find_min_cal_version -L $tmp_dir/clean*fits.fz)
    echo "min_bias_data_vers: $min_bias_data_vers"
    echo "min_bias_code_vers: $min_bias_code_vers"
    echo "min_dark_data_vers: $min_dark_data_vers"
@@ -450,7 +450,7 @@ else
    # Combine darks with outlier rejection (stack_args in config.sh):
    mecho "\n`RowWrite 75 -`\n"
    opts="$dark_stack_args"
-   cmde "medianize $opts $tmp_dir/clean*fits -o '!$foo'"    || exit $?
+   cmde "medianize $opts $tmp_dir/clean*fits.fz -o '!$foo'" || exit $?
    timer
 
    # Add stats and identifiers to header:
@@ -469,6 +469,7 @@ else
 
    hargs=( $camid $obstype $lampexp $drtag )
    cmde "update_output_header $foo ${hargs[*]}"                   || exit $?
+   cmde "fpack -F -Y -qt 32 $foo"                                 || exit $?
    cmde "mv -f $foo $nite_lampsave"                               || exit $?
 
    ## Preserve stack files (if requested):

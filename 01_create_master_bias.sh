@@ -216,7 +216,7 @@ fi
 
 ## Output files:
 nite_folder="$save_root/$camid/$fdate"
-nite_bias="$nite_folder/med_${camid}_bias_${fdate}_${drtag}.fits"
+nite_bias="$nite_folder/med_${camid}_bias_${fdate}_${drtag}.fits.fz"
 cmde "mkdir -p $nite_folder" || exit $?
 
 ##--------------------------------------------------------------------------##
@@ -284,7 +284,7 @@ else
    for image in "${bias_list[@]}"; do
       ibase="${image##*/}"
       ifits="${ibase%.fz}"
-      cbase="clean_${ifits}"
+      cbase="clean_${ifits}.fz"
       isave="$tmp_dir/$cbase"
 
       # Get 'clean' bias (process only if necessary):
@@ -314,6 +314,7 @@ else
       cmde "record_code_version $foo -b $script_version"       || exit $?
       cmde "record_data_version $foo -b $script_version"       || exit $?
       cmde "update_output_header $foo $camid BIAS 0.0 $drtag"  || exit $?
+      cmde "fpack -F -Y -qt 32 $foo"                           || exit $?
       cmde "mv -f $foo $isave"                                 || exit $?
 
       # Preserve files (if requested):
@@ -325,15 +326,15 @@ else
    done
    timer
 
-   min_bias_data_vers=$(find_min_cal_version -b $tmp_dir/clean*fits)
+   min_bias_data_vers=$(find_min_cal_version -b $tmp_dir/clean*fits.fz)
    echo "min_bias_data_vers: $min_bias_data_vers"
-   min_bias_code_vers=$(find_min_cal_version -B $tmp_dir/clean*fits)
+   min_bias_code_vers=$(find_min_cal_version -B $tmp_dir/clean*fits.fz)
    echo "min_bias_code_vers: $min_bias_code_vers"
 
    # Combine biases with outlier rejection (stack-args in config.sh):
    mecho "\n`RowWrite 75 -`\n"
    opts="$bias_stack_args"
-   cmde "medianize $opts $tmp_dir/clean*fits -o '!$foo'"    || exit $?
+   cmde "medianize $opts $tmp_dir/clean*fits.fz -o '!$foo'" || exit $?
    timer
 
    # Add stats and identifiers to header:
@@ -343,6 +344,7 @@ else
    #cmde "record_code_version $foo -b $min_bias_code_vers"   || exit $?
    cmde "record_code_version $foo -b $script_version"       || exit $?
    cmde "update_output_header $foo $camid BIAS 0.0 $drtag"  || exit $?
+   cmde "fpack -F -Y -qt 32 $foo"                           || exit $?
    cmde "mv -f $foo $nite_bias"                             || exit $?
 
    ## Preserve files (if requested):

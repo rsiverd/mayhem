@@ -4,14 +4,14 @@
 #
 # Rob Siverd
 # Created:      2017-07-10
-# Last updated: 2018-11-05
+# Last updated: 2018-11-13
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.67"
+script_version="0.68"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -408,7 +408,7 @@ else
    cmde "record_code_version $foo -d $script_version"       || exit $?
    #hargs=( $camid DARK 1.0 $drtag )
    cmde "update_output_header $foo $camid DARK 1.0 $drtag"  || exit $?
-   cmde "fpack -D -F -qt 32 $foo"                           || exit $?
+   cmde "fpack -F -Y -qt 32 $foo"                           || exit $?
    cmde "mv -f $foo $nite_dark"                             || exit $?
 
    ## Preserve stack files (if requested):

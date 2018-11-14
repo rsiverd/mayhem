@@ -292,7 +292,7 @@ echo
 echo
 echo
 echo "dark_list:"
-echo "${dark_list[@]}"
+for item in "${dark_list[@]}"; do echo "--> $item"; done
 echo
 echo
 #exit

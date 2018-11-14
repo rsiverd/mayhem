@@ -6,7 +6,7 @@
 #
 # Rob Siverd
 # Created:      2018-02-19
-# Last updated: 2018-09-28
+# Last updated: 2018-11-13
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
@@ -98,7 +98,11 @@ pick_best_bdcal () {
       fi
 
       # list available files, report latest-and-greatest:
-      hits=( `ls -r $cal_folder/med_${camid}_${ctype}_${cal_day}_*.fits 2>/dev/null` )
+      #hits=( `ls -r $cal_folder/med_${camid}_${ctype}_${cal_day}_*.fits 2>/dev/null` )
+      hits=()
+      for csuff in fits fits.fz; do
+         hits+=( `ls -r $cal_folder/med_${camid}_${ctype}_${cal_day}_*.$csuff 2>/dev/null` )
+      done
       nfound=${#hits[*]}
       #echo "nfound: $nfound" >&2
       if [ $nfound -gt 0 ]; then

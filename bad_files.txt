@@ -1,0 +1,9 @@
+lscnrs01-fl09-20180530-0024-b00.fits.fz
+lscnrs01-fl09-20180530-0025-b00.fits.fz
+lscnrs01-fl09-20180530-0026-b00.fits.fz
+lscnrs01-fl09-20180530-0027-b00.fits.fz
+lscnrs01-fl09-20180530-0028-b00.fits.fz
+lscnrs01-fl09-20180530-0029-b00.fits.fz
+lscnrs01-fl09-20180530-0030-d00.fits.fz
+lscnrs01-fl09-20180530-0031-d00.fits.fz
+lscnrs01-fl09-20180530-0032-d00.fits.fz

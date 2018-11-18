@@ -319,7 +319,8 @@ else
       # Temporary 'clean' file name (includes DRTAG of best-available bias):
       ibase="${image##*/}"
       ifits="${ibase%.fz}"
-      cbase="clean_${bdr_tag}_${ifits}.fz"
+      #cbase="clean_${bdr_tag}_${ifits}.fz"
+      cbase="clean_${ifits}.fz"
       isave="$tmp_dir/$cbase"
 
       # Use existing cleaned dark if possible:
@@ -367,7 +368,7 @@ else
       cmde "record_data_version $foo -d ${script_version}"           || exit $?
 
       #hargs=( $camid DARK 1.0 $drtag )
-      cmde "update_output_header $foo $camid DARK 1.0 $drtag"        || exit $?
+      cmde "update_output_header $foo $camid DARK 1.0 none"          || exit $?
       #echo "inspect: $foo"
       #read pause
       cmde "fpack -F -Y -qt 32 $foo"                                 || exit $?

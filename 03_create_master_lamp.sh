@@ -4,14 +4,14 @@
 #
 # Rob Siverd
 # Created:      2017-07-24
-# Last updated: 2018-11-05
+# Last updated: 2018-11-17
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.46"
+script_version="0.47"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -339,7 +339,8 @@ else
       # Temporary 'clean' file name (includes DRTAG of associated calibs):
       ibase="${image##*/}"
       ifits="${ibase%.fz}"
-      cbase="clean_${drtag}_${ifits}.fz"
+      #cbase="clean_${drtag}_${ifits}.fz"
+      cbase="clean_${ifits}.fz"
       isave="$tmp_dir/$cbase"
 
       # Use existing cleaned lamp if possible:
@@ -420,7 +421,7 @@ else
       cmde "record_data_version $bar -l ${script_version}"        || exit $?
 
       #cmde "record_cal_version $foo -l $script_version"           || exit $?
-      hargs=( $camid $obstype $lampexp $drtag )
+      hargs=( $camid $obstype $lampexp "none" )
       cmde "update_output_header $foo ${hargs[*]}"                || exit $?
       cmde "mv -f $bar $isave"                                    || exit $?
 
@@ -451,6 +452,7 @@ else
    mecho "\n`RowWrite 75 -`\n"
    opts="$dark_stack_args"
    cmde "medianize $opts $tmp_dir/clean*fits.fz -o '!$foo'" || exit $?
+   append_input_histories $foo $tmp_dir/clean*fits.fz       || exit $?
    timer
 
    # Add stats and identifiers to header:

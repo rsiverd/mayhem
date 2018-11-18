@@ -361,7 +361,6 @@ else
       code_versions=( `get_code_versions $use_bias` )
       echo "data_versions: ${data_versions[*]}"
       echo "code_versions: ${code_versions[*]}"
-      #biasvers=$(imhget -u $use_bias BIASVERS)
       cmde "record_code_version $foo -b ${code_versions[0]}"         || exit $?
       cmde "record_code_version $foo -d ${script_version}"           || exit $?
       cmde "record_data_version $foo -b ${data_versions[0]}"         || exit $?

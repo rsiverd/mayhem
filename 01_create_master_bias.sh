@@ -309,7 +309,6 @@ else
       fi
 
       # Existing 'clean' file unavailable, make it:
-      #bdl_drtags=( "none" "none" "none" "none" )
       echo
       cmde "nres-cdp-trim-oscan -q $image -o $foo"             || exit $?
       cmde "record_code_version $foo -b $script_version"       || exit $?

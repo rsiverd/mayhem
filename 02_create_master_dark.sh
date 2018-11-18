@@ -4,14 +4,14 @@
 #
 # Rob Siverd
 # Created:      2017-07-10
-# Last updated: 2018-11-13
+# Last updated: 2018-11-17
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.68"
+script_version="0.69"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -310,11 +310,11 @@ else
 
       # FIRST, identify best available bias frame for this dark:
       use_bias=$(pick_best_bdcal $image $camid bias) || exit $?
-      bdr_tag=$(imhget DRTAG $use_bias)
       if [ -z "$use_bias" ] || [ ! -f $use_bias ]; then
          Recho "Blank name or file missing: '$use_bias'\n\n" >&2
          exit 1
       fi
+      bdr_tag=$(imhget DRTAG $use_bias)
 
       # Temporary 'clean' file name (includes DRTAG of best-available bias):
       ibase="${image##*/}"

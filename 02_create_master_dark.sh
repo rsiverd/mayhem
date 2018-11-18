@@ -366,10 +366,7 @@ else
       cmde "record_data_version $foo -b ${data_versions[0]}"         || exit $?
       cmde "record_data_version $foo -d ${script_version}"           || exit $?
 
-      #hargs=( $camid DARK 1.0 $drtag )
       cmde "update_output_header $foo $camid DARK 1.0 none"          || exit $?
-      #echo "inspect: $foo"
-      #read pause
       cmde "fpack -F -Y -qt 32 $foo"                                 || exit $?
       cmde "mv -f $foo $isave"                                       || exit $?
 

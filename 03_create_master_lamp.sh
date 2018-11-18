@@ -466,7 +466,6 @@ else
    cmde "record_data_version $foo -d $min_dark_data_vers"   || exit $?
    cmde "record_code_version $foo -d $min_dark_code_vers"   || exit $?
    cmde "record_data_version $foo -l $min_lamp_data_vers"   || exit $?
-   #cmde "record_code_version $foo -l $min_lamp_code_vers"   || exit $?
    cmde "record_code_version $foo -l $script_version"       || exit $?
 
    hargs=( $camid $obstype $lampexp $drtag )

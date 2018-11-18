@@ -4,14 +4,14 @@
 #
 # Rob Siverd
 # Created:      2017-07-10
-# Last updated: 2018-11-05
+# Last updated: 2018-11-17
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.62"
+script_version="0.63"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -309,18 +309,19 @@ else
       fi
 
       # Existing 'clean' file unavailable, make it:
+      bdl_drtags=( "none" "none" "none" )
       echo
-      cmde "nres-cdp-trim-oscan -q $image -o $foo"             || exit $?
-      cmde "record_code_version $foo -b $script_version"       || exit $?
-      cmde "record_data_version $foo -b $script_version"       || exit $?
-      cmde "update_output_header $foo $camid BIAS 0.0 $drtag"  || exit $?
-      cmde "fpack -F -Y -qt 32 $foo"                           || exit $?
-      cmde "mv -f $foo $isave"                                 || exit $?
+      cmde "nres-cdp-trim-oscan -q $image -o $foo"                       || exit $?
+      cmde "record_code_version $foo -b $script_version"                 || exit $?
+      cmde "record_data_version $foo -b $script_version"                 || exit $?
+      cmde "update_output_header $foo $camid BIAS 0.0 ${bdl_drtags[*]}"  || exit $?
+      cmde "fpack -F -Y -qt 32 $foo"                                     || exit $?
+      cmde "mv -f $foo $isave"                                           || exit $?
 
       # Preserve files (if requested):
       if [ $keep_clean -eq 1 ]; then
-         vcmde "mkdir -p $(dirname $icheck)"                   || exit $?
-         cmde "cp -f $isave $icheck"                           || exit $?
+         vcmde "mkdir -p $(dirname $icheck)"                           || exit $?
+         cmde "cp -f $isave $icheck"                                   || exit $?
       fi
       echo
    done

@@ -283,7 +283,7 @@ if [ -f $nite_bias ]; then
    if [ $numstack -eq $nlisted ]; then
       Gecho "Existing $nite_bias has matching inputs ($numstack images).\n"
    else
-      Recho "Existing $nite_bias has input mismatch! Rebuild needed ...\n"
+      Recho "Existing $nite_bias has input mismatch!  Rebuild needed ...\n"
       cmde "rm $nite_bias"
    fi
 fi

@@ -122,6 +122,55 @@ pick_best_bdcal () {
 ##==========================================================================##
 ##--------------------------------------------------------------------------##
 
+## Check input calibrations to specified clean image:
+get_history_calibs () {
+   listhead $1 | awk '/^HISTORY use_/ { print $3 }'
+}
+
+## Get DRTAG (??d_??b_??a) from filename:
+extract_drtag () {
+   echo $1 | grep -o '[0-9][0-9]d_[0-9][0-9]b_[0-9][0-9]a'
+}
+
+## Parse numbers from DRTAG string:
+numbers_from_drtag () {
+   echo $1 | sed 's/[abd]//g' | awk -F_ '{ printf "%d %d %d\n", $1, $2, $3 }'
+}
+
+## Get the 'width' of a calibration file from its name:
+get_calib_width () {
+   cal_drtag=$(extract_drtag $1)
+   drnumbers=( `numbers_from_drtag $cal_drtag` )
+   echo ${drnumbers[0]}
+}
+
+## Get the 'width' of a calibration file from history of specified image:
+get_histcal_width () {
+   local clean="$1"     # path to file
+   local ctype="$2"     # bias, dark
+   get_calib_width `get_history_calibs $clean | grep $ctype`
+}
+
+## Given input clean image path and stacked calibration name/type,
+## test whether clean input calib of said type has day-range width
+## that meets or exceeds the calibration comparison. Basically, this
+## checks whether the calibrations used for the 'clean' image are
+## "as good or better than" the image provided. This is used to
+## determine whether or not an image needs to be remade.
+clean_width_check_passed () {
+   local clean="$1"
+   local calib="$2"
+   local ctype="$3"
+   cal_width=$(get_calib_width $calib)
+   cln_width=$(get_histcal_width $clean $ctype)
+   if [ $cln_width -ge $cal_width ]; then
+      return 0    # check passed
+   else
+      return 1    # check failed
+   fi
+}
+
+
 ######################################################################
 # CHANGELOG (05_file_selection.sh):
 #---------------------------------------------------------------------

@@ -263,6 +263,7 @@ fi
 ##--------------------------------------------------------------------------##
 
 if [ -f $nite_dark ]; then
+   echo
    echo "Data version requirements: ${need_data_versions[*]}"
    echo "Code version requirements: ${need_code_versions[*]}"
    if ( header_gain_is_unity $nite_dark ) && \
@@ -282,12 +283,13 @@ fi
 if [ -f $nite_dark ]; then
    numstack=$(imhget $nite_dark NUMSTACK)
    nlisted="${#dark_list[@]}"
+   echo
    echo "Existing image inputs: $numstack"
    echo "Expected input images: $nlisted"
    if [ $numstack -eq $nlisted ]; then
       Gecho "Existing $nite_dark has matching inputs ($numstack images).\n"
    else
-      Recho "Existing $nite_dark has input mismatch! Rebuild needed ...\n"
+      Recho "Existing $nite_dark has input mismatch!  Rebuild needed ...\n"
       cmde "rm $nite_dark"
    fi
 fi
@@ -314,11 +316,41 @@ echo
 echo
 #exit
 
-## Go file-by-file and build a list of expected calibration inputs:
-for item in "${dark_list[@]}"; do
-   echo "--> $item"
-done
-exit 9
+if [ -f $nite_dark ]; then
+   yecho "\nChecking calibration inputs of $nite_dark ...\n"
+   have_cals_list="$tmp_dir/have_cals.txt"
+   want_cals_list="$tmp_dir/want_cals.txt"
+   both_cals_list="$tmp_dir/both_sets.txt"
+   rm $have_cals_list $want_cals_list 2>/dev/null
+
+   # List of calibrations from nite_dark history:
+   get_history_calibs $nite_dark > $have_cals_list
+
+   # Go file-by-file and build a list of expected calibration inputs:
+   for image in "${dark_list[@]}"; do
+      ibase="${image##*/}"
+      imcal=$(pick_best_bdcal $image $camid bias)
+      cbase="${imcal##*/}"
+      echo "$cbase" >> $want_cals_list
+   done
+   paste -d' ' $have_cals_list $want_cals_list > $both_cals_list
+   exec 10<$both_cals_list
+   while read chave cwant <&10; do
+      have_width=$(get_calib_width $chave)
+      want_width=$(get_calib_width $cwant)
+      if [ $want_width -gt $have_width ]; then
+         #Recho "DISCREPANCY DETECTED!\n"
+         Recho "Out-of-date inputs detected, rebuild needed!\n"
+         echo "chave: $chave, have_width: $have_width"
+         echo "cwant: $cwant, want_width: $want_width"
+         echo
+         cmde "rm $nite_dark"
+         break
+      fi
+   done
+   exec 10>&-
+   rm $have_cals_list $want_cals_list $both_cals_list 2>/dev/null
+fi
 
 ##--------------------------------------------------------------------------##
 ## Create master dark (if not present):

@@ -4,14 +4,14 @@
 #
 # Rob Siverd
 # Created:      2017-07-10
-# Last updated: 2018-11-17
+# Last updated: 2018-11-19
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.63"
+script_version="0.64"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -269,6 +269,23 @@ if [ -f $nite_bias ]; then
    fi
 else
    recho "No existing stacked bias found.\n"
+fi
+
+##--------------------------------------------------------------------------##
+##          Existing Image Removal: Remove if wrong input count             ##
+##--------------------------------------------------------------------------##
+
+if [ -f $nite_bias ]; then
+   numstack=$(imhget $nite_bias NUMSTACK)
+   nlisted="${#bias_list[@]}"
+   echo "Existing image inputs: $numstack"
+   echo "Expected input images: $nlisted"
+   if [ $numstack -eq $nlisted ]; then
+      Gecho "Existing $nite_bias has matching inputs ($numstack images).\n"
+   else
+      Recho "Existing $nite_bias has input mismatch! Rebuild needed ...\n"
+      cmde "rm $nite_bias"
+   fi
 fi
 
 ##--------------------------------------------------------------------------##

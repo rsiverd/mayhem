@@ -11,7 +11,7 @@
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.48"
+script_version="0.50"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -336,7 +336,30 @@ else
    timer start
    yecho "Overscan correction and bias/dark subtraction ...\n"
    for image in "${lamp_list[@]}"; do
-      # Temporary 'clean' file name (includes DRTAG of associated calibs):
+
+      # FIRST, identify best current bias frame:
+      yecho "Selecting good bias ... "
+      use_bias=$(pick_best_bdcal $image $camid bias --prev) || exit $?
+      if [ -z "$use_bias" ] || [ ! -f $use_bias ]; then
+         Recho "Blank name or file missing: '$use_bias'\n\n" >&2
+         exit 1
+      fi
+      bdr_tag=$(imhget DRTAG $use_bias)
+      gecho "done.\n"
+      echo "use_bias: $use_bias"
+
+      # NEXT, identify best current dark frame:
+      yecho "Selecting good dark ... "
+      use_dark=$(pick_best_bdcal $image $camid dark --prev) || exit $?
+      if [ -z "$use_dark" ] || [ ! -f $use_dark ]; then
+         Recho "Blank name or file missing: '$use_dark'\n\n" >&2
+         exit 1
+      fi
+      ddr_tag=$(imhget DRTAG $use_dark)
+      gecho "done.\n"
+      echo "use_dark: $use_dark"
+
+      # Temporary 'clean' file name:
       ibase="${image##*/}"
       ifits="${ibase%.fz}"
       #cbase="clean_${drtag}_${ifits}.fz"
@@ -348,6 +371,8 @@ else
       if [ -f $icheck ]; then
          yecho "\nChecking ${icheck##*/} ... "
          if ( header_gain_is_unity $icheck ) && \
+            ( clean_width_check_passed $icheck $use_bias bias ) && \
+            ( clean_width_check_passed $icheck $use_dark dark ) && \
             ( data_version_pass $icheck ${need_data_versions[*]} ) && \
             ( code_version_pass $icheck ${need_code_versions[*]} ); then
             Gecho "version check PASSED!\n"
@@ -368,28 +393,6 @@ else
       # --------------------------------------------
       # Otherwise, create cleaned file for stacking:
       # --------------------------------------------
-
-      # Identify best current bias frame:
-      yecho "Selecting good bias ... "
-      use_bias=$(pick_best_bdcal $image $camid bias --prev) || exit $?
-      if [ -z "$use_bias" ] || [ ! -f $use_bias ]; then
-         Recho "Blank name or file missing: '$use_bias'\n\n" >&2
-         exit 1
-      fi
-      bdr_tag=$(imhget DRTAG $use_bias)
-      gecho "done.\n"
-      echo "use_bias: $use_bias"
-
-      # Identify best current dark frame:
-      yecho "Selecting good dark ... "
-      use_dark=$(pick_best_bdcal $image $camid dark --prev) || exit $?
-      if [ -z "$use_dark" ] || [ ! -f $use_dark ]; then
-         Recho "Blank name or file missing: '$use_dark'\n\n" >&2
-         exit 1
-      fi
-      ddr_tag=$(imhget DRTAG $use_dark)
-      gecho "done.\n"
-      echo "use_dark: $use_dark"
 
       # Versions from input images:
       min_bias_data_vers=$(find_min_cal_version -b $use_bias $use_dark)

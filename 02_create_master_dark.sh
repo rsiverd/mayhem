@@ -276,6 +276,23 @@ if [ -f $nite_dark ]; then
 fi
 
 ##--------------------------------------------------------------------------##
+##          Existing Image Removal: Remove if wrong input count             ##
+##--------------------------------------------------------------------------##
+
+if [ -f $nite_dark ]; then
+   numstack=$(imhget $nite_dark NUMSTACK)
+   nlisted="${#dark_list[@]}"
+   echo "Existing image inputs: $numstack"
+   echo "Expected input images: $nlisted"
+   if [ $numstack -eq $nlisted ]; then
+      Gecho "Existing $nite_dark has matching inputs ($numstack images).\n"
+   else
+      Recho "Existing $nite_dark has input mismatch! Rebuild needed ...\n"
+      cmde "rm $nite_dark"
+   fi
+fi
+
+##--------------------------------------------------------------------------##
 ##             Existing Image Removal: Better Data Available                ##
 ##--------------------------------------------------------------------------##
 
@@ -296,6 +313,12 @@ for item in "${dark_list[@]}"; do echo "--> $item"; done
 echo
 echo
 #exit
+
+## Go file-by-file and build a list of expected calibration inputs:
+for item in "${dark_list[@]}"; do
+   echo "--> $item"
+done
+exit 9
 
 ##--------------------------------------------------------------------------##
 ## Create master dark (if not present):

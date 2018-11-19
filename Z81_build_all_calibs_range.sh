@@ -4,14 +4,14 @@
 #
 # Rob Siverd
 # Created:      2017-07-26
-# Last updated: 2017-07-26
+# Last updated: 2018-11-19
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.10"
+script_version="0.20"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -151,27 +151,6 @@ for nprev in ${lookbacks[*]}; do
    use_args="dark -k -B$nprev"
    cmde "$build_range $camid $day1 $day2 $use_args" || exit $?
 done
-
-##--------------------------------------------------------------------------##
-## Build master lamps (tung01):
-#cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B0 --tung01" || exit $?
-#cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B2 --tung01" || exit $?
-#cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B4 --tung01" || exit $?
-
-## Build master lamps (tung12):
-#cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B0 --tung12" || exit $?
-#cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B2 --tung12" || exit $?
-#cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B4 --tung12" || exit $?
-
-## Build master lamps (thar01):
-#cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B0 --thar01" || exit $?
-#cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B2 --thar01" || exit $?
-#cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B4 --thar01" || exit $?
-
-## Build master lamps (thar12):
-#cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B0 --thar12" || exit $?
-#cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B2 --thar12" || exit $?
-#cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B4 --thar12" || exit $?
 
 ##--------------------------------------------------------------------------##
 ## Build master lamps (all types):

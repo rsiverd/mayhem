@@ -114,9 +114,13 @@ build_range="./Z01_rebuild_range.sh"
 
 ##--------------------------------------------------------------------------##
 ## Versions to build (look-back days, keep in order):
-lookbacks=( 0 2 4 )
+#lookbacks=( 0 2 4 )
+lookbacks=( 0 2 4 6 )
 max_back=$(echo ${lookbacks[*]} | tr ' ' '\n' | sort -nk1 | tail -n1)
 echo "max_back: $max_back"
+
+## What types of lamp frames to build:
+lamptypes=( tung01 tung12 thar01 thar12 )
 
 ##--------------------------------------------------------------------------##
 ## Bias/dark DAY-OBS is shifted by -1 relative to lamp/target:
@@ -150,24 +154,33 @@ done
 
 ##--------------------------------------------------------------------------##
 ## Build master lamps (tung01):
-cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B0 --tung01" || exit $?
-cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B2 --tung01" || exit $?
-cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B4 --tung01" || exit $?
+#cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B0 --tung01" || exit $?
+#cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B2 --tung01" || exit $?
+#cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B4 --tung01" || exit $?
 
 ## Build master lamps (tung12):
-cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B0 --tung12" || exit $?
-cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B2 --tung12" || exit $?
-cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B4 --tung12" || exit $?
+#cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B0 --tung12" || exit $?
+#cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B2 --tung12" || exit $?
+#cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B4 --tung12" || exit $?
 
 ## Build master lamps (thar01):
-cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B0 --thar01" || exit $?
-cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B2 --thar01" || exit $?
-cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B4 --thar01" || exit $?
+#cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B0 --thar01" || exit $?
+#cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B2 --thar01" || exit $?
+#cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B4 --thar01" || exit $?
 
 ## Build master lamps (thar12):
-cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B0 --thar12" || exit $?
-cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B2 --thar12" || exit $?
-cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B4 --thar12" || exit $?
+#cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B0 --thar12" || exit $?
+#cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B2 --thar12" || exit $?
+#cmde "$build_range $camid $lampday1 $lampday2 lamp -k -B4 --thar12" || exit $?
+
+##--------------------------------------------------------------------------##
+## Build master lamps (all types):
+for ltype in ${lamptypes[*]}; do
+   for nprev in ${lookbacks[*]}; do
+      use_args="lamp -k -B$nprev --$ltype"
+      cmde "$build_range $camid $lampday1 $lampday2 $use_args" || exit $?
+   done
+done
 
 ##--------------------------------------------------------------------------##
 ## Clean up:

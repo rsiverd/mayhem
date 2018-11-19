@@ -131,8 +131,6 @@ bdday2=$(get_prev_day $fdate2)
 lampday1=$fdate1
 lampday2=$fdate2
 
-## ALSO need master biases and darks:
-
 ##--------------------------------------------------------------------------##
 ## Build master biases (compensate for look-back time):
 for nprev in ${lookbacks[*]}; do

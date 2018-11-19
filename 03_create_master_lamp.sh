@@ -488,6 +488,7 @@ else
       #cmde "record_cal_version $foo -l $script_version"           || exit $?
       hargs=( $camid $obstype $lampexp "none" )
       cmde "update_output_header $foo ${hargs[*]}"                || exit $?
+      cmde "fpack -F -Y -qt 32 $foo"                              || exit $?
       cmde "mv -f $bar $isave"                                    || exit $?
 
       # Preserve files (if requested):

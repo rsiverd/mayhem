@@ -327,6 +327,68 @@ if [ -f $nite_lampsave ]; then
 fi
 
 ##--------------------------------------------------------------------------##
+##             Existing Image Removal: Better Data Available                ##
+##--------------------------------------------------------------------------##
+
+# After multiple iterations calibration build procedures, newer versions of
+# some files may appear. The purpose of this section is two-fold:
+# 1) For each listed dark, remove non-current 'clean' intermediate files. This
+#     ensures there is only one cleaned copy of each image.
+# 2) If a nite_lampsave already exists, check its content (the 'quality' of cleaned
+#     images that went into making it) against clean images available now. If
+#     today's files are different and *sufficiently* better, the existing
+#     master should be removed and rebuilt using these superior files.
+
+echo 
+echo
+echo
+echo "lamp_list:"
+for item in "${lamp_list[@]}"; do echo "--> $item"; done
+echo
+echo
+#exit
+
+if [ -f $nite_lampsave ]; then
+   yecho "\nChecking calibration inputs of $nite_lampsave ...\n"
+   have_cals_list="$tmp_dir/have_cals.txt"
+   want_cals_list="$tmp_dir/want_cals.txt"
+   both_cals_list="$tmp_dir/both_sets.txt"
+   rm $have_cals_list $want_cals_list 2>/dev/null
+
+   # List of calibrations from nite_lampsave history:
+   get_history_calibs $nite_lampsave > $have_cals_list
+   #cmde "cat $have_cals_list"
+
+   # Go file-by-file and build a list of expected calibration inputs:
+   for image in "${lamp_list[@]}"; do
+      ibase="${image##*/}"
+      for ctype in bias dark; do
+         imcal=$(pick_best_bdcal $image $camid $ctype)
+         cbase="${imcal##*/}"
+         echo "$cbase" >> $want_cals_list
+      done
+   done
+   paste -d' ' $have_cals_list $want_cals_list > $both_cals_list
+   #cmde "cat $both_cals_list"
+   exec 10<$both_cals_list
+   while read chave cwant <&10; do
+      have_width=$(get_calib_width $chave)
+      want_width=$(get_calib_width $cwant)
+      if [ $want_width -gt $have_width ]; then
+         #Recho "DISCREPANCY DETECTED!\n"
+         Recho "Out-of-date inputs detected, rebuild needed!\n"
+         echo "chave: $chave, have_width: $have_width"
+         echo "cwant: $cwant, want_width: $want_width"
+         echo
+         cmde "rm $nite_lampsave"
+         break
+      fi
+   done
+   exec 10>&-
+   rm $have_cals_list $want_cals_list $both_cals_list 2>/dev/null
+fi
+
+##--------------------------------------------------------------------------##
 ## Create master dark (if not present):
 if [ -f $nite_lampsave ]; then
    Gecho "$nite_lampsave already exists!\n"
@@ -375,7 +437,7 @@ else
             ( clean_width_check_passed $icheck $use_dark dark ) && \
             ( data_version_pass $icheck ${need_data_versions[*]} ) && \
             ( code_version_pass $icheck ${need_code_versions[*]} ); then
-            Gecho "version check PASSED!\n"
+            Gecho "version/width check PASSED!\n"
             gecho "Using existing temp-lamp (${access_mode}): ${icheck}\n"
             case $access_mode in
                copy)    vcmde "cp -f $icheck $isave" || exit $?  ;;
@@ -384,7 +446,7 @@ else
             esac
             continue
          else
-            recho "version check FAILED, rebuild!\n\n"
+            recho "version/width check FAILED, rebuild!\n\n"
             #[ $keep_clean -eq 1 ] && cmde "rm $icheck"
          fi
       fi

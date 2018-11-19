@@ -4,14 +4,14 @@
 #
 # Rob Siverd
 # Created:      2017-07-10
-# Last updated: 2018-11-17
+# Last updated: 2018-11-19
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.69"
+script_version="0.70"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -328,9 +328,10 @@ else
       if [ -f $icheck ]; then
          yecho "\nChecking ${icheck##*/} ... "
          if ( header_gain_is_unity $icheck ) && \
+            ( clean_width_check_passed $icheck $use_bias bias ) && \
             ( data_version_pass $icheck ${need_data_versions[*]} ) && \
             ( code_version_pass $icheck ${need_code_versions[*]} ); then
-            Gecho "version check PASSED!\n"
+            Gecho "version/width check PASSED!\n"
             gecho "Using existing temp-dark (${access_mode}): ${icheck}\n"
             case $access_mode in
                copy)    vcmde "cp -f $icheck $isave" || exit $?  ;;
@@ -339,7 +340,7 @@ else
             esac
             continue
          else
-            recho "version check FAILED, rebuild!\n\n"
+            recho "version/width check FAILED, rebuild!\n\n"
             #[ $keep_clean -eq 1 ] && cmde "rm $icheck"
          fi
       fi

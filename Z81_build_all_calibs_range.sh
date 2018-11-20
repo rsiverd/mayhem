@@ -66,7 +66,6 @@ eval "$(FuncDef $fd_args)"  || exit $?
 
 ## Check for arguments:
 usage () { 
-   #Recho "\nSyntax: $this_prog --START\n\n"
    Recho "\nSyntax: $this_prog camera day-obs1 day-obs2\n\n"
    yecho "Input date range should correspond to the day-obs of lamp/target \n"
    yecho "frames (i.e., after DAY-OBS rollover). The corresponding biases and\n"

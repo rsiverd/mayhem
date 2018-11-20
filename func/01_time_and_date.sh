@@ -24,6 +24,9 @@ day_change () {
 get_next_day () { day_change $1  1; }
 get_prev_day () { day_change $1 -1; }
 
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+
 ## List all dates between starting/ending FDATE:
 list_dates_between () {
    local fdate1="$1"
@@ -40,6 +43,24 @@ list_dates_between () {
       fi
    done
    echo ${fdate_list[*]}
+}
+
+## Divide date range into chunks of specified size (one chunk per line):
+nites_to_chunks_full () {
+   local csize="$1"; shift
+   printf '%s\n' "$@" | awk -v csize=$csize '{
+      delim = (NR % csize == 0) ? "\n" : " "
+      printf "%s%s", $1, delim
+   } END { if (NR % csize) printf "\n" }'
+}
+
+## Divide date range into chunks of specified size (only show first/last):
+nites_to_chunks_firstlast () {
+   local csize="$1"; shift
+   printf '%s\n' "$@" | awk -v csize=$csize '{
+      if ( NR % csize == 1 ) { printf "%s ", $1 }
+      if ( NR % csize == 0 ) { printf "%s\n", $1 }
+   } END { if (NR % csize) printf "%s\n", $1 }'
 }
 
 

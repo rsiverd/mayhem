@@ -91,6 +91,9 @@ usage () {
    yecho "\nOther arguments:\n"
    yecho " * chunkdays --> chunk size for date range breakdown. For decent\n"
    yecho "        performance, need chunkdays > maximum lookback\n"
+   yecho " * erase_lag --> if given, this specifies a number of days back\n"
+   yecho "        prior to the chunk nights where 'clean' files will be\n"
+   yecho "        erased from disk. erase_nites = chunk_nites - erase_lag\n"
    yecho "\n"
 }
 #if [ "$1" != "--START" ]; then
@@ -112,10 +115,33 @@ for item in $fdate1 $fdate2 ; do
 done
 
 ##--------------------------------------------------------------------------##
+## Note erase_lag (if provided):
+delete_old=0
+if [ -n "$5" ]; then
+   delete_old=1
+   erase_lag=$5
+
+   # Erase lag should be larger than chunk size:
+   if [ $erase_lag -lt $chunkdays ]; then
+      recho "Error: need erase_lag >= chunk_size ...\n" >&2
+      exit 1
+   fi
+   yecho "User-specified erase lag: ${erase_lag}\n"
+fi
+
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+
 ## Date/time manipulation:
 date_funcs="func/01_time_and_date.sh"
 [ -f $date_funcs ] || ErrorAbort "Can't find file: $date_funcs"
 vcmde "source $date_funcs"
+
+## Storage and pipeline configuration:
+conf_file="config.sh"
+yecho "Loading storage and pipeline config ...\n"
+[ -f $conf_file ] || ErrorAbort "Can't find file: $conf_file"
+cmde "source $conf_file"
 
 ##**************************************************************************##
 ##==========================================================================##
@@ -137,17 +163,36 @@ nites_to_chunks_firstlast $chunkdays ${fdate_list[*]} > $foo
 exec 10<$foo
 while read chunk_start chunk_end <&10; do
    #echo "cdate1,cdate2: $cdate1, $cdate2"
-   echo "$child_script $camid $chunk_start $chunk_end"
+   cmde "$child_script $camid $chunk_start $chunk_end"
+   if [ $delete_old -eq 1 ]; then
+      # Start/end of date range to wipe:
+      erase_start=`day_change $chunk_start -$erase_lag`
+      erase_end=`day_change $chunk_end -$erase_lag`
+      #echo "chunk: $chunk_start -> $chunk_end"
+      #echo "erase: $erase_start -> $erase_end"
+ 
+      # Full list of FDATEs marked for clean-up:
+      #echo "erase_fdates: ${erase_fdates[*]}"
+      #echo; echo
+
+      # Wipe clean files in each of the listed FDATEs:
+      erase_fdates=( `list_dates_between $erase_start $erase_end` )
+      for edate in ${erase_fdates[*]}; do
+         proc_save="$save_root/$camid/$edate"
+         echo "proc_save: $proc_save"
+         if [ -d $proc_save ]; then
+            wipe_list=( `ls $proc_save/clean_*fits* 2>/dev/null` )
+            tmp_files="${#wipe_list[@]}"
+            echo "Found $tmp_files images to remove ..."
+            vcmde "rm ${wipe_list[@]}"
+         fi
+         echo
+      done
+      #echo "save_root: $save_root"
+   fi
+   exit 1
 done
 exec 10>&-
-
-## List of recent nights:
-#nights=5
-#declare -a nite_list
-#for (( x = $nights; x >= -1; x-- )); do
-#   nite_list+=( $(date -u +%Y%m%d --date="$x days ago") )
-#done
-
 
 ##--------------------------------------------------------------------------##
 ## Clean up:

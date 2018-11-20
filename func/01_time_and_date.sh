@@ -24,6 +24,25 @@ day_change () {
 get_next_day () { day_change $1  1; }
 get_prev_day () { day_change $1 -1; }
 
+## List all dates between starting/ending FDATE:
+list_dates_between () {
+   local fdate1="$1"
+   local fdate2="$2"
+   next_unixtime=$(fdate2unix $fdate1)
+   fdate_list=( `unix2fdate $next_unixtime` )
+   while true; do
+      next_unixtime=$(( next_unixtime + 86400 ))
+      next_fdate=`unix2fdate $next_unixtime`
+      if [ $next_fdate -le $fdate2 ]; then
+         fdate_list+=( $next_fdate )
+      else
+         break
+      fi
+   done
+   echo ${fdate_list[*]}
+}
+
+
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 ## Check for fdate in array:

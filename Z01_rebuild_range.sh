@@ -4,14 +4,14 @@
 #
 # Rob Siverd
 # Created:      2017-07-20
-# Last updated: 2018-01-07
+# Last updated: 2018-11-19
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.15"
+script_version="0.20"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -76,6 +76,12 @@ if [ -z "$3" ]; then
    exit 1
 fi
 
+##--------------------------------------------------------------------------##
+## Date/time manipulation:
+date_funcs="func/01_time_and_date.sh"
+[ -f $date_funcs ] || ErrorAbort "Can't find file: $date_funcs"
+vcmde "source $date_funcs"
+
 ##**************************************************************************##
 ##==========================================================================##
 ##--------------------------------------------------------------------------##
@@ -114,23 +120,26 @@ esac
 
 ##--------------------------------------------------------------------------##
 ## Convert between FDATE and UNIX seconds:
-fdate2unix () { date +%s --date=$1; }
-unix2fdate () { date +%Y%m%d --date="@$1"; }
+#fdate2unix () { date +%s --date=$1; }
+#unix2fdate () { date +%Y%m%d --date="@$1"; }
 
 ## Make list:
-next_unixtime=$(fdate2unix $fdate1)
-fdate_list=( `unix2fdate $next_unixtime` )
-while true; do
-   next_unixtime=$(( next_unixtime + 86400 ))
-   next_fdate=`unix2fdate $next_unixtime`
-   if [ $next_fdate -le $fdate2 ]; then
-      fdate_list+=( $next_fdate )
-   else
-      break
-   fi
-done
+#next_unixtime=$(fdate2unix $fdate1)
+#fdate_list=( `unix2fdate $next_unixtime` )
+#while true; do
+#   next_unixtime=$(( next_unixtime + 86400 ))
+#   next_fdate=`unix2fdate $next_unixtime`
+#   if [ $next_fdate -le $fdate2 ]; then
+#      fdate_list+=( $next_fdate )
+#   else
+#      break
+#   fi
+#done
 
 ##--------------------------------------------------------------------------##
+## Make list of nites in specified range:
+fdate_list=( `list_dates_between $fdate1 $fdate2` )
+
 ## Process each listed night:
 for fdate in ${fdate_list[*]}; do
    wecho "`RowWrite 75 -`\n"

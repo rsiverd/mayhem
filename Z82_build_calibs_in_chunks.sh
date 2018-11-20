@@ -186,14 +186,14 @@ while read chunk_start chunk_end <&10; do
          if [ -d $proc_save ]; then
             wipe_list=( `ls $proc_save/clean_*fits* 2>/dev/null` )
             tmp_files="${#wipe_list[@]}"
-            echo "Found $tmp_files images to remove ..."
-            vcmde "rm ${wipe_list[@]}"
+            echo "Removing $tmp_files images ..."
+            for item in "${wipe_list[@]}"; do
+               rm -f $item
+            done
          fi
          echo
       done
-      #echo "save_root: $save_root"
    fi
-   exit 1
 done
 exec 10>&-
 

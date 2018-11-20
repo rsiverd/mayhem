@@ -4,14 +4,14 @@
 #
 # Rob Siverd
 # Created:      2018-02-19
-# Last updated: 2018-02-19
+# Last updated: 2018-11-19
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Convert between FDATE and UNIX seconds:
-fdate2unix () { date +%s --date=$1; }
-unix2fdate () { date +%Y%m%d --date="@$1"; }
+fdate2unix () { date -u +%s --date=$1; }
+unix2fdate () { date -u +%Y%m%d --date="@$1"; }
 
 day_change () {
    local old_fdate="$1"

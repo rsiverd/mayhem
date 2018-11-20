@@ -84,19 +84,24 @@ fi
 
 ## Check for arguments:
 usage () {
-   Recho "\nSyntax: $this_prog camera day-obs1 day-obs2\n\n"
+   Recho "\nSyntax: $this_prog camera day-obs1 day-obs2 chunkdays\n\n"
    yecho "Input date range should correspond to the day-obs of lamp/target \n"
    yecho "frames (i.e., after DAY-OBS rollover). The corresponding biases and\n"
    yecho "darks for lamp/target spectra are obtained on the previous DAY-OBS.\n"
+   yecho "\nOther arguments:\n"
+   yecho " * chunkdays --> chunk size for date range breakdown. For decent\n"
+   yecho "        performance, need chunkdays > maximum lookback\n"
+   yecho "\n"
 }
 #if [ "$1" != "--START" ]; then
-if [ -z "$3" ]; then
+if [ -z "$4" ]; then
    usage >&2
    exit 1
 fi
 camid="$1"
 fdate1="$2"
 fdate2="$3"
+chunkdays="$4"
 
 ## FDATE sanity checks:
 for item in $fdate1 $fdate2 ; do
@@ -112,27 +117,42 @@ date_funcs="func/01_time_and_date.sh"
 [ -f $date_funcs ] || ErrorAbort "Can't find file: $date_funcs"
 vcmde "source $date_funcs"
 
-##--------------------------------------------------------------------------##
-## Chunk config:
-max_consec_nites=15
-
-
 ##**************************************************************************##
 ##==========================================================================##
 ##--------------------------------------------------------------------------##
 
-## List of recent nights:
-nights=5
-declare -a nite_list
-for (( x = $nights; x >= -1; x-- )); do
-   nite_list+=( $(date -u +%Y%m%d --date="$x days ago") )
+## Child script and args:
+child_script="./Z81_build_all_calibs_range.sh"
+[ -f $child_script ] || PauseAbort "Can't find file: $child_script"
+
+##--------------------------------------------------------------------------##
+## Split date range into chunks. Each line gets start/end of a chunk range:
+#chunksize=15
+fdate_list=( `list_dates_between $fdate1 $fdate2` )
+nites_to_chunks_firstlast $chunkdays ${fdate_list[*]} > $foo
+#cmde "cat $foo"
+
+## Execute child script using per-chunk date ranges:
+## FIXME / TODO: add cleanup after processing each chunk.
+exec 10<$foo
+while read chunk_start chunk_end <&10; do
+   #echo "cdate1,cdate2: $cdate1, $cdate2"
+   echo "$child_script $camid $chunk_start $chunk_end"
 done
+exec 10>&-
+
+## List of recent nights:
+#nights=5
+#declare -a nite_list
+#for (( x = $nights; x >= -1; x-- )); do
+#   nite_list+=( $(date -u +%Y%m%d --date="$x days ago") )
+#done
 
 
 ##--------------------------------------------------------------------------##
 ## Clean up:
 #[ -d $tmp_dir ] && [ -O $tmp_dir ] && rm -rf $tmp_dir
-#[ -f $foo ] && rm -f $foo
+[ -f $foo ] && rm -f $foo
 #[ -f $bar ] && rm -f $bar
 #[ -f $baz ] && rm -f $baz
 #[ -f $qux ] && rm -f $qux

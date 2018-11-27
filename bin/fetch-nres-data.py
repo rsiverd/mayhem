@@ -358,9 +358,7 @@ if (context.ndays > 0.0):
     params['start'] = (astt.Time.now() - look_back).iso
 
 ## Initial pass to get total frame count:
-#get_cmd = {'url':frame_url, 'headers':headers, 'params':params}
 try:
-    #total = lcofrm.count_results(get_cmd)
     total = lcofrm.count_frames_by_params(params)
 except:
     sys.stderr.write("Error: frame count failed!\n")
@@ -373,15 +371,12 @@ results = []
 try:
     depth, rcount = lcofrm.find_frames_by_params(params, results,
             maxdepth=context.max_depth, vlevel=0)
-    #depth, rcount = lcofrm.recursive_request(get_cmd, results, 
-    #        maxdepth=context.max_depth)
 except:
     sys.stderr.write("Error: recursive frame retrieval failed!\n")
     sys.stderr.write("traceback:\n\n%s\n" % traceback.format_exc())
     sys.exit(1)
 nhits = len(results)
 
-sys.exit(0)
 ## Order by observation date:
 results.sort(key=lambda x:x['DATE_OBS'])
 

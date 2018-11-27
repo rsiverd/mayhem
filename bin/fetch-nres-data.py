@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2018-09-05
-# Last modified: 2018-11-01
+# Last modified: 2018-11-27
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.3.5"
+__version__ = "0.4.0"
 
 ## Python version-agnostic module reloading:
 try:
@@ -33,6 +33,7 @@ import copy
 import time
 import numpy as np
 import requests
+import traceback
 
 ##--------------------------------------------------------------------------##
 ## Catch interruption cleanly:
@@ -54,11 +55,14 @@ lsi = lco_site_info.info
 nres_sites = [x for x in lsi if lsi[x]['nres_spec']]
 nres_cam_map = dict([(x, lsi[x]['nres_spec'][0]['cam']) for x in nres_sites])
 
-## LCO API requests:
-auth_token = '2de3ffb5590fe7411e426d1d28d04376e77d05d1'
+## LCO API interaction:
+obs_api_token = 'aa63829a45739210d124c6ec1c7edb0d62e5e860'
+#archive_token = '2de3ffb5590fe7411e426d1d28d04376e77d05d1' # OLD, lolwut?
+archive_token = 'f05b4a4f098a009b3008460b2949339a398662ed'
 import lco_api_tools
 reload(lco_api_tools)
-lcofrm = lco_api_tools.LCO_Frames(auth_token)
+lcofrm = lco_api_tools.LCO_Frames(archive_token)
+#lcoapi = lco_api_tools.LCO_API(obs_api_token)
 
 ## Fancy/pretty file downloading:
 #_fancy_downloading = False
@@ -213,11 +217,13 @@ if __name__ == '__main__':
     #datagroup.add_argument('--token', required=True, default=None,
     #        help='LCO API/Archive authentication token')
 
-    authgroup = parser.add_argument_group('Accounts and Authentication')
-    #authgroup.add_argument('--token', required=True, default=None,
-    authgroup.add_argument('--token', required=False,
-            default='2de3ffb5590fe7411e426d1d28d04376e77d05d1',
-            help='LCO API/Archive authentication token')
+   #authgroup = parser.add_argument_group('Accounts and Authentication')
+   #authgroup.add_argument('--obs_api_token', required=False,
+   #        default=obs_api_token,
+   #        help='LCO observing API (Valhalla) authentication token')
+   #authgroup.add_argument('--archive_token', required=False,
+   #        default=archive_token,
+   #        help='LCO Archive authentication token')
 
     filegroup = parser.add_argument_group('Local File I/O')
     filegroup.add_argument('-o', '--save_root', required=True, default=None,
@@ -321,9 +327,9 @@ if (context.data_rlevel != None):
 ##--------------------------------------------------------------------------##
 
 ## Frame look-up:
-headers = {'Authorization': 'Token ' + context.token}
-base_url = 'https://archive-api.lco.global/'
-frame_url = base_url + 'frames/'
+#headers = {'Authorization': 'Token ' + context.archive_token}
+#base_url = 'https://archive-api.lco.global/'
+#frame_url = base_url + 'frames/'
 params = {'limit':context.max_files}
 params['basename'] = 'nrs'              # only NRES files!!
 #params['OBSTYPE'] = 'EXPOSE'
@@ -352,24 +358,30 @@ if (context.ndays > 0.0):
     params['start'] = (astt.Time.now() - look_back).iso
 
 ## Initial pass to get total frame count:
-get_cmd = {'url':frame_url, 'headers':headers, 'params':params}
+#get_cmd = {'url':frame_url, 'headers':headers, 'params':params}
 try:
-    total = lcofrm.count_results(get_cmd)
+    #total = lcofrm.count_results(get_cmd)
+    total = lcofrm.count_frames_by_params(params)
 except:
     sys.stderr.write("Error: frame count failed!\n")
+    sys.stderr.write("traceback:\n\n%s\n" % traceback.format_exc())
     sys.exit(1)
 sys.stderr.write("Search identified %d frames in the LCO archive.\n" % total)
 
 ## Fetch frames (gets newest first):
 results = []
 try:
-    depth, rcount = lcofrm.recursive_request(get_cmd, results, 
-            maxdepth=context.max_depth)
+    depth, rcount = lcofrm.find_frames_by_params(params, results,
+            maxdepth=context.max_depth, vlevel=0)
+    #depth, rcount = lcofrm.recursive_request(get_cmd, results, 
+    #        maxdepth=context.max_depth)
 except:
     sys.stderr.write("Error: recursive frame retrieval failed!\n")
+    sys.stderr.write("traceback:\n\n%s\n" % traceback.format_exc())
     sys.exit(1)
 nhits = len(results)
 
+sys.exit(0)
 ## Order by observation date:
 results.sort(key=lambda x:x['DATE_OBS'])
 

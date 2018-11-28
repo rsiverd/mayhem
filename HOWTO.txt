@@ -27,4 +27,5 @@ idlenice ./Z01_rebuild_range.sh nres01 20170701 20170705 bias -k -B0
 idlenice ./Z01_rebuild_range.sh nres01 20170701 20170705 dark -k -B0
 
 
-
+# Smarter driver script that bounds capacity of intermediate files:
+idlenice ./Z82_build_calibs_in_chunks.sh nres01 20181101 20181125 10 11

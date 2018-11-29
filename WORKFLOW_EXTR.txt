@@ -12,7 +12,7 @@ stacked_thar12="images/med_nres01_thar12_20180414_07d_06b_00a.fits.fz"
    -Y handy/spec_yprofile_med.fits.fz -o initial_trace.fits
 
 Optionally inspect results:
-mayhem-overplot-traces.py -T initial_trace.fits $stacked_tung01 -o tung01_tr1.fits
+./mayhem-overplot-traces.py -T initial_trace.fits $stacked_tung01 -o tung01_tr1.fits
 
 2) High-quality background measurement with traces masked out.
 ./mayhem-estimate-background.py -B vtx-baffle-lsc.fits.fz $stacked_tung01 \
@@ -26,6 +26,9 @@ fitsarith -qHi $stacked_tung01 \
 ./mayhem-find-spec-trace.py -B vtx-baffle-lsc.fits.fz \
    -Y handy/spec_yprofile_med.fits.fz -o improved_trace.fits \
    squeaky_clean_lampflat.fits
+
+Optionally inspect results:
+./mayhem-overplot-traces.py -T improved_trace.fits $stacked_tung01 -o tung01_tr2.fits
 
 # -----------------------------------------------------------------------
 

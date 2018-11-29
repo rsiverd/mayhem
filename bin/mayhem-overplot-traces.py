@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2018-05-09
-# Last modified: 2018-05-09
+# Last modified: 2018-11-29
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.1.0"
+__version__ = "0.1.5"
 
 ## Python version-agnostic module reloading:
 try:
@@ -171,7 +171,9 @@ if __name__ == '__main__':
 
     # ------------------------------------------------------------------
     descr_txt = """
-    Illustrate traces on the specified image.
+    Illustrate traces on the specified image. This script produces a FITS
+    file with data matching input_image where the trace locations have
+    been replaced by NaN.
     
     Version: %s
     """ % __version__
@@ -179,15 +181,15 @@ if __name__ == '__main__':
             prog=os.path.basename(__file__),
             description=descr_txt)
     parser.add_argument('input_image', help='spectrum image to annotate')
-    parser.add_argument('-t', '--trace',
+    parser.add_argument('-T', '--trace',
             help='file with trace data', required=True)
     parser.add_argument('-o', '--output_file', required=True,
-            help='Output filename.')
+            help='Output FITS filename .')
     parser.add_argument('--debug', dest='debug', default=False,
              help='Enable extra debugging messages', action='store_true')
     parser.add_argument('-q', '--quiet', action='count', default=0)
     parser.add_argument('-v', '--verbose', action='count', default=0)
-    parser.add_argument('remainder', help='other stuff', nargs='*')
+    #parser.add_argument('remainder', help='other stuff', nargs='*')
     # ------------------------------------------------------------------
 
     context = parser.parse_args()

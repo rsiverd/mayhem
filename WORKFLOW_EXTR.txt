@@ -28,7 +28,7 @@ fitsarith -qHi $stacked_tung01 \
    squeaky_clean_lampflat.fits
 
 Optionally inspect results:
-./mayhem-overplot-traces.py -T improved_trace.fits $stacked_tung01 -o tung01_tr2.fits
+./mayhem-overplot-traces.py -T improved_trace.fits squeaky_clean_lampflat.fits -o tung01_tr2.fits
 
 # -----------------------------------------------------------------------
 

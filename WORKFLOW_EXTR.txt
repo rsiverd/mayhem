@@ -12,7 +12,7 @@ stacked_thar12="images/med_nres01_thar12_20180414_07d_06b_00a.fits.fz"
    -Y handy/spec_yprofile_med.fits.fz -o initial_trace.fits
 
 2) High-quality background measurement with traces masked out.
-./mayhem-fit-background.py -B vtx-baffle-lsc.fits.fz $stacked_tung01 \
+./mayhem-estimate-background.py -B vtx-baffle-lsc.fits.fz $stacked_tung01 \
    -Y handy/spec_yprofile_med.fits.fz -o really_nice_background.fits
 
 3) Subtract background from stacked lampflat.

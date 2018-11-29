@@ -1,0 +1,29 @@
+
+0) Prepare stacked, bias- and dark-subtracted lampflats suitable for analysis.
+
+stacked_tung01="images/med_nres01_tung01_20180414_07d_06b_00a.fits.fz"
+stacked_tung12="images/med_nres01_tung12_20180414_07d_06b_00a.fits.fz"
+stacked_thar01="images/med_nres01_thar01_20180414_07d_06b_00a.fits.fz"
+stacked_thar12="images/med_nres01_thar12_20180414_07d_06b_00a.fits.fz"
+
+
+1) Initial guess at traces using Y-profile for simplicity.
+./mayhem-find-spec-trace.py -B vtx-baffle-lsc.fits.fz $stacked_tung01 \
+   -Y handy/spec_yprofile_med.fits.fz -o initial_trace.fits
+
+2) High-quality background measurement with traces masked out.
+./mayhem-fit-background.py -B vtx-baffle-lsc.fits.fz $stacked_tung01 \
+   -Y handy/spec_yprofile_med.fits.fz -o really_nice_background.fits
+
+3) Subtract background from stacked lampflat.
+fitsarith -qHi $stacked_tung01 \
+   -S really_nice_background.fits -o squeaky_clean_lampflat.fits
+
+4) Re-identify traces from cleaned lampflat. 
+./mayhem-find-spec-trace.py -B vtx-baffle-lsc.fits.fz \
+   -Y handy/spec_yprofile_med.fits.fz -o initial_trace.fits \
+   squeaky_clean_lampflat.fits
+
+# -----------------------------------------------------------------------
+
+

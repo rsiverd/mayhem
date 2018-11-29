@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2018-08-03
-# Last modified: 2018-08-03
+# Last modified: 2018-11-29
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 ## Python version-agnostic module reloading:
 try:
@@ -378,7 +378,8 @@ def _ann_image_name(tag):
     return "lookie_%s.fits" % tag
 
 def analyze(tnum, show_spec=True, show_flat=False):
-    func_cmd = "source /home/rsiverd/config/functions/DS9.sh"
+    home_dir = os.getenv('HOME')
+    func_cmd = "source %s/config/functions/DS9.sh" % home_dir
     view_cmd = "fztf --lin --slock" 
     show_cmd = func_cmd + ";" + view_cmd
 

@@ -39,7 +39,7 @@ params = result[0]
 sys.stderr.write("fitted slope: %s\n" % str(params))
 
 direct_slope = fit_yx_ratio(clean_xvals, noisy_yvals)
-sys.stderr.write("direct slope: 10.5f\n" % direct_slope)
+sys.stderr.write("direct slope: %10.5f\n" % direct_slope)
 
 fig = plt.figure(1)
 fig.clf()

@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2018-08-03
-# Last modified: 2018-11-29
+# Last modified: 2018-11-30
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 ## Python version-agnostic module reloading:
 try:
@@ -82,25 +82,9 @@ except ImportError:
                "Install either astropy.io.fits or pyfits and try again!\n\n")
         sys.exit(1)
 
-## ASCII I/O:
-#try:
-#    import astropy.io.ascii as aia
-#except ImportError:
-#    sys.stderr.write("\nError: astropy module not found!\n")
-#    sys.exit(1)
-
 ## Time conversion:
 #try:
 #    import astropy.time as astt
-#except ImportError:
-#    sys.stderr.write("\nError: astropy module not found!\n"
-#           "Please install and try again.\n\n")
-#    sys.exit(1)
-
-## WCS handling:
-#try:
-#    from astropy.wcs import WCS
-#    import astropy.wcs as awcs
 #except ImportError:
 #    sys.stderr.write("\nError: astropy module not found!\n"
 #           "Please install and try again.\n\n")
@@ -155,16 +139,6 @@ def qsave(iname, idata, header=None, padkeys=1000, **kwargs):
         os.remove(iname)
     pf.writeto(iname, idata, header=header, **kwargs)
     sys.stderr.write("done.\n")
-
-##--------------------------------------------------------------------------##
-## Save FITS image with clobber (fitsio):
-#def qsave(iname, idata, header=None, **kwargs):
-#    this_func = sys._getframe().f_code.co_name
-#    sys.stderr.write("Writing to '%s' ... " % iname)
-#    #if os.path.isfile(iname):
-#    #    os.remove(iname)
-#    fitsio.write(iname, idata, clobber=True, header=header, **kwargs)
-#    sys.stderr.write("done.\n")
 
 ##--------------------------------------------------------------------------##
 def ldmap(things):
@@ -229,6 +203,9 @@ if __name__ == '__main__':
             prog=os.path.basename(__file__),
             description=descr_txt)
     parser = MyParser(prog=os.path.basename(__file__), description=descr_txt)
+    # ------------------------------------------------------------------
+    parser.set_defaults(extr_method="dumb")
+    # ------------------------------------------------------------------
     #parser.add_argument('-d', '--dayshift', required=False, default=0,
     #        help='Switch between days (1=tom, 0=today, -1=yest', type=int)
     parser.add_argument('-q', '--quiet', action='count', default=0,
@@ -249,17 +226,14 @@ if __name__ == '__main__':
             help='FITS file with trace position parameters')
     ifgroup.add_argument('-o', '--output_file', required=True,
             default=None, help='output FITS file for extracted data')
-    #ifgroup.add_
-    #ofgroup = parser.add_argument_group('Output format')
-    #fmtparse = ofgroup.add_mutually_exclusive_group()
-    #fmtparse.add_argument('--python', required=False, dest='output_mode',
-    #        help='Return Python dictionary with results [default]',
-    #        default='pydict', action='store_const', const='pydict')
-    #bash_var = 'ARRAY_NAME'
-    #bash_msg = 'output Bash code snippet (use with eval) to declare '
-    #bash_msg += 'an associative array %s containing results' % bash_var
-    #fmtparse.add_argument('--bash', required=False, default=None,
-    #        help=bash_msg, dest='bash_array', metavar=bash_var)
+    # ------------------------------------------------------------------
+    # ------------------------------------------------------------------
+    extgroup = parser.add_argument_group('Extraction Method')
+    extgroup = extgroup.add_mutually_exclusive_group()
+    extgroup.add_argument('--dumb', dest='extr_method', action='store_const',
+            const='dumb', help='dumb/obvious method [def]')
+    extgroup.add_argument('--fox', dest='extr_method', action='store_const',
+            const='fox', help='flat-relative extraction')
     # ------------------------------------------------------------------
 
     context = parser.parse_args()

@@ -312,8 +312,8 @@ for ii,trace_pos in enumerate(trace_pixel_pos, 1):
 
     # FOX method:
     if (context.extr_method == 'fox'):
-        schunk = spec_data[trace_pos].T
-        fchunk = lamp_data[trace_pos].T
+        schunk = spec_data[trace_pos]
+        fchunk = lamp_data[trace_pos]
         fox_spec = nrex.flat_rel_solver(schunk, fchunk)
         fox_results.append((spec_cols, spec_rows, fox_spec))
 sys.stderr.write("done.\n")

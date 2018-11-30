@@ -307,6 +307,7 @@ sys.stderr.write("done.\n")
 ## Extract data at specified positions:
 n_traces = len(trace_pixel_pos)
 spec_chunks = []
+fox_results = []
 for ii,trace_pos in enumerate(trace_pixel_pos, 1):
     sys.stderr.write("\rExtracting blob %d of %d ... " % (ii, n_traces))
     ycoo, xcoo = trace_pos
@@ -319,8 +320,10 @@ for ii,trace_pos in enumerate(trace_pixel_pos, 1):
     lamp_rflx = lamp_blob / lamp_vsum
     #lamp_fwei = lamp_rflx * float(lamp_blob.shape[0])
     #spec_blobs.append(
-    spec_rows = np.average(ycoo, axis=0) + 1
-    spec_cols = xcoo[0] + 1
+
+    # Get "summed" CCD Y- and X-positions for each lambda in the blob:
+    spec_rows = np.average(ycoo, axis=0) + 1.0
+    spec_cols = xcoo[0] + 1.0                   # (all rows equal, take first)
     spec_vsum = np.sum(spec_blob, axis=0)
     spec_wsum = np.sum(spec_blob * lamp_rflx, axis=0)
     #normalize = calc_kde_mode(spec_vsum / spec_wsum, **kde_opts)
@@ -331,6 +334,16 @@ for ii,trace_pos in enumerate(trace_pixel_pos, 1):
     #lamp_vals = np.sum(lamp_blob, axis=0)
     #spec_chunks.append((spec_cols, spec_rows, spec_vsum, lamp_vsum))
     spec_chunks.append((spec_cols, spec_rows, spec_vsum, spec_wsum, lamp_vsum))
+
+    # FOX method:
+    xdpixels = trace_pos[0].shape[0]    # number of cross-dispersion pixels
+    ncolumns = trace_pos[0].shape[1]    # number of CCD columns in this order
+    schunk = spec_data[trace_pos].T
+    fchunk = lamp_data[trace_pos].T
+    fox_spec = np.zeros(ncolumns, dtype='float32')
+    for i,(fcol,scol) in enumerate(zip(fchunk, schunk)):
+        fox_spec[i] = np.linalg.lstsq(fcol[:, np.newaxis], scol, rcond=None)[0]
+    fox_results.append((spec_cols, spec_rows, fox_spec))
 sys.stderr.write("done.\n")
 
 

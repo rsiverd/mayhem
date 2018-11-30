@@ -358,6 +358,7 @@ def qplot(blob):
     ax1.set_xlim(col_lims)
     ax1.set_ylim(-0.07*high_flux, 1.25*high_flux)
     #ax1.set_yscale('log')
+    ax1.legend(loc='best')
     sys.stderr.write("Trace X range: %d to %d\n" % (xpix.min(), xpix.max()))
     sys.stderr.write("Trace Y middle: %10.5f\n" % np.average(ypix)) 
 

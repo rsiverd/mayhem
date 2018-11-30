@@ -349,12 +349,18 @@ def qplot(blob):
     #use_flux = sflux / lflux
     use_flux = sflux
     high_flux = np.percentile(use_flux, 98.0)
+    lamp_relcounts = lamp_vsum / lamp_vsum.mean()
+    clean_specflux = wei_flux / lamp_relcounts
     fig.clf()
+
+    # Raw and weighted counts from spectrum:
     ax1 = fig.add_subplot(221)
     ax1.grid(True)
     #ax1.plot(xpix, sflux, lw=1.0) 
     ax1.plot(xpix, use_flux, lw=1.50, label='spec_vsum') 
     ax1.plot(xpix, wei_flux, lw=0.25, c='r', label='spec_wsum') 
+    ax1.set_xlabel('X pixel')
+    ax1.set_ylabel('Counts (e-)')
     ax1.set_xlim(col_lims)
     ax1.set_ylim(-0.07*high_flux, 1.25*high_flux)
     #ax1.set_yscale('log')
@@ -362,21 +368,31 @@ def qplot(blob):
     sys.stderr.write("Trace X range: %d to %d\n" % (xpix.min(), xpix.max()))
     sys.stderr.write("Trace Y middle: %10.5f\n" % np.average(ypix)) 
 
-    ax2 = fig.add_subplot(223, sharex=ax1)
+    # Corresponding lampflat counts, summed across order:
+    ax2 = fig.add_subplot(222, sharex=ax1)
     ax2.grid(True)
     ax2.plot(xpix, lflux, lw=1.0, label='lamp_vsum') 
     ax2.legend(loc='best')
     ax2.set_xlabel('X pixel')
     ax2.set_ylabel('Counts (e-)')
 
-    ax3 = fig.add_subplot(224, aspect='equal')
+    # Attempt to normalize using lampflat ...
+    ax3 = fig.add_subplot(223, sharex=ax1)
     ax3.grid(True)
-    ax3.scatter(xpix, ypix, lw=0, s=5, label='CCD position')
-    ax3.set_xlim(col_lims)
-    ax3.set_ylim(col_lims)
-    ax3.set_xlabel("X pixel")
-    ax3.set_ylabel("Y pixel")
+    ax3.plot(xpix, clean_specflux, lw=0.5, c='g', label='clean_specflux')
+    ax3.set_xlabel('X pixel')
+    ax3.set_ylabel('Counts (e-)')
     ax3.legend(loc='best')
+
+    # Illustrate CCD position of blob:
+    ax4 = fig.add_subplot(224, aspect='equal')
+    ax4.grid(True)
+    ax4.scatter(xpix, ypix, lw=0, s=5, label='CCD position')
+    ax4.set_xlim(col_lims)
+    ax4.set_ylim(col_lims)
+    ax4.set_xlabel("X pixel")
+    ax4.set_ylabel("Y pixel")
+    ax4.legend(loc='best')
 
     fig.tight_layout() # adjust boundaries sensibly, matplotlib v1.1+
     plt.draw()

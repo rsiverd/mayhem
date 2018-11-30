@@ -291,10 +291,14 @@ for ii,trace_pos in enumerate(trace_pixel_pos, 1):
     spec_cols = np.average(xcoo, axis=0) + 1.0
     #spec_cols = xcoo[0] + 1.0                   # (all rows equal, take first)
 
+    # Extract pixel data:
+    spec_blob = spec_data[ycoo, xcoo]
+    lamp_blob = lamp_data[ycoo, xcoo]
+
     # My dumb method:
     if (context.extr_method == 'dumb'):
-        spec_blob = spec_data[ycoo, xcoo]
-        lamp_blob = lamp_data[ycoo, xcoo]
+        #spec_blob = spec_data[ycoo, xcoo]
+        #lamp_blob = lamp_data[ycoo, xcoo]
         lamp_vsum = np.sum(lamp_blob, axis=0)
         lamp_rflx = lamp_blob / lamp_vsum
 
@@ -312,9 +316,10 @@ for ii,trace_pos in enumerate(trace_pixel_pos, 1):
 
     # FOX method:
     if (context.extr_method == 'fox'):
-        schunk = spec_data[trace_pos]
-        fchunk = lamp_data[trace_pos]
-        fox_spec = nrex.flat_rel_solver(schunk, fchunk)
+        #schunk = spec_data[trace_pos]
+        #fchunk = lamp_data[trace_pos]
+        #fox_spec = nrex.flat_rel_solver(schunk, fchunk)
+        fox_spec = nrex.flat_rel_solver(spec_blob, lamp_blob)
         fox_results.append((spec_cols, spec_rows, fox_spec))
 sys.stderr.write("done.\n")
 

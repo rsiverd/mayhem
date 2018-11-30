@@ -353,8 +353,8 @@ def qplot(blob):
     ax1 = fig.add_subplot(221)
     ax1.grid(True)
     #ax1.plot(xpix, sflux, lw=1.0) 
-    ax1.plot(xpix, use_flux, lw=1.50) 
-    ax1.plot(xpix, wei_flux, lw=0.25, c='r') 
+    ax1.plot(xpix, use_flux, lw=1.50, label='spec_vsum') 
+    ax1.plot(xpix, wei_flux, lw=0.25, c='r', label='spec_wsum') 
     ax1.set_xlim(col_lims)
     ax1.set_ylim(-0.07*high_flux, 1.25*high_flux)
     #ax1.set_yscale('log')
@@ -363,13 +363,19 @@ def qplot(blob):
 
     ax2 = fig.add_subplot(223, sharex=ax1)
     ax2.grid(True)
-    ax2.plot(xpix, lflux, lw=1.0) 
+    ax2.plot(xpix, lflux, lw=1.0, label='lamp_vsum') 
+    ax2.legend(loc='best')
+    ax2.set_xlabel('X pixel')
+    ax2.set_ylabel('Counts (e-)')
 
     ax3 = fig.add_subplot(224, aspect='equal')
     ax3.grid(True)
-    ax3.scatter(xpix, ypix, lw=0, s=5)
+    ax3.scatter(xpix, ypix, lw=0, s=5, label='CCD position')
     ax3.set_xlim(col_lims)
     ax3.set_ylim(col_lims)
+    ax3.set_xlabel("X pixel")
+    ax3.set_ylabel("Y pixel")
+    ax3.legend(loc='best')
 
     fig.tight_layout() # adjust boundaries sensibly, matplotlib v1.1+
     plt.draw()

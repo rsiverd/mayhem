@@ -344,12 +344,12 @@ fig = plt.figure(1, figsize=fig_dims)
 def qplot(blob):
     col_lims = (-5, 4100)
     xpix, ypix, sflux, wflux, lflux = blob
-    norm_val = calc_kde_mode(sflux / wflux, **kde_opts)
-    wei_flux = norm_val * wflux
+    kde_mode = calc_kde_mode(sflux / wflux, **kde_opts)
+    wei_flux = kde_mode * wflux
     #use_flux = sflux / lflux
     use_flux = sflux
     high_flux = np.percentile(use_flux, 98.0)
-    lamp_relcounts = lamp_vsum / lamp_vsum.mean()
+    lamp_relcounts = lflux / lflux.mean()
     clean_specflux = wei_flux / lamp_relcounts
     fig.clf()
 

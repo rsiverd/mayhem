@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2018-08-03
-# Last modified: 2018-11-30
+# Last modified: 2018-12-01
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.3.0"
+__version__ = "0.3.5"
 
 ## Python version-agnostic module reloading:
 try:
@@ -319,7 +319,8 @@ for ii,trace_pos in enumerate(trace_pixel_pos, 1):
         #schunk = spec_data[trace_pos]
         #fchunk = lamp_data[trace_pos]
         #fox_spec = nrex.flat_rel_solver(schunk, fchunk)
-        fox_spec = nrex.flat_rel_solver(spec_blob, lamp_blob)
+        #fox_spec = nrex.flat_rel_solver(spec_blob, lamp_blob)
+        fox_spec = nrex.flat_rel_solver(lamp_blob, spec_blob)
         fox_results.append((spec_cols, spec_rows, fox_spec))
 sys.stderr.write("done.\n")
 

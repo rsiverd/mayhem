@@ -36,15 +36,36 @@ def fit_yxratio_numpy_lstsq(xvals, yvals, rcond=-1, full=False):
     if full:
         return result       # everything we know
     else:
-        return result[0]    # parameters only
+        return result[0][0] # parameters only
 
 ##--------------------------------------------------------------------------##
-## Fit for Y/X using direct summation:
+## Fit for Y/X using direct summation (single slope):
 def fit_yxratio_direct_sums(xvals, yvals):
     """Fit Y = a*X. Returns `a'."""
     return np.sum(xvals * yvals) / np.sum(xvals * xvals)
 
-
+## Bulk fitting of yxratio with direct method:
+def blob_fit_yxratio_direct(xblob, yblob, weights=None):
+    # set uniform weights if none provided:
+    if (weights == None):
+        wvals = np.ones_like(xblob)
+    else:
+        wvals = weights
+    if (xblob.shape != yblob.shape) or (xblob.shape != wvals.shape):
+        sys.stderr.write("Mismatched shapes:\n")
+        sys.stderr.write("xblob: %s\n" % str(xblob.shape))
+        sys.stderr.write("yblob: %s\n" % str(yblob.shape))
+        sys.stderr.write("wvals: %s\n" % str(wvals.shape))
+        raise
+    if (len(xblob.shape) != 2):
+        sys.stderr.write("Unexpected shape: %s\n" % str(xblob.shape))
+        sys.stderr.write("Expected 2-D input ....\n")
+        raise
+    narrower = np.argmin(xblob.shape)   # skinny axis should be summed over
+    sys.stderr.write("narrower: %d\n" % narrower)
+    numer = np.sum(wvals * xblob * yblob, axis=narrower)
+    denom = np.sum(wvals * xblob * xblob, axis=narrower)
+    return numer / denom
 
 ##--------------------------------------------------------------------------##
 

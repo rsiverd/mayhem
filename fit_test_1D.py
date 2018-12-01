@@ -1,17 +1,28 @@
 #!/usr/bin/env python
 
+## Python version-agnostic module reloading:
+try:
+    reload                              # Python 2.7
+except NameError:
+    try:
+        from importlib import reload    # Python 3.4+
+    except ImportError:
+        from imp import reload          # Python 3.0 - 3.3
+
 import matplotlib.pyplot as plt
 import numpy as np
 import os, sys, time
+import fcheck
+reload(fcheck)
 
 def ycalc(xvals, slope):
     return slope*xvals
 
-def fit_yx_ratio(xvals, yvals, weights=None):
-    """Fit Y = a*X"""
-    #if (weights == None):
-
-    return np.sum(xvals * yvals) / np.sum(xvals * xvals)
+#def fit_yx_ratio(xvals, yvals, weights=None):
+#    """Fit Y = a*X"""
+#    #if (weights == None):
+#
+#    return np.sum(xvals * yvals) / np.sum(xvals * xvals)
 
 # adopt sqrt(y) as scatter:
 def make_fake_yvals(xvals, slope, sigma):
@@ -34,11 +45,13 @@ noisy_yvals = make_fake_yvals(clean_xvals, use_slope, err_sigma)
 
 # fit attempt:
 #result = np.linalg.lstsq(clean_xvals[:, None], noisy_yvals)
-result = np.linalg.lstsq(clean_xvals[:, None], noisy_yvals, rcond=-1)
+#result = np.linalg.lstsq(clean_xvals[:, None], noisy_yvals, rcond=-1)
+result = fcheck.fit_yxratio_numpy_lstsq(clean_xvals, noisy_yvals, full=True)
 params = result[0]
 sys.stderr.write("fitted slope: %s\n" % str(params))
 
-direct_slope = fit_yx_ratio(clean_xvals, noisy_yvals)
+#direct_slope = fit_yx_ratio(clean_xvals, noisy_yvals)
+direct_slope = fcheck.fit_yxratio_direct_sums(clean_xvals, noisy_yvals)
 sys.stderr.write("direct slope: %10.5f\n" % direct_slope)
 
 fig = plt.figure(1)

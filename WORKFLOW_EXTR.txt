@@ -2,9 +2,9 @@
 0) Prepare stacked, bias- and dark-subtracted lampflats suitable for analysis.
 
 stacked_tung01="images/med_nres01_tung01_20180414_07d_06b_00a.fits.fz"
-stacked_tung12="images/med_nres01_tung12_20180414_07d_06b_00a.fits.fz"
 stacked_thar01="images/med_nres01_thar01_20180414_07d_06b_00a.fits.fz"
-stacked_thar12="images/med_nres01_thar12_20180414_07d_06b_00a.fits.fz"
+#stacked_tung12="images/med_nres01_tung12_20180414_07d_06b_00a.fits.fz"
+#stacked_thar12="images/med_nres01_thar12_20180414_07d_06b_00a.fits.fz"
 
 
 1) Initial guess at traces using Y-profile for simplicity.
@@ -31,5 +31,22 @@ Optionally inspect results:
 ./mayhem-overplot-traces.py -T improved_trace.fits squeaky_clean_lampflat.fits -o tung01_tr2.fits
 
 # -----------------------------------------------------------------------
+# DOUBLEs:
+--> background tends to be low, let's just use the trace as-is (simpler anyway)
+
+./mayhem-dumb-extract.py -S $stacked_thar01 -L squeaky_clean_lampflat.fits \
+   -T initial_trace.fits -o test_spec_thar01.fits
+
+IPYTHON:
+%run ./mayhem-dumb-extract.py -S images/med_nres01_thar01_20180414_07d_06b_00a.fits.fz -o test_spec_thar01.fits -L squeaky_clean_lampflat.fits -T initial_trace.fits
+
+fibnum = 7
+analyze(fibnum, show_flat=True)
+xpix, ypix, sflux, wflux, lflux = spec_chunks[fibnum]
+kde_mode = calc_kde_mode(sflux / wflux, **kde_opts)
+wei_flux = wflux * kde_mode
+lamp_relcounts = lflux / lflux.mean()
+specflux = wei_flux / lamp_relcounts
+
 
 

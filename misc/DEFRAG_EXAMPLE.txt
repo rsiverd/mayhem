@@ -1,0 +1,9 @@
+
+cd /net/shredder.phy.vanderbilt.edu/hd1/siverd/mayhem_proc
+camid="nres01"
+for nmax in 20 10 5; do
+   for procdir in $camid/201????? ; do
+      cmde "./defrag_stacked_images.sh $procdir $nmax"
+   done
+done
+

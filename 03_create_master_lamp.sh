@@ -514,6 +514,9 @@ else
    echo "min_lamp_data_vers: $min_lamp_data_vers"
    echo "min_lamp_code_vers: $min_lamp_code_vers"
 
+   # Get lamp exposure time from input frames:
+
+
    # Combine darks with outlier rejection (stack_args in config.sh):
    mecho "\n`RowWrite 75 -`\n"
    opts="$dark_stack_args"
@@ -538,9 +541,9 @@ else
    echo "hargs ( camid obstype lampexp drtag ):"
    echo "( ${hargs[*]} ) "
    exit
-   cmde "update_output_header $foo ${hargs[*]}"                   || exit $?
-   cmde "fpack -F -Y -qt 32 $foo"                                 || exit $?
-   cmde "mv -f $foo $nite_lampsave"                               || exit $?
+   cmde "update_output_header $foo ${hargs[*]}"             || exit $?
+   cmde "fpack -F -Y -qt 32 $foo"                           || exit $?
+   cmde "mv -f $foo $nite_lampsave"                         || exit $?
 
    ## Preserve stack files (if requested):
    #if [ $keep_clean -eq 1 ]; then

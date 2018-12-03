@@ -125,6 +125,7 @@ frag_list=( `cut -d: -f1 $bar` )
 for image in "${frag_list[@]}"; do
    ibase="${image##*/}"
    xfile="${stack_dir}/${ibase}.xfer"
+   jnk="$def_jnk $xfile"
    echo "image: $image"
    echo "xfile: $xfile"
    cmde "cp $image $baz"
@@ -137,12 +138,12 @@ for image in "${frag_list[@]}"; do
    else
       PauseAbort "YIKES!\n"
    fi
+   jnk="$def_jnk"
 done
 
 ##--------------------------------------------------------------------------##
 ## Re-check after committment to disk:
 cmde "sync" || exit $?
-#cmde "filefrag `cat $foo`"
 
 ## Warn if any images at/above cutoff after defrag attempt:
 filefrag ${img_list[*]} | awk -v fmax=$max_frags '$2 >= fmax' | tee $bar
@@ -153,6 +154,7 @@ else
    Recho "Some files ($nstuck) remain at/above frag limit ...\n"
    vcmde "cat $bar"
 fi
+echo -ne "\n\n"
 
 #mecho "\nWorst 5 after defrag attempt:\n"
 #cmde "filefrag $stack_dir/med*fz | sort -rnk2 | head -5"

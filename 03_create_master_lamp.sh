@@ -515,7 +515,10 @@ else
    echo "min_lamp_code_vers: $min_lamp_code_vers"
 
    # Get lamp exposure time from input frames:
-
+   #echo "STACKED EXPTIME ..."
+   avg_expt=$(calc_average_exptime $tmp_dir/clean*fits.fz)  || exit $?
+   echo "avg_expt: $avg_expt"
+   #exit 1
 
    # Combine darks with outlier rejection (stack_args in config.sh):
    mecho "\n`RowWrite 75 -`\n"
@@ -537,7 +540,7 @@ else
    cmde "record_data_version $foo -l $min_lamp_data_vers"   || exit $?
    cmde "record_code_version $foo -l $script_version"       || exit $?
 
-   hargs=( $camid $obstype $lampexp $drtag )
+   hargs=( $camid $obstype $avg_exp $drtag )
    echo "hargs ( camid obstype lampexp drtag ):"
    echo "( ${hargs[*]} ) "
    exit

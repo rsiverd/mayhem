@@ -210,6 +210,26 @@ header_gain_is_unity () {
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 
+## Determine sensible stack EXPTIME from duration of its inputs:
+calc_average_exptime () {
+   [ -z "$tmp_dir" ] && ErrorAbort "Temp directory unknown!!" 99
+   tmp_expt="$tmp_dir/input_exposure_times.txt"
+   vcmde "imhget EXPTIME $* -o $tmp_expt" || return $?
+   #cmde "cat $tmp_expt"
+   avg_exp=$(awk '{ sum += $2 } END { printf "%.3f\n", sum / NR }' $tmp_expt)
+   status=$?
+   vcmde "rm $tmp_expt"
+   #imhget EXPTIME $* | awk '{ sum += $2 } END { printf "%.3f\n", sum / NR }'
+   #read pause
+   echo $avg_exp
+   return $status
+}
+
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+
 
 ##--------------------------------------------------------------------------##
 ## Collect unique input image history from a set of input images:

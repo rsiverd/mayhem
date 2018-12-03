@@ -5,7 +5,7 @@
 #
 # Rob Siverd
 # Created:      2018-01-05
-# Last updated: 2018-11-17
+# Last updated: 2018-12-03
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
@@ -13,20 +13,33 @@
 ##--------------------------------------------------------------------------##
 ## Output image header updates:
 update_output_header () {
+   local NEED_ARGS=5
+   if [ $# -ne $NEED_ARGS ]; then
+      echo "update_output_header: UNEXPECTED INPUTS!!" >&2
+      echo "Expected ${NEED_ARGS}, got $#" >&2
+      echo "args: $*"
+      return 1
+   fi
+   for hval in "$@"; do
+      if [ -z "$hval" ]; then
+         echo "BLANK INPUT DETECTED!"
+         return 1
+      fi
+   done
    local image="$1"
    local camid="$2"
    local obstype="$3"
    local exptime="$4"
    local drtag="$5"
-   vcmde "hdrtool $image -d"                                || return $?
-   vcmde "hdrtool $image -U GAIN     --value='1.0'"         || return $?
-   vcmde "hdrtool $image -U OBSTYPE  --value='$obstype'"    || return $?
-   vcmde "hdrtool $image -U EXPTIME  --value='$exptime'"    || return $?
-   vcmde "hdrtool $image -U CAMID    --value='$camid'"      || return $?
-   vcmde "hdrtool $image -U DRTAG    --value='$drtag'"      || return $?
-   vcmde "hdrtool $image -U EXTNAME  --value='SPECTRUM'"    || return $?
-   vcmde "hdrtool $image -U TELESCOP --value='$camid'"      || return $?
-   vcmde "hdrtool $image -Cd"                               || return $?
+   vcmde "hdrtool $image -d"                                  || return $?
+   vcmde "hdrtool $image -U GAIN     --hdr_data=1.0"          || return $?
+   vcmde "hdrtool $image -U OBSTYPE  --str_data='$obstype'"   || return $?
+   vcmde "hdrtool $image -U EXPTIME  --hdr_data='$exptime'"   || return $?
+   vcmde "hdrtool $image -U CAMID    --str_data='$camid'"     || return $?
+   vcmde "hdrtool $image -U DRTAG    --str_data='$drtag'"     || return $?
+   vcmde "hdrtool $image -U EXTNAME  --str_data='SPECTRUM'"   || return $?
+   vcmde "hdrtool $image -U TELESCOP --str_data='$camid'"     || return $?
+   vcmde "hdrtool $image -Cd"                                 || return $?
 }
 
 ##--------------------------------------------------------------------------##

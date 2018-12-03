@@ -3,3 +3,4 @@ temp_dark.fits
 .*.swp
 cron_mayhem*log
 clipped_pixels.log
+image_scaling.log

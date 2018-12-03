@@ -541,9 +541,6 @@ else
    cmde "record_code_version $foo -l $script_version"       || exit $?
 
    hargs=( $camid $obstype $avg_exp $drtag )
-   echo "hargs ( camid obstype lampexp drtag ):"
-   echo "( ${hargs[*]} ) "
-   exit
    cmde "update_output_header $foo ${hargs[*]}"             || exit $?
    cmde "fpack -F -Y -qt 32 $foo"                           || exit $?
    cmde "mv -f $foo $nite_lampsave"                         || exit $?

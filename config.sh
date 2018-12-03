@@ -21,6 +21,7 @@ barrier_list="./barriers.txt"
 
 bias_stack_args="-r410 --itable"
 dark_stack_args="-r410 --itable -c5"
+lamp_stack_args="-r410 --itable -c5"
 
 #declare -A objects_keyword
 #objects_keyword["thar01"]="thar&thar&none"

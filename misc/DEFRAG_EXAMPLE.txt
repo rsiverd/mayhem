@@ -1,9 +1,22 @@
+# Storage locations:
+proc_root="/net/shredder.phy.vanderbilt.edu/hd1/siverd/mayhem_proc"
+
+# Check the average number of extents:
+for cam in nres01 nres03 ; do
+   fsave="frags_${cam}.txt"
+   find $proc_root/$cam -type f -name "med*fz" | xargs -n50 filefrag > $fsave
+   awk -v cam=$cam '{ sum += $2 }
+   END { printf "Average %s extents: %.3f\n", cam, sum/NR }' $fsave
+done
+
 
 cd /net/shredder.phy.vanderbilt.edu/hd1/siverd/mayhem_proc
 camid="nres01"
 for nmax in 20 10 5; do
-   for procdir in $camid/201????? ; do
-      cmde "./defrag_stacked_images.sh $procdir $nmax"
+   for imdir in $proc_root/$camid/201????? ; do
+      cmde "./defrag_stacked_images.sh $imdir $nmax"
    done
 done
+
+
 

@@ -286,25 +286,31 @@ img_vals, hdr_keys = pf.getdata(context.spec_file, header=True)
 #img_vals, hdr_keys = pf.getdata(data_file, header=True, uint=True) # USHORT
 #img_vals, hdr_keys = fitsio.read(data_file, header=True)
 
+## Working copy of image with some tweaks:
+wrk_vals = img_vals.astype('float32')
+wrk_vals[wrk_vals < 0.0] = 0.0
+wrk_vals = np.sqrt(wrk_vals)
+
 #maxval = img_vals.max()
-sat_thresh = context.rthresh * img_vals.max()
-satur_mask = (img_vals >= sat_thresh).nonzero()
+sat_thresh = context.rthresh * wrk_vals.max()
+satur_mask = (wrk_vals >= sat_thresh).nonzero()
 
-### Save masked image copy:
-#if context.output:
-#    tdata = img_vals.astype('float32')
-#    tdata[satur_mask] = np.nan
-#    qsave(context.output, tdata, overwrite=True)
-#    del tdata
+## Save masked image copy:
+if context.output:
+    tdata = wrk_vals.astype('float32')
+    tdata[satur_mask] = np.nan
+    qsave(context.output, tdata, overwrite=True)
+    del tdata
 
+sys.exit(0)
 ## Try existing tools:
 pix_origin = 1
-kstbc.create_sat_mask(img_vals, sat_thresh)
+kstbc.create_sat_mask(wrk_vals, sat_thresh)
 ccd_xx, ccd_yy, ccd_npix = kstbc.find_stars(minpix=5, origin=pix_origin)
 
 
 ## Mark up an image:
-tdata = img_vals.astype('float32')
+tdata = wrk_vals.astype('float32')
 yrel, xrel = np.mgrid[-1:2, -1:2]
 yrel = yrel.flatten()
 xrel = xrel.flatten()

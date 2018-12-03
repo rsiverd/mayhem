@@ -1,0 +1,11 @@
+
+Object identification in the 2D image is probably not a useful path. The
+blooms have varying length and Argon spots in adjacent fibers can overlap,
+making robust segmentation very hard. 
+
+An alternative option may be to multiply the master flat and double, 
+effectively "highlighting" the bits of Argon lines that land in the
+expected locations. This might work.
+
+Better course of action: look for saturated pixels after extracting.
+

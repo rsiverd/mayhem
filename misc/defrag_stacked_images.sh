@@ -101,12 +101,13 @@ if [ $nfiles -eq 0 ]; then
    exit 0
 fi
 yecho "found $nfiles stacked images.\n"
+img_list=( `cat $foo` )
 
 ##--------------------------------------------------------------------------##
 ## Check for fragmentation:
 yecho "Checking fragmentation ... "
-vcmde "filefrag `cat $foo` > $bar"  || exit $?
-vcmde "mv -f $bar $foo"             || exit $?
+vcmde "filefrag ${img_list[*]} > $bar"    || exit $?
+vcmde "mv -f $bar $foo"                   || exit $?
 gecho "done.\n"
 
 ## Select files for adjustment:
@@ -143,8 +144,18 @@ done
 cmde "sync" || exit $?
 #cmde "filefrag `cat $foo`"
 
-mecho "\nWorst 5 after defrag attempt:\n"
-cmde "filefrag $stack_dir/med*fz | sort -rnk2 | head -5"
+## Warn if any images at/above cutoff after defrag attempt:
+filefrag ${img_list[*]} | awk -v fmax=$max_frags '$2 >= fmax' | tee $bar
+nstuck=$(cat $bar | wc -l)
+if [ $nstuck -eq 0 ]; then
+   Gecho "All files now below frag limit!\n"
+else
+   Recho "Some files ($nstuck) remain at/above frag limit ...\n"
+   vcmde "cat $bar"
+fi
+
+#mecho "\nWorst 5 after defrag attempt:\n"
+#cmde "filefrag $stack_dir/med*fz | sort -rnk2 | head -5"
 
 ##--------------------------------------------------------------------------##
 ## Clean up:

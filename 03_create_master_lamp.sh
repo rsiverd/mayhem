@@ -522,7 +522,7 @@ else
 
    # Combine darks with outlier rejection (stack_args in config.sh):
    mecho "\n`RowWrite 75 -`\n"
-   opts="$dark_stack_args"
+   opts="$lamp_stack_args"
    cmde "medianize $opts $tmp_dir/clean*fits.fz -o '!$foo'" || exit $?
    append_input_histories $foo $tmp_dir/clean*fits.fz       || exit $?
    timer
@@ -540,7 +540,7 @@ else
    cmde "record_data_version $foo -l $min_lamp_data_vers"   || exit $?
    cmde "record_code_version $foo -l $script_version"       || exit $?
 
-   hargs=( $camid $obstype $avg_exp $drtag )
+   hargs=( $camid $obstype $avg_expt $drtag )
    cmde "update_output_header $foo ${hargs[*]}"             || exit $?
    cmde "fpack -F -Y -qt 32 $foo"                           || exit $?
    cmde "mv -f $foo $nite_lampsave"                         || exit $?

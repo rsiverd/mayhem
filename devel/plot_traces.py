@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # vim: set fileencoding=utf-8 ts=4 sts=4 sw=4 et tw=80 :
 #
-#
+# This script is written to investigate what (if any) mathematical
+# relationship exists among the orders that could be used to simplify
+# fitting and reduce jitter.
 #
 # Rob Siverd
 # Created:       2018-05-08
@@ -12,21 +14,6 @@
 
 ## Current version:
 __version__ = "0.0.1"
-
-## Optional matplotlib control:
-#from matplotlib import use, rc, rcParams
-#from matplotlib import use
-#from matplotlib import rc
-#from matplotlib import rcParams
-#use('GTKAgg')  # use GTK with Anti-Grain Geometry engine
-#use('agg')     # use Anti-Grain Geometry engine (file only)
-#use('ps')      # use PostScript engine for graphics (file only)
-#use('cairo')   # use Cairo (pretty, file only)
-#rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
-#rc('font',**{'family':'serif','serif':['Palatino']})
-#rc('font',**{'sans-serif':'Arial','family':'sans-serif'})
-#rc('text', usetex=True) # enables text rendering with LaTeX (slow!)
-#rcParams['axes.formatter.useoffset'] = False   # v. 1.4 and later
 
 ## Python version-agnostic module reloading:
 try:
@@ -197,9 +184,24 @@ def pick_inliers(data, sig_thresh):
 
 
 ##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+
+## Get trace file from command line:
+if (len(sys.argv) != 2):
+    sys.stderr.write("Syntax: %s trace_file.fits\n"
+            % os.path.basename(__FILE__))
+    sys.exit(1)
+
+trace_file = sys.argv[1]
+if not os.path.isfile(trace_file):
+    sys.stderr.write("File not found: %s\n" % trace_file)
+    sys.exit(1)
+
+##--------------------------------------------------------------------------##
 ## Load traces for analysis:
 
-data = trio.load_traces('./output_trace.fits')
+data = trio.load_traces(trace_file)
 pars = np.array([x['params'].tolist() for x in data])
 
 c0, c1, c2 = pars.T

@@ -238,7 +238,10 @@ linearized_data = copy.deepcopy(data)
 for tfit,ldata in zip(linearized_data, linearized_pars):
     tfit['params'] = ldata
 
-trio.store_traces('modified_trace.fits', linearized_data)
+mod_save = "modified_trace.fits"
+sys.stderr.write("Saving adjusted trace file '%s' ... " % mod_save)
+trio.store_traces(mod_save, linearized_data)
+sys.stderr.write("done.\n")
 
 ##--------------------------------------------------------------------------##
 ## Misc:

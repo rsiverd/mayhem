@@ -1,0 +1,60 @@
+# prepare channel 01 lampflat (CPT):
+cd /scratch/rsiverd/mayhem/nres03/20180801
+mayhem-find-spec-trace med_nres03_tung01_20180801_03d_02b_00a.fits -Y ~/NRES/handy/spec_yprofile_med.fits.fz -B ~/NRES/handy/vertex_baffle/vtx-baffle-cpt.b01.fits.fz -o /tmp/cpt_initial_trace_01.fits
+mayhem-estimate-background med_nres03_tung01_20180801_03d_02b_00a.fits -B ~/NRES/handy/vertex_baffle/vtx-baffle-cpt.b01.fits.fz -Y ~/NRES/handy/spec_yprofile_med.fits.fz -T /tmp/cpt_initial_trace_01.fits -o /tmp/lampflat_bg_01.fits 
+fitsarith -Hi med_nres03_tung01_20180801_03d_02b_00a.fits -S /tmp/lampflat_bg_01.fits -o /tmp/bgsub_med_nres03_tung01_20180801_03d_02b_00a.fits
+mayhem-find-spec-trace /tmp/bgsub_med_nres03_tung01_20180801_03d_02b_00a.fits -B ~/NRES/handy/vertex_baffle/vtx-baffle-cpt.b01.fits.fz -o /tmp/cleanflat_traces_01.fits
+
+# inspection ...
+mayhem-overplot-traces -t /tmp/cleanflat_traces_01.fits /tmp/bgsub_med_nres03_tung01_20180801_03d_02b_00a.fits -o /tmp/clean_image_clean_traces_01.fits
+fpeg -i /tmp/bgsub_med_nres03_tung01_20180801_03d_02b_00a.fits -Hnf /tmp/heq_bgsub_med_nres03_tung01_20180801_03d_02b_00a.fits
+
+# prepare channel 12 lampflat (CPT):
+cd /scratch/rsiverd/mayhem/nres03/20180801
+mayhem-find-spec-trace med_nres03_tung12_20180801_03d_02b_00a.fits -Y ~/NRES/handy/spec_yprofile_med.fits.fz -B ~/NRES/handy/vertex_baffle/vtx-baffle-cpt.b01.fits.fz -o /tmp/cpt_initial_trace_12.fits
+mayhem-estimate-background med_nres03_tung12_20180801_03d_02b_00a.fits -B ~/NRES/handy/vertex_baffle/vtx-baffle-cpt.b01.fits.fz -Y ~/NRES/handy/spec_yprofile_med.fits.fz -T /tmp/cpt_initial_trace_12.fits -o /tmp/lampflat_bg_12.fits 
+fitsarith -Hi med_nres03_tung12_20180801_03d_02b_00a.fits -S /tmp/lampflat_bg_12.fits -o /tmp/bgsub_med_nres03_tung12_20180801_03d_02b_00a.fits
+mayhem-find-spec-trace /tmp/bgsub_med_nres03_tung12_20180801_03d_02b_00a.fits -B ~/NRES/handy/vertex_baffle/vtx-baffle-cpt.b01.fits.fz -o /tmp/cleanflat_traces_12.fits
+
+# inspection ...
+mayhem-overplot-traces -t /tmp/cleanflat_traces_12.fits /tmp/bgsub_med_nres03_tung12_20180801_03d_02b_00a.fits -o /tmp/clean_image_clean_traces_12.fits
+fpeg -i /tmp/bgsub_med_nres03_tung12_20180801_03d_02b_00a.fits -Hnf /tmp/heq_bgsub_med_nres03_tung12_20180801_03d_02b_00a.fits
+
+# process a science frame:
+cd /scratch/rsiverd/mayhem/nres03/20180801
+nres-cdp-trim-oscan /archive/engineering/cpt/nres03/20180803/raw/cptnrs03-fl13-20180803-0027-e00.fits.fz -o /tmp/trim_cptnrs03-fl13-20180803-0027-e00.fits
+nres-labcal /tmp/trim_cptnrs03-fl13-20180803-0027-e00.fits -b med_bias_20180801_05d_04b_00a.fits -d med_dark_20180801_05d_04b_00a.fits -o /tmp/clean_cptnrs03-fl13-20180803-0027-e00.fits
+mayhem-estimate-background /tmp/clean_cptnrs03-fl13-20180803-0027-e00.fits -B ~/NRES/handy/vertex_baffle/vtx-baffle-cpt.b01.fits.fz -Y ~/NRES/handy/spec_yprofile_med.fits.fz -T /tmp/cleanflat_traces_01.fits -o /tmp/spectrum_bg.fits
+fitsarith -Hi /tmp/clean_cptnrs03-fl13-20180803-0027-e00.fits -S /tmp/spectrum_bg.fits -o /tmp/bgsub_clean_cptnrs03-fl13-20180803-0027-e00.fits
+mayhem-dumb-extract.py -S /tmp/bgsub_clean_cptnrs03-fl13-20180803-0027-e00.fits -T /tmp/cleanflat_traces_01.fits -L /tmp/bgsub_med_tung01_20180801_03d_02b_00a.fits -o /tmp/extracted_cptnrs03-fl13-20180803-0027-e00.fits
+
+# process a mega-bright (alpha Sco = antares) science frame:
+cd /scratch/rsiverd/mayhem/nres03/20180801
+nres-cdp-trim-oscan /archive/engineering/cpt/nres03/20180801/raw/cptnrs03-fl13-20180801-0020-e00.fits.fz -o /tmp/trim_cptnrs03-fl13-20180801-0020-e00.fits
+nres-labcal /tmp/trim_cptnrs03-fl13-20180801-0020-e00.fits -b med_bias_20180801_05d_04b_00a.fits -d med_dark_20180801_05d_04b_00a.fits -o /tmp/clean_cptnrs03-fl13-20180801-0020-e00.fits
+mayhem-estimate-background /tmp/clean_cptnrs03-fl13-20180801-0020-e00.fits -B ~/NRES/handy/vertex_baffle/vtx-baffle-cpt.b01.fits.fz -Y ~/NRES/handy/spec_yprofile_med.fits.fz -T /tmp/cleanflat_traces_01.fits -o /tmp/spectrum_bg.fits -s /tmp/bgsub_clean_cptnrs03-fl13-20180801-0020-e00.fits
+#fitsarith -Hi /tmp/clean_cptnrs03-fl13-20180801-0020-e00.fits -S /tmp/spectrum_bg.fits -o /tmp/bgsub_clean_cptnrs03-fl13-20180801-0020-e00.fits
+mayhem-dumb-extract.py -S /tmp/bgsub_clean_cptnrs03-fl13-20180801-0020-e00.fits -T /tmp/cleanflat_traces_01.fits -L /tmp/bgsub_med_tung01_20180801_03d_02b_00a.fits -o /tmp/extracted_cptnrs03-fl13-20180801-0020-e00.fits
+
+# -----------------------------------------------------------------------
+# -----------------------------------------------------------------------
+# -----------------------------------------------------------------------
+
+# prepare channel 12 lampflat (LSC):
+cd /scratch/rsiverd/mayhem/nres01/20180804
+mayhem-find-spec-trace med_nres01_tung12_20180804_05d_04b_00a.fits -A7 -Y ~/NRES/handy/spec_yprofile_med.fits.fz -B ~/NRES/handy/vertex_baffle/vtx-baffle-lsc.b01.fits.fz -o /tmp/lsc_initial_trace_12.fits
+mayhem-estimate-background med_nres01_tung12_20180804_05d_04b_00a.fits -B ~/NRES/handy/vertex_baffle/vtx-baffle-lsc.b01.fits.fz -Y ~/NRES/handy/spec_yprofile_med.fits.fz -T /tmp/lsc_initial_trace_12.fits -o /tmp/lsc_lampflat_bg_12.fits -s /tmp/bgsub_med_nres01_tung12_20180804_05d_04b_00a.fits
+#fitsarith -Hi med_nres01_tung12_20180801_03d_02b_00a.fits -S /tmp/lampflat_bg_12.fits -o /tmp/bgsub_med_nres01_tung12_20180804_05d_04b_00a.fits
+mayhem-find-spec-trace /tmp/bgsub_med_nres01_tung12_20180804_05d_04b_00a.fits -A7 -B ~/NRES/handy/vertex_baffle/vtx-baffle-lsc.b01.fits.fz -o /tmp/lsc_cleanflat_traces_12.fits
+
+# inspection ...
+mayhem-overplot-traces -t /tmp/lsc_cleanflat_traces_12.fits /tmp/bgsub_med_nres01_tung12_20180804_05d_04b_00a.fits -o /tmp/lsc_clean_image_clean_traces_12.fits
+fpeg -i /tmp/bgsub_med_nres01_tung12_20180804_05d_04b_00a.fits -Hnf /tmp/heq_bgsub_med_nres01_tung12_20180804_05d_04b_00a.fits
+
+# process an LSC science frame (HD134004 = KS37C014219):
+cd /scratch/rsiverd/mayhem/nres01/20180804
+nres-cdp-trim-oscan /archive/engineering/lsc/nres01/20180804/raw/lscnrs01-fl09-20180804-0018-e00.fits.fz -o /tmp/trim_lscnrs01-fl09-20180804-0018-e00.fits
+nres-labcal /tmp/trim_lscnrs01-fl09-20180804-0018-e00.fits -b med_nres01_bias_20180804_05d_04b_00a.fits -d med_nres01_dark_20180804_05d_04b_00a.fits -o /tmp/clean_lscnrs01-fl09-20180804-0018-e00.fits
+mayhem-estimate-background /tmp/clean_lscnrs01-fl09-20180804-0018-e00.fits -B ~/NRES/handy/vertex_baffle/vtx-baffle-lsc.b01.fits.fz -Y ~/NRES/handy/spec_yprofile_med.fits.fz -T /tmp/lsc_initial_trace_12.fits -s /tmp/bgsub_clean_lscnrs01-fl09-20180804-0018-e00.fits
+mayhem-dumb-extract -S /tmp/bgsub_clean_lscnrs01-fl09-20180804-0018-e00.fits -T /tmp/lsc_initial_trace_12.fits -L /tmp/bgsub_med_nres01_tung12_20180804_05d_04b_00a.fits -o /tmp/extracted_lscnrs01-fl09-20180804-0018-e00.fits
+

@@ -1,0 +1,11 @@
+
+# NIST spectral atlas of modern ThAr lamps:
+https://www.nist.gov/pml/spectrum-th-ar-hollow-cathode-lamps
+
+# Westinghouse ThAr lamp spectral atlas:
+https://www.noao.edu/kpno/tharatlas/thar/thar.html
+
+# CORALIE wavelength-fitting routines from Ceres:
+https://github.com/rabrahm/ceres/blob/master/coralie/coraliepipe.py
+https://github.com/rabrahm/ceres/blob/master/utils/GLOBALutils/GLOBALutils.py
+

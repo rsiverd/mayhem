@@ -1,0 +1,7 @@
+https://github.com/LCOGT/nres-pipe
+
+https://github.com/LCOGT/nres-pipe/blob/master/glass_index.pro
+
+https://github.com/LCOGT/nres-pipe/blob/master/lam_polynoms.pro
+
+https://github.com/LCOGT/nres-pipe/blob/master/lambda3ofx.pro

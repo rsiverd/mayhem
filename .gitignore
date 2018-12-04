@@ -1,6 +1,7 @@
 nice_bias.fits
 temp_dark.fits
 .*.swp
-cron_mayhem*log
 clipped_pixels.log
 image_scaling.log
+cron_mayhem*log
+cron_fetch*log

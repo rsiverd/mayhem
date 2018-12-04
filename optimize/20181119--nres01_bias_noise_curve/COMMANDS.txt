@@ -1,0 +1,12 @@
+#!/bin/bash
+camid="nres01"
+fdate=20180705
+
+proc_root="/net/shredder.phy.vanderbilt.edu/hd1/siverd/mayhem_proc"
+proc_nite="${proc_root}/${camid}/${fdate}"
+
+# Make image list:
+ls ${proc_nite}/med_*bias*fits.fz > input_images.txt
+imhget --npyhdr -l input_images.txt NUMSTACK PIX_IQRN ISIGMA -o thdr
+mv -f thdr img_noise.txt
+

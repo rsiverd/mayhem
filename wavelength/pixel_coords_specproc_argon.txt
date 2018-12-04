@@ -1,0 +1,34 @@
+
+-----------------------------------------------------------------------
+specproc order 3 seems to contain:
+ 323, 245
+ 640, 210
+2906, 169
+
+-----------------------------------------------------------------------
+specproc order 5 seems to contain:
+ 145, 335
+ 368, 309
+
+-----------------------------------------------------------------------
+specproc order 8 has the very close pair at 772.5 nm:
+ 675, 386
+ 685, 385
+
+NOTE: at ~0.00378 nm/pix, the 10-pixel separation spans ~0.0378 nm (0.378 AA)
+
+-----------------------------------------------------------------------
+specproc order 10 has a tight pair with wlen~750 nm at:
+
+
+-----------------------------------------------------------------------
+-----------------------------------------------------------------------
+
+* Same-order booming lines are ~275 pixels apart at ~0.00366 nm/pix
+--> 0.9333 nm separated
+
+* Good initial guess:
+R = lambda / dlambda ~= 50000 for NRES (per resolution element)
+With ~5 pixels per resolution element, guess that
+--> dlambda / pixel = 0.2 * (lambda / R) =~ 0.2 * (500 / 50000) = 0.002 nm/pix
+

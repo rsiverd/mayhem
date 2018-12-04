@@ -1,0 +1,15 @@
+# -----------------------------------------------------------------------
+# Identify channel 1 as intersection of 01 and 12:
+
+#fitsarith -qHi med_tung01_20180726_05d_04b_00a.fits -M med_tung12_20180726_05d_04b_00a.fits -o /tmp/prod.fits
+fitsarith -qHi med_tung01_20180726_05d_04b_00a.fits -D ~/NRES/handy/spec_yprofile_med.fits.fz -o /tmp/norm01.fits
+fitsarith -qHi med_tung12_20180726_05d_04b_00a.fits -D ~/NRES/handy/spec_yprofile_med.fits.fz -o /tmp/norm12.fits
+fitsarith -qHi /tmp/norm01.fits -M /tmp/norm12.fits -o /tmp/prod11.fits
+
+# -----------------------------------------------------------------------
+# Trace files need identifying information in their primary headers, i.e.,
+# --> what file was traced
+# --> what options were used
+# --> when tracing was performed
+# --> etc.
+

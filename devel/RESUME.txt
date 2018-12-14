@@ -1,0 +1,4 @@
+
+Files in ../test_extr/scratch are produced using code in: test_full_set.sh
+
+

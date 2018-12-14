@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2018-08-03
-# Last modified: 2018-12-01
+# Last modified: 2018-12-14
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.3.5"
+__version__ = "0.4.0"
 
 ## Python version-agnostic module reloading:
 try:
@@ -294,12 +294,13 @@ for ii,trace_pos in enumerate(trace_pixel_pos, 1):
     # Extract pixel data:
     spec_blob = spec_data[ycoo, xcoo]
     lamp_blob = lamp_data[ycoo, xcoo]
+    lamp_vsum = np.sum(lamp_blob, axis=0)
 
     # My dumb method:
     if (context.extr_method == 'dumb'):
         #spec_blob = spec_data[ycoo, xcoo]
         #lamp_blob = lamp_data[ycoo, xcoo]
-        lamp_vsum = np.sum(lamp_blob, axis=0)
+        #lamp_vsum = np.sum(lamp_blob, axis=0)
         lamp_rflx = lamp_blob / lamp_vsum
 
         spec_vsum = np.sum(spec_blob, axis=0)
@@ -321,7 +322,9 @@ for ii,trace_pos in enumerate(trace_pixel_pos, 1):
         #fox_spec = nrex.flat_rel_solver(schunk, fchunk)
         #fox_spec = nrex.flat_rel_solver(spec_blob, lamp_blob)
         fox_spec = nrex.flat_rel_solver(lamp_blob, spec_blob)
-        fox_results.append((spec_cols, spec_rows, fox_spec))
+        fox_results.append((spec_cols, spec_rows,  fox_spec))
+        spec_chunks.append((spec_cols, spec_rows, 
+                             fox_spec,  fox_spec, lamp_vsum))
 sys.stderr.write("done.\n")
 
 
@@ -398,6 +401,7 @@ def analyze(tnum, show_spec=True, show_flat=False):
     show_cmd = func_cmd + ";" + view_cmd
 
     # Make plot:
+    #qplot(trace_data[tnum])
     qplot(spec_chunks[tnum])
     if show_spec:
         annotated = _ann_image_name("spec")

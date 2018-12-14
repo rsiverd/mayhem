@@ -1,0 +1,4 @@
+/net/shredder.phy.vanderbilt.edu/hd1/siverd/mayhem_proc/nres01/20180705/med_nres01_bias_20180705_01d_00b_00a.fits.fz
+/net/shredder.phy.vanderbilt.edu/hd1/siverd/mayhem_proc/nres01/20180705/med_nres01_bias_20180705_03d_02b_00a.fits.fz
+/net/shredder.phy.vanderbilt.edu/hd1/siverd/mayhem_proc/nres01/20180705/med_nres01_bias_20180705_05d_04b_00a.fits.fz
+/net/shredder.phy.vanderbilt.edu/hd1/siverd/mayhem_proc/nres01/20180705/med_nres01_bias_20180705_07d_06b_00a.fits.fz

@@ -1,0 +1,15 @@
+hsrad=75
+hopts="-Q0.5 -b$hsrad -A"
+copts="-N --mean -r15"
+for image in `cat image_list.txt`; do
+   ibase="${image##*/}"
+   ifits="${ibase%.fz}"
+   #isave="bdr_${ifits}.fz"
+   bsave="bdr_${ifits}"
+   hsave="h${hsrad}_${ifits}"
+   csave="
+
+   cmde "borderize $image -b1 -p nan -o \!tmp.fits"
+   cmde "mv -f tmp.fits $bsave"
+   cmde "hsmooth $hopts $bsave -o 
+done

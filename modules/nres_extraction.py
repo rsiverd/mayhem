@@ -356,7 +356,7 @@ class TraceIO(object):
             # Standard keys go in first:
             for kk in _metadata_order:
                 if kk in hdata.keys():
-                    prihdr[kk] = hdata.pop(kk)
+                    prihdr[kk] = tuple(hdata.pop(kk))
             prihdr.append(self.divcmt)
 
             # Dump in anything else:

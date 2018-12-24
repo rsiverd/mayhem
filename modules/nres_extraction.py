@@ -330,7 +330,7 @@ class TraceIO(object):
         return
 
     def _header_from_dict(self, fit_data):
-        c_list = [self._divcmt]
+        c_list = [self._divcmt, self._divcmt]
         for dkey,fkey,cmnt in _trace_hkey_spec:
             c_list.append(pf.Card(fkey, fit_data[dkey], comment=cmnt))
         return pf.Header(c_list)
@@ -360,8 +360,9 @@ class TraceIO(object):
             prihdr.append(self._divcmt)
 
             # Dump in anything else:
-            prihdr.update({k:tuple(v) for k,v in hdata.items()})
-            prihdr.append(self._divcmt)
+            if len(hdata):
+                prihdr.update({k:tuple(v) for k,v in hdata.items()})
+                prihdr.append(self._divcmt)
         prihdu = pf.PrimaryHDU(header=prihdr)
 
         tables.append(prihdu)

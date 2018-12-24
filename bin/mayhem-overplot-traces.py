@@ -166,7 +166,7 @@ if __name__ == '__main__':
     idata, hkeys = pf.getdata(context.input_image, header=True)
     trdata = trio.load_traces(context.trace)
 
-    annotated = nrex.overplot_traces(idata, trdata.get_params_list())
+    annotated = nrex.overplot_traces(idata, trdata.get_trace_list())
     qsave(context.output_file, annotated, header=hkeys, overwrite=True)
 
 

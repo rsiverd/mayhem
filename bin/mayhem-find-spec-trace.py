@@ -170,6 +170,16 @@ trbox_smethod = 'median'    # smoothing method for trace search box
 trace_polyord = 2           # order of polynomial fit to trace
 
 ##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+
+## Default tracing process metadata:
+proc_metadata = {
+        'EXTRVERS'      : [__version__, 'extraction script version'],
+        'BAFFMASK'      : ['none', 'baffle mask used in extraction'],
+        'YPROFILE'      : ['none', 'Y-profile nomralization image used'],
+        }
+
+##--------------------------------------------------------------------------##
 ## Argument type-checking:
 def is_integer(asdf):
     try:
@@ -511,10 +521,12 @@ prof_data = None
 if yprofile_path and os.path.isfile(yprofile_path):
     prof_data = pf.getdata(yprofile_path)
     sys.stderr.write("Successfully loaded Y-profile '%s'\n" % yprofile_path)
+    proc_metadata["YPROFILE"][0] = yprofile_path
 
 if baffmask_path and os.path.isfile(baffmask_path):
     baff_mask = pf.getdata(baffmask_path)
     sys.stderr.write("Successfully loaded baffle mask '%s'\n" % baffmask_path)
+    proc_metadata["BAFFMASK"][0] = baffmask_path
 
 ##--------------------------------------------------------------------------##
 ## Simple smoother:
@@ -528,6 +540,9 @@ def boxcar_smooth(values, box_size):
 #img_vals = pf.getdata(data_file)
 #hdr_keys = pf.getheader(data_file)
 img_vals, hdr_keys = pf.getdata(data_file, header=True)
+proc_metadata['TR_IMAGE'] = [data_file, 'source image of traces']
+proc_metadata['SRC_XPIX'] = [img_vals.shape[1], 'source image X-pixels']
+proc_metadata['SRC_YPIX'] = [img_vals.shape[0], 'source image Y-pixels']
 
 ## If requested, flatten background with Y-profile:
 if isinstance(prof_data, np.ndarray):
@@ -561,6 +576,9 @@ sys.stdout.write("trace box X-center: %.1f\n" % trbox_xcenter)
 trbox_xlower = int(trbox_xcenter - trbox_halfpix - 1.0)
 trbox_xupper = int(trbox_xcenter + trbox_halfpix + 2.0)
 trbox_columns = slice(trbox_xlower, trbox_xupper)
+
+proc_metadata['HALFBPIX'] = [trbox_halfpix, 'half-size of tracing box']
+proc_metadata['TRMETHOD'] = [trbox_smethod, 'trace box smoothing method']
 
 ##--------------------------------------------------------------------------##
 
@@ -655,7 +673,7 @@ sys.stderr.write("done.\n")
 
 ## Write traces to file:
 if save_traces:
-    trio.store_traces(save_traces, trace_data)
+    trio.store_traces(save_traces, trace_data, hdata=proc_metadata)
 
 
 sys.exit(0)

@@ -292,15 +292,15 @@ def fitsify_spectrum(data, filename):
 
 class TraceData(object):
 
-    def __init__(self, tparam_list, metadata):
-        self._tparam_list = tparam_list
+    def __init__(self, trace_list, metadata):
+        self._trace_list = trace_list
         self._metadata = metadata
         return
 
     # Return raw trace parameters:
-    def get_params_list(self):
+    def get_trace_list(self):
         """Return raw trace fit parameters."""
-        return self._tparam_list
+        return self._trace_list
 
     # Return full primary data header:
     def get_metadata(self):
@@ -319,6 +319,9 @@ _trace_hkey_spec = [
         ( 'xmax',  'XMAX', '[pixel] trace upper X limit (right side)'),
         ('apron', 'APRON', '[pixel] apron size used for tracing'),
         ]
+
+_metadata_order = ['EXTRVERS', 'TR_IMAGE', 'SRC_XPIX', 'SRC_YPIX',
+            'TRMETHOD', 'HALFBPIX', 'BAFFMASK', 'YPROFILE', ]
 
 class TraceIO(object):
 
@@ -345,10 +348,20 @@ class TraceIO(object):
         return fit_data
 
     # Save a list of traces to a FITS table:
-    def store_traces(self, filename, traces_list):
+    def store_traces(self, filename, traces_list, hdata=None):
         tables = []
         prihdr = pf.Header()
-        prihdr['VERSION'] = __version__
+        prihdr['TRIOVERS'] = (__version__, 'TraceIO code version')
+        if hdata:
+            # Standard keys go in first:
+            for kk in _metadata_order:
+                if kk in hdata.keys():
+                    prihdr[kk] = hdata.pop(kk)
+            prihdr.append(self.divcmt)
+
+            # Dump in anything else:
+            prihdr.update({k:tuple(v) for k,v in hdata.items()})
+            prihdr.append(self.divcmt)
         prihdu = pf.PrimaryHDU(header=prihdr)
 
         tables.append(prihdu)

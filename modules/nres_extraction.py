@@ -357,11 +357,11 @@ class TraceIO(object):
             for kk in _metadata_order:
                 if kk in hdata.keys():
                     prihdr[kk] = tuple(hdata.pop(kk))
-            prihdr.append(self.divcmt)
+            prihdr.append(self._divcmt)
 
             # Dump in anything else:
             prihdr.update({k:tuple(v) for k,v in hdata.items()})
-            prihdr.append(self.divcmt)
+            prihdr.append(self._divcmt)
         prihdu = pf.PrimaryHDU(header=prihdr)
 
         tables.append(prihdu)

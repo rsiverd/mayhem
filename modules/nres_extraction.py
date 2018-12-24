@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2017-08-14
-# Last modified: 2018-12-02
+# Last modified: 2018-12-24
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.4.1"
+__version__ = "0.4.2"
 
 ## Modules:
 #import argparse
@@ -67,23 +67,23 @@ import theil_sen as ts
 #    sys.stderr.write("done.\n")
 
 ##--------------------------------------------------------------------------##
-def argnear(vec, val):
-    return (np.abs(vec - val)).argmin()
+#def argnear(vec, val):
+#    return (np.abs(vec - val)).argmin()
 
 ## Robust location/scale estimate using median/MAD:
-def calc_ls_med_MAD(a, axis=None):
-    """Return median and median absolute deviation of *a* (scaled to normal)."""
-    med_val = np.median(a, axis=axis)
-    sig_hat = (1.482602218 * np.median(np.abs(a - med_val), axis=axis))
-    return (med_val, sig_hat)
+#def calc_ls_med_MAD(a, axis=None):
+#    """Return median and median absolute deviation of *a* (scaled to normal)."""
+#    med_val = np.median(a, axis=axis)
+#    sig_hat = (1.482602218 * np.median(np.abs(a - med_val), axis=axis))
+#    return (med_val, sig_hat)
 
 ## Robust location/scale estimate using median/IQR:
-def calc_ls_med_IQR(a, axis=None):
-    """Return median and inter-quartile range of *a* (scaled to normal)."""
-    pctiles = np.percentile(a, [25, 50, 75], axis=axis)
-    med_val = pctiles[1]
-    sig_hat = (0.741301109 * (pctiles[2] - pctiles[0]))
-    return (med_val, sig_hat)
+#def calc_ls_med_IQR(a, axis=None):
+#    """Return median and inter-quartile range of *a* (scaled to normal)."""
+#    pctiles = np.percentile(a, [25, 50, 75], axis=axis)
+#    med_val = pctiles[1]
+#    sig_hat = (0.741301109 * (pctiles[2] - pctiles[0]))
+#    return (med_val, sig_hat)
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##

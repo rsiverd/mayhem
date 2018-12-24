@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2018-05-09
-# Last modified: 2018-11-29
+# Last modified: 2018-12-24
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.1.5"
+__version__ = "0.1.6"
 
 ## Python version-agnostic module reloading:
 try:
@@ -199,7 +199,7 @@ if __name__ == '__main__':
     idata, hkeys = pf.getdata(context.input_image, header=True)
     tdata = trio.load_traces(context.trace)
 
-    annotated = nrex.overplot_traces(idata, tdata)
+    annotated = nrex.overplot_traces(idata, tdata.get_params_list())
     qsave(context.output_file, annotated, header=hkeys, overwrite=True)
 
 

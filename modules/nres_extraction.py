@@ -296,6 +296,9 @@ class TraceData(object):
         self._trace_list = trace_list
         self._metadata = metadata
         self._imshape = self._get_imshape(self._metadata)
+        sys.stderr.write("got imshape: %s\n" % str(self._imshape))
+        sys.stderr.write("headers:\n")
+        sys.stderr.write("%s\n" % str(self._metadata))
         return
 
     # Look for image dimensions in metadata:
@@ -370,7 +373,7 @@ class TraceIO(object):
         return
 
     def _header_from_dict(self, fit_data):
-        c_list = [self._divcmt, self._divcmt]
+        c_list = [self._divcmt]
         for dkey,fkey,cmnt in _trace_hkey_spec:
             c_list.append(pf.Card(fkey, fit_data[dkey], comment=cmnt))
         return pf.Header(c_list)
@@ -391,6 +394,7 @@ class TraceIO(object):
     def store_traces(self, filename, traces_list, hdata=None):
         tables = []
         prihdr = pf.Header()
+        prihdr.append(self._divcmt)
         prihdr['TRIOVERS'] = (__version__, 'TraceIO code version')
         if hdata:
             # Standard keys go in first:
@@ -418,7 +422,9 @@ class TraceIO(object):
         traces_list = []
         with pf.open(filename) as hdu_list:
             all_pri_keys = hdu_list[0].header
+            sys.stderr.write("all_pro_keys: \n%s\n\n" % str(all_pri_keys))
             use_pri_keys = all_pri_keys.copy(strip=True)
+            sys.stderr.write("use_pro_keys: \n%s\n\n" % str(use_pri_keys))
             for hdu in hdu_list[1:]:
                 traces_list.append(self._trace_from_HDU(hdu))
         return TraceData(traces_list, use_pri_keys)

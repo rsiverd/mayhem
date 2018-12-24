@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2018-06-18
-# Last modified: 2018-08-06
+# Last modified: 2018-12-24
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.1.5"
+__version__ = "0.1.6"
 
 ## Python version-agnostic module reloading:
 try:
@@ -338,7 +338,8 @@ if os.path.isfile(context.baffle):
 ## Load trace data:
 trace_params_list = None
 if os.path.isfile(context.trace):
-    trace_params_list = trio.load_traces(context.trace)
+    trdata = trio.load_traces(context.trace)
+    trace_params_list = trdata.get_trace_list()
 
 ##--------------------------------------------------------------------------##
 ## If requested, flatten background with Y-profile:

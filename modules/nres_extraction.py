@@ -295,7 +295,16 @@ class TraceData(object):
     def __init__(self, trace_list, metadata):
         self._trace_list = trace_list
         self._metadata = metadata
+        self._imshape = self._get_imshape(self._metadata)
         return
+
+    # Look for image dimensions in metadata:
+    @staticmethod
+    def _get_imshape(mdata):
+        if ('SRC_XPIX' in mdata.keys()) and ('SRC_YPIX' in mdata.keys()):
+            return (mdata['SRC_YPIX'], mdata['SRC_XPIX'])
+        else:
+            return None
 
     # Return raw trace parameters:
     def get_trace_list(self):
@@ -305,6 +314,37 @@ class TraceData(object):
     # Return full primary data header:
     def get_metadata(self):
         return self._metadata
+
+    # Return traces as pixel masks (requires appropriate metadata):
+    def get_trace_masks(self, vlevel=0):
+        """Returns traces as pixel masks."""
+        if not self._imshape:
+            sys.stderr.write("Image dimensions not available!\n")
+            #return None
+            raise
+        return self._mask_from_traces(self._imshape, self._trace_list, vlevel)
+
+    # Build pixel masks corresponding to listed traces:
+    @staticmethod
+    def _mask_from_traces(imshape, trace_list, vlevel=0):
+        mask_image = np.zeros(imshape, dtype='bool')
+        trace_coords = []
+        n_traces = len(trace_list)
+        for i,trace_fit in enumerate(trace_list, 1):
+            if (vlevel >= 1):
+                sys.stderr.write("\rAdding trace %d of %d ... " % (i, n_traces))
+            xlist = np.arange(trace_fit['xmin'],
+                            trace_fit['xmax']).astype('uint16')
+            ordfit_ycoord = ridge_eval(trace_fit['params'], xlist)
+            ylower = np.int_(np.floor(ordfit_ycoord))
+            yc_list, xc_list = [], []
+            apron_pix = trace_fit['apron']
+            for offset in range(-apron_pix + 1, apron_pix + 1):
+                xc_list.append(xlist)
+                yc_list.append(ylower + offset)
+                pass
+            trace_coords.append((np.vstack(yc_list), np.vstack(xc_list)))
+        return trace_coords
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -440,10 +480,6 @@ def mask_from_traces(imshape, trace_list, vlevel=0):
             yc_list.append(ylower + offset)
             pass
         trace_coords.append((np.vstack(yc_list), np.vstack(xc_list)))
-        #trace_coords.append((
-        #    np.array(yc_list).reshape(2*apron_pix, -1), 
-        #    np.array(xc_list).reshape(2*apron_pix, -1)
-        #    ))
     return trace_coords
 
 

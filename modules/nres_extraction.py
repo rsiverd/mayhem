@@ -292,10 +292,22 @@ def fitsify_spectrum(data, filename):
 
 class TraceData(object):
 
-    def __init__(self, trace_list, metadata):
-        self._trace_list = trace_list
+    def __init__(self, tparam_list, metadata):
+        self._tparam_list = tparam_list
         self._metadata = metadata
         return
+
+    # Return raw trace parameters:
+    def get_params_list(self):
+        """Return raw trace fit parameters."""
+        return self._tparam_list
+
+    # Return full primary data header:
+    def get_metadata(self):
+        return self._metadata
+
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
 
 ## In this (initial) format, each trace will be given its own HDU. That HDU has
 ## a single 'params' column with the polynomial fit coefficients. Each HDU also
@@ -351,11 +363,11 @@ class TraceIO(object):
     def load_traces(self, filename):
         traces_list = []
         with pf.open(filename) as hdu_list:
-            pri_keys = hdu_list[0].header
+            all_pri_keys = hdu_list[0].header
+            use_pri_keys = all_pri_keys.copy(strip=True)
             for hdu in hdu_list[1:]:
                 traces_list.append(self._trace_from_HDU(hdu))
-        return TraceData(traces_list, pri_keys)
-        #return traces_list
+        return TraceData(traces_list, use_pri_keys)
 
 ##--------------------------------------------------------------------------##
 ##                      overplotting of traces onto image                   ##

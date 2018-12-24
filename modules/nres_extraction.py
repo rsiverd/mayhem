@@ -296,9 +296,6 @@ class TraceData(object):
         self._trace_list = trace_list
         self._metadata = metadata
         self._imshape = self._get_imshape(self._metadata)
-        sys.stderr.write("got imshape: %s\n" % str(self._imshape))
-        sys.stderr.write("headers:\n")
-        sys.stderr.write("%s\n" % str(self._metadata))
         return
 
     # Look for image dimensions in metadata:
@@ -422,9 +419,7 @@ class TraceIO(object):
         traces_list = []
         with pf.open(filename) as hdu_list:
             all_pri_keys = hdu_list[0].header
-            sys.stderr.write("all_pro_keys: \n%s\n\n" % str(all_pri_keys))
             use_pri_keys = all_pri_keys.copy(strip=True)
-            sys.stderr.write("use_pro_keys: \n%s\n\n" % str(use_pri_keys))
             for hdu in hdu_list[1:]:
                 traces_list.append(self._trace_from_HDU(hdu))
         return TraceData(traces_list, use_pri_keys)

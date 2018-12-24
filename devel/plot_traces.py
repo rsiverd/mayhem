@@ -202,7 +202,7 @@ if not os.path.isfile(trace_file):
 ## Load traces for analysis:
 
 trdata = trio.load_traces(trace_file)
-traces = trdata.get_traces()
+traces = trdata.get_trace_list()
 pars = np.array([x['params'].tolist() for x in traces])
 
 c0, c1, c2 = pars.T

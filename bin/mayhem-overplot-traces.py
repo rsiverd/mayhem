@@ -132,39 +132,6 @@ def pick_inliers(data, sig_thresh):
 
 
 ##--------------------------------------------------------------------------##
-
-##--------------------------------------------------------------------------##
-## Quick FITS I/O:
-#data_file = 'image.fits'
-#img_vals = pf.getdata(data_file)
-#hdr_keys = pf.getheader(data_file)
-#img_vals, hdr_keys = pf.getdata(data_file, header=True)
-#img_vals, hdr_keys = pf.getdata(data_file, header=True, uint=True) # USHORT
-#img_vals, hdr_keys = fitsio.read(data_file, header=True)
-
-#date_obs = hdr_keys['DATE-OBS']
-#site_lat = hdr_keys['LATITUDE']
-#site_lon = hdr_keys['LONGITUD']
-
-## Initialize time:
-#img_time = astt.Time(hdr_keys['DATE-OBS'], scale='utc', format='isot')
-#img_time += astt.TimeDelta(0.5 * hdr_keys['EXPTIME'], format='sec')
-#jd_image = img_time.jd
-
-## Initialize location:
-#observer = ephem.Observer()
-#observer.lat = np.radians(site_lat)
-#observer.lon = np.radians(site_lon)
-#observer.date = img_time.datetime
-
-#pf.writeto('new.fits', img_vals)
-#qsave('new.fits', img_vals)
-#qsave('new.fits', img_vals, header=hdr_keys)
-
-## Star extraction:
-#pse.set_image(img_vals, gain=3.6)
-#objlist = pse.analyze(sigthresh=5.0)
-
 ##--------------------------------------------------------------------------##
 ## Parse arguments and run script:
 if __name__ == '__main__':
@@ -197,9 +164,9 @@ if __name__ == '__main__':
     context.vlevel = 99 if context.debug else (context.verbose-context.quiet)
 
     idata, hkeys = pf.getdata(context.input_image, header=True)
-    tdata = trio.load_traces(context.trace)
+    trdata = trio.load_traces(context.trace)
 
-    annotated = nrex.overplot_traces(idata, tdata.get_params_list())
+    annotated = nrex.overplot_traces(idata, trdata.get_params_list())
     qsave(context.output_file, annotated, header=hkeys, overwrite=True)
 
 

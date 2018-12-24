@@ -36,15 +36,15 @@ import statsmodels.api as sm
 import theil_sen as ts
 
 ## FITS I/O:
-#try:
-#    import astropy.io.fits as pf
-#except ImportError:
-#    try:
-#       import pyfits as pf
-#    except ImportError:
-#        sys.stderr.write("\nError!  No FITS I/O module found!\n"
-#               "Install either astropy.io.fits or pyfits and try again!\n\n")
-#        sys.exit(1)
+try:
+    import astropy.io.fits as pf
+except ImportError:
+    try:
+       import pyfits as pf
+    except ImportError:
+        sys.stderr.write("\nError!  No FITS I/O module found!\n"
+               "Install either astropy.io.fits or pyfits and try again!\n\n")
+        sys.exit(1)
 
 ##--------------------------------------------------------------------------##
 ## Catch interruption cleanly:
@@ -105,6 +105,52 @@ import theil_sen as ts
 #    #for i,(fcol,scol) in enumerate(zip(fchunk, schunk)):
 #    #    rel_spec[i] = np.linalg.lstsq(fcol.reshape(-1, 1), scol, rcond=None)[0]
 #    return rel_spec
+
+##--------------------------------------------------------------------------##
+## Flat-relative extraction class:
+class FlatRelativeExtraction(object):
+
+    def __init__(self):
+        return
+
+    # Fit for Y/X using direct summation (single slope):
+    @staticmethod
+    def fit_yxratio_direct_sums(xvals, yvals):
+        """Fit Y = a*X. Returns `a'."""
+        return np.sum(xvals * yvals) / np.sum(xvals * xvals)
+
+
+    # Bulk fitting of yxratio with direct method:
+    @staticmethod
+    def flat_rel_solver(lblob, sblob, weights=None):
+        """
+        Inputs:
+            lblob   <-- lampflat pixels
+            sblob   <-- spectrum pixels
+            weights <-- per-pixel weights/errors
+                        FIXME: need to double-check what to use here
+        """
+    
+        # set uniform weights if none provided:
+        if (weights == None):
+            wvals = np.ones_like(lblob)
+        else:
+            wvals = weights
+        if (lblob.shape != sblob.shape) or (lblob.shape != wvals.shape):
+            sys.stderr.write("Mismatched shapes:\n")
+            sys.stderr.write("lblob: %s\n" % str(lblob.shape))
+            sys.stderr.write("sblob: %s\n" % str(sblob.shape))
+            sys.stderr.write("wvals: %s\n" % str(wvals.shape))
+            raise
+        if (len(lblob.shape) != 2):
+            sys.stderr.write("Unexpected shape: %s\n" % str(lblob.shape))
+            sys.stderr.write("Expected 2-D input ....\n")
+            raise
+        narrower = np.argmin(lblob.shape)   # skinny axis should be summed over
+        #sys.stderr.write("narrower: %d\n" % narrower)
+        numer = np.sum(wvals * lblob * sblob, axis=narrower)
+        denom = np.sum(wvals * lblob * lblob, axis=narrower)
+        return numer / denom
 
 ##--------------------------------------------------------------------------##
 ## Fit for Y/X using numpy linalg.lstsq:
@@ -244,6 +290,13 @@ def fitsify_spectrum(data, filename):
 ##                      Loading and storing of trace data                   ##
 ##--------------------------------------------------------------------------##
 
+class TraceData(object):
+
+    def __init__(self, trace_list, metadata):
+        self._trace_list = trace_list
+        self._metadata = metadata
+        return
+
 ## In this (initial) format, each trace will be given its own HDU. That HDU has
 ## a single 'params' column with the polynomial fit coefficients. Each HDU also
 ## has a few keywords providing useful metadata.
@@ -259,7 +312,7 @@ class TraceIO(object):
 
     def __init__(self):
         self._divcmt = pf.Card("COMMENT", 65*'-')
-        pass
+        return
 
     def _header_from_dict(self, fit_data):
         c_list = [self._divcmt]
@@ -298,9 +351,11 @@ class TraceIO(object):
     def load_traces(self, filename):
         traces_list = []
         with pf.open(filename) as hdu_list:
+            pri_keys = hdu_list[0].header
             for hdu in hdu_list[1:]:
                 traces_list.append(self._trace_from_HDU(hdu))
-        return traces_list
+        return TraceData(traces_list, pri_keys)
+        #return traces_list
 
 ##--------------------------------------------------------------------------##
 ##                      overplotting of traces onto image                   ##

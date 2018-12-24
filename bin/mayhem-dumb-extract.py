@@ -275,8 +275,7 @@ if (spec_data.shape != lamp_data.shape):
 
 ## Generate pixel masks from trace parameters:
 sys.stderr.write("Calculating pixels from trace parameters ... ")
-trace_pixel_pos = nrex.mask_from_traces(spec_data.shape, 
-                                trdata.get_trace_list())
+trace_pixel_pos = trdata.get_trace_masks()
 sys.stderr.write("done.\n")
 
 ## Extract data at specified positions:

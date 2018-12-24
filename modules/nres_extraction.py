@@ -36,23 +36,23 @@ import statsmodels.api as sm
 import theil_sen as ts
 
 ## FITS I/O:
-try:
-    import astropy.io.fits as pf
-except ImportError:
-    try:
-       import pyfits as pf
-    except ImportError:
-        sys.stderr.write("\nError!  No FITS I/O module found!\n"
-               "Install either astropy.io.fits or pyfits and try again!\n\n")
-        sys.exit(1)
+#try:
+#    import astropy.io.fits as pf
+#except ImportError:
+#    try:
+#       import pyfits as pf
+#    except ImportError:
+#        sys.stderr.write("\nError!  No FITS I/O module found!\n"
+#               "Install either astropy.io.fits or pyfits and try again!\n\n")
+#        sys.exit(1)
 
 ##--------------------------------------------------------------------------##
 ## Catch interruption cleanly:
-def signal_handler(signum, frame):
-    sys.stderr.write("\nInterrupted!\n\n")
-    sys.exit(1)
-
-signal.signal(signal.SIGINT, signal_handler)
+#def signal_handler(signum, frame):
+#    sys.stderr.write("\nInterrupted!\n\n")
+#    sys.exit(1)
+#
+#signal.signal(signal.SIGINT, signal_handler)
 
 ##--------------------------------------------------------------------------##
 ## Save FITS image with clobber (astropy / pyfits):

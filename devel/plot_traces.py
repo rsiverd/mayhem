@@ -7,13 +7,13 @@
 #
 # Rob Siverd
 # Created:       2018-05-08
-# Last modified: 2018-05-08
+# Last modified: 2018-12-24
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 ## Python version-agnostic module reloading:
 try:
@@ -201,8 +201,9 @@ if not os.path.isfile(trace_file):
 ##--------------------------------------------------------------------------##
 ## Load traces for analysis:
 
-data = trio.load_traces(trace_file)
-pars = np.array([x['params'].tolist() for x in data])
+trdata = trio.load_traces(trace_file)
+traces = trdata.get_traces()
+pars = np.array([x['params'].tolist() for x in traces])
 
 c0, c1, c2 = pars.T
 fiber1 = slice(0, None, 2)

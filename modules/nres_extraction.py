@@ -47,45 +47,6 @@ except ImportError:
         sys.exit(1)
 
 ##--------------------------------------------------------------------------##
-## Catch interruption cleanly:
-#def signal_handler(signum, frame):
-#    sys.stderr.write("\nInterrupted!\n\n")
-#    sys.exit(1)
-#
-#signal.signal(signal.SIGINT, signal_handler)
-
-##--------------------------------------------------------------------------##
-## Save FITS image with clobber (astropy / pyfits):
-#def qsave(iname, idata, header=None, padkeys=1000, **kwargs):
-#    sys.stderr.write("Writing to '%s' ... " % iname)
-#    if header:
-#        while (len(header) < padkeys):
-#            header.append() # pad header
-#    if os.path.isfile(iname):
-#        os.remove(iname)
-#    pf.writeto(iname, idata, header=header, **kwargs)
-#    sys.stderr.write("done.\n")
-
-##--------------------------------------------------------------------------##
-#def argnear(vec, val):
-#    return (np.abs(vec - val)).argmin()
-
-## Robust location/scale estimate using median/MAD:
-#def calc_ls_med_MAD(a, axis=None):
-#    """Return median and median absolute deviation of *a* (scaled to normal)."""
-#    med_val = np.median(a, axis=axis)
-#    sig_hat = (1.482602218 * np.median(np.abs(a - med_val), axis=axis))
-#    return (med_val, sig_hat)
-
-## Robust location/scale estimate using median/IQR:
-#def calc_ls_med_IQR(a, axis=None):
-#    """Return median and inter-quartile range of *a* (scaled to normal)."""
-#    pctiles = np.percentile(a, [25, 50, 75], axis=axis)
-#    med_val = pctiles[1]
-#    sig_hat = (0.741301109 * (pctiles[2] - pctiles[0]))
-#    return (med_val, sig_hat)
-
-##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -108,9 +69,10 @@ except ImportError:
 
 ##--------------------------------------------------------------------------##
 ## Flat-relative extraction class:
-class FlatRelativeExtraction(object):
+class FlatRelativeOptimalExtraction(object):
 
     def __init__(self):
+        self._stream = sys.stderr
         return
 
     # Fit for Y/X using direct summation (single slope):
@@ -176,9 +138,8 @@ class FlatRelativeExtraction(object):
         # Extract data at specified positions:
         frox_results = []
         for ii,trace_pos in enumerate(trace_pixel_pos, 1):
-            if (vlevel >= 0):
-                sys.stderr.write("\rExtracting blob %d of %d ... "
-                        % (ii, n_traces))
+            self.vlwrite(vlevel, 0, 
+                    "\rExtracting trace %d of %d ... " % (ii, n_traces))
             ycoo, xcoo = trace_pos
 
             # Get CCD Y- and X-positions for each lambda in the blob:
@@ -189,10 +150,21 @@ class FlatRelativeExtraction(object):
             spec_pix = spec_image[ycoo, xcoo]
             flat_pix = flat_image[ycoo, xcoo]
             fox_spec = self.flat_rel_solver(flat_pix, spec_pix)
-            frox_results.append(fox_spec)
-        
+            frox_results.append({'rows':spec_rows, 'cols':spec_cols,
+                                 'spec':fox_spec})
+            del xcoo, ycoo, spec_rows, spec_cols, spec_pix, flat_pix, fox_spec
+
+        self.vlwrite(vlevel, 0, "done.\n")
         return frox_results
 
+    # ------------------------------------
+    # Verbosity-specific messages:
+    @staticmethod
+    def vlwrite(vlevel, msg_vlevel, msg_text):
+        if (vlevel >= msg_vlevel):
+            sys.stderr.write(msg_text)
+        return
+        
 ##--------------------------------------------------------------------------##
 ## Fit for Y/X using numpy linalg.lstsq:
 def fit_yxratio_numpy_lstsq(xvals, yvals, rcond=-1, full=False):
@@ -524,19 +496,11 @@ def mask_from_traces(imshape, trace_list, vlevel=0):
         trace_coords.append((np.vstack(yc_list), np.vstack(xc_list)))
     return trace_coords
 
-
-###--------------------------------------------------------------------------##
-### Trace object for echelle orders:
-#class Trace(object):
-#
-#    def __init__(self):
-#        pass
-#
-#    @staticmethod
-#    def _column_average(imvals, ypixels):
-#        return np.sum(ypixels * imvals, axis=0) / np.sum(imvals, axis=0)
-
 ##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+
 ## Ridge fitting and evaluation:
 def fit_polynomial(xvec, yvec, poly=2, rlm=True):
     results = {'xmin':xvec.min(), 'xmax':xvec.max()}

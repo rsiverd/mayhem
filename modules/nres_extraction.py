@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2017-08-14
-# Last modified: 2018-12-24
+# Last modified: 2018-12-26
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.4.2"
+__version__ = "0.4.5"
 
 ## Modules:
 #import argparse
@@ -151,6 +151,47 @@ class FlatRelativeExtraction(object):
         numer = np.sum(wvals * lblob * sblob, axis=narrower)
         denom = np.sum(wvals * lblob * lblob, axis=narrower)
         return numer / denom
+
+    # Main extraction driver routine:
+    def extract(self, spec_image, flat_image, trace_data, spec_wei=None,
+            vlevel=0):
+        """Perform flat-relative optimal extraction. Effectively, this returns
+        the best-fit ratio spec_data / flat_data for corresponding CCD pixels.
+        This technique works well when the spectrograph is stable (traces do
+        not move between flat and spec observations). Blaze, QE variations,
+        and fringing are removed in a single operation.
+        
+        Inputs:
+        spec_image -- 2D image with spectrum to be extracted
+        flat_image -- 2D image with corresponding lampflat spectrum
+        trace_data -- list of trace information from TraceIO
+        spec_wei   -- 2D image of weights/uncertainties [FIXME CHECK FORMAT]
+        vlevel     -- verbosity level. Set below 0 to suppress progress
+        """
+        
+        # Trace pixel position masks:
+        trace_pixel_pos = trace_data.get_trace_masks()
+        n_traces = len(trace_pixel_pos)
+
+        # Extract data at specified positions:
+        frox_results = []
+        for ii,trace_pos in enumerate(trace_pixel_pos, 1):
+            if (vlevel >= 0):
+                sys.stderr.write("\rExtracting blob %d of %d ... "
+                        % (ii, n_traces))
+            ycoo, xcoo = trace_pos
+
+            # Get CCD Y- and X-positions for each lambda in the blob:
+            spec_rows = np.average(ycoo, axis=0) + 1.0
+            spec_cols = np.average(xcoo, axis=0) + 1.0
+
+            # Pixel data for this trace:
+            spec_pix = spec_image[ycoo, xcoo]
+            flat_pix = flat_image[ycoo, xcoo]
+            fox_spec = self.flat_rel_solver(flat_pix, spec_pix)
+            frox_results.append(fox_spec)
+        
+        return frox_results
 
 ##--------------------------------------------------------------------------##
 ## Fit for Y/X using numpy linalg.lstsq:

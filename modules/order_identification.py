@@ -128,35 +128,24 @@ class AdjacentDoubleSimilarity(object):
         ncomparisons = len(thar_norm) - 1
         #match_scores = np.zeros(ncomparisons, dtype='float')
         #match_shifts = np.zeros(ncomparisons, dtype='int')
-        #trace_indexes = []
         match_summary = []
         for i in range(len(thar_norm) - 1):
             sys.stderr.write("order: %3d\n" % i)
-            #trace_indexes.append((i, i+1))
             mshift, mscore = \
                     self.correl_calc_similarity(thar_norm[i], thar_norm[i+1])
-            tridx = (i, i+1)
-            result = {'tridx':(i, i+1), 'mshift':mshift, 'mscore':mscore}
-            #match_summary.append((mshift, mscore))
-            #match_summary.append((tridx, result))
+            trpair = (i, i+1)
+            result = {'trpair':trpair, 'mshift':mshift, 'mscore':mscore}
             match_summary.append(result)
-           #match_shifts[i], match_scores[i] = \
-           #        self.correl_calc_similarity(thar_norm[i], thar_norm[i+1])
         return match_summary
 
     # resolve pairs in score order:
-    #def resolve_trace_pairs(self, match_shifts, match_scores):
-    #def resolve_trace_pairs(self, trace_indexes, match_summary):
     def resolve_trace_pairs(self, match_summary):
         n_traces       = len(match_summary) + 1
         unpaired_trace = list(range(n_traces))
-        possible_pairs = {x['tridx']:x for x in match_summary}
-        #possible_pairs = {(i,i+1):x for i,x in enumerate(match_summary)}
-        #possible_pairs = {x:y for x,y in zip(trace_indexes, match_summary)}
-        #possible_pairs = {x:y for x,y in match_summary}
+        possible_pairs = {x['trpair']:x for x in match_summary}
         detected_pairs = {}
-        #mshifts, match_scores = zip(*match_summary)
         match_scores   = np.array([x['mscore'] for x in match_summary])
+
         for botidx in np.argsort(match_scores)[::-1]:
             sys.stderr.write("botidx: %d\n" % botidx)
             prev_pair = (botidx - 1, botidx)

@@ -150,7 +150,7 @@ class FlatRelativeOptimalExtraction(object):
             spec_pix = spec_image[ycoo, xcoo]
             flat_pix = flat_image[ycoo, xcoo]
             fox_spec = self.flat_rel_solver(flat_pix, spec_pix)
-            frox_results.append({'rows':spec_rows, 'cols':spec_cols,
+            frox_results.append({'xpix':spec_rows, 'ypix':spec_cols,
                                  'spec':fox_spec})
             del xcoo, ycoo, spec_rows, spec_cols, spec_pix, flat_pix, fox_spec
 

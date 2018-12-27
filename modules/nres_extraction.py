@@ -338,18 +338,25 @@ class TraceData(object):
             raise
         return self._mask_from_traces(self._imshape, self._trace_list, vlevel)
 
+    # Evaluate ridge corresponding to specified trace:
+    def _ridge_from_trace(self, tr_model):
+        """Evaluate X,Y ridge from input trace model."""
+        xvals = np.arange(tr_model['xmin'], tr_model['xmax']).astype('uint16')
+        yvals = ridge_eval(tr_model['params'], xvals)
+        return (xvals, yvals)
+
     # Build pixel masks corresponding to listed traces:
-    @staticmethod
-    def _mask_from_traces(imshape, trace_list, vlevel=0):
+    def _mask_from_traces(self, imshape, trace_list, vlevel=0):
         mask_image = np.zeros(imshape, dtype='bool')
         trace_coords = []
         n_traces = len(trace_list)
         for i,trace_fit in enumerate(trace_list, 1):
             if (vlevel >= 1):
                 sys.stderr.write("\rAdding trace %d of %d ... " % (i, n_traces))
-            xlist = np.arange(trace_fit['xmin'],
-                            trace_fit['xmax']).astype('uint16')
-            ordfit_ycoord = ridge_eval(trace_fit['params'], xlist)
+            #xlist = np.arange(trace_fit['xmin'],
+            #                trace_fit['xmax']).astype('uint16')
+            #ordfit_ycoord = ridge_eval(trace_fit['params'], xlist)
+            xlist, ordfit_ycoord = self._ridge_from_trace(trace_fit)
             ylower = np.int_(np.floor(ordfit_ycoord))
             yc_list, xc_list = [], []
             apron_pix = trace_fit['apron']

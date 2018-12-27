@@ -27,17 +27,11 @@ except NameError:
 import argparse
 import os
 import sys
+import copy
 import time
 import signal
 import numpy as np
 #from numpy.lib.recfunctions import append_fields
-#import datetime as dt
-#import scipy.linalg as sla
-#import scipy.signal as ssig
-#import scipy.ndimage as ndi
-#import scipy.optimize as opti
-#import scipy.interpolate as stp
-#import scipy.spatial.distance as ssd
 #from functools import partial
 #from collections import OrderedDict
 #import multiprocessing as mp
@@ -48,10 +42,6 @@ import numpy as np
 #from statsmodels.regression.quantile_regression import QuantReg
 #import PIL.Image as pli
 #import seaborn as sns
-#import cmocean
-#import theil_sen as ts
-#import window_filter as wf
-#import itertools as itt
 
 ## Mayhem extraction tools:
 import nres_extraction
@@ -60,6 +50,10 @@ nrex = nres_extraction
 trio = nres_extraction.TraceIO()
 frox = nres_extraction.FlatRelativeOptimalExtraction()
 
+## Order identification tools:
+import order_identification
+reload(order_identification)
+ads = order_identification.AdjacentDoubleSimilarity()
 
 ##--------------------------------------------------------------------------##
 
@@ -248,10 +242,17 @@ if (thar_data.shape != lamp_data.shape):
     sys.exit(1)
 
 ##--------------------------------------------------------------------------##
-##------------------         Spectrum Data Extraction       ----------------##
+##------------------          ThAr DOUBLE Extraction        ----------------##
 ##--------------------------------------------------------------------------##
 
 thar_data = frox.extract(thar_data, lamp_data, trdata)
+thar_norm = ads.normalize_spectrum(thar_data)
+
+##--------------------------------------------------------------------------##
+##------------------      Spectrum Order Identification     ----------------##
+##--------------------------------------------------------------------------##
+
+
 
 
 ######################################################################

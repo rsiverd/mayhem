@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2017-08-14
-# Last modified: 2018-12-26
+# Last modified: 2018-12-27
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.4.5"
+__version__ = "0.4.6"
 
 ## Modules:
 #import argparse
@@ -473,36 +473,36 @@ def overplot_traces(idata, trace_list, vlevel=0):
     sys.stderr.write("done.\n")
     return tmp_image
 
-def get_trace_xya(trace_fit):
-    """
-    Return X position, ridge Y position, and pixel apron from the specified
-    trace parameter dictionary. 
-    
-    NOTE: positions are in array coordinates (0-indexed)
-    """
-    ridge_x = np.arange(trace_fit['xmin'], trace_fit['xmax']).astype('uint16')
-    ridge_y = ridge_eval(trace_fit['params'], ridge_x)
-    return (ridge_x, ridge_y, trace_fit['apron'])
+#def get_trace_xya(trace_fit):
+#    """
+#    Return X position, ridge Y position, and pixel apron from the specified
+#    trace parameter dictionary. 
+#    
+#    NOTE: positions are in array coordinates (0-indexed)
+#    """
+#    ridge_x = np.arange(trace_fit['xmin'], trace_fit['xmax']).astype('uint16')
+#    ridge_y = ridge_eval(trace_fit['params'], ridge_x)
+#    return (ridge_x, ridge_y, trace_fit['apron'])
 
 
-def mask_from_traces(imshape, trace_list, vlevel=0):
-    mask_image = np.zeros(imshape, dtype='bool')
-    trace_coords = []
-    n_traces = len(trace_list)
-    for i,trace_fit in enumerate(trace_list, 1):
-        if (vlevel >= 1):
-            sys.stderr.write("\rAdding trace %d of %d ... " % (i, n_traces))
-        xlist = np.arange(trace_fit['xmin'], trace_fit['xmax']).astype('uint16')
-        ordfit_ycoord = ridge_eval(trace_fit['params'], xlist)
-        ylower = np.int_(np.floor(ordfit_ycoord))
-        yc_list, xc_list = [], []
-        apron_pix = trace_fit['apron']
-        for offset in range(-apron_pix + 1, apron_pix + 1):
-            xc_list.append(xlist)
-            yc_list.append(ylower + offset)
-            pass
-        trace_coords.append((np.vstack(yc_list), np.vstack(xc_list)))
-    return trace_coords
+#def mask_from_traces(imshape, trace_list, vlevel=0):
+#    mask_image = np.zeros(imshape, dtype='bool')
+#    trace_coords = []
+#    n_traces = len(trace_list)
+#    for i,trace_fit in enumerate(trace_list, 1):
+#        if (vlevel >= 1):
+#            sys.stderr.write("\rAdding trace %d of %d ... " % (i, n_traces))
+#        xlist = np.arange(trace_fit['xmin'], trace_fit['xmax']).astype('uint16')
+#        ordfit_ycoord = ridge_eval(trace_fit['params'], xlist)
+#        ylower = np.int_(np.floor(ordfit_ycoord))
+#        yc_list, xc_list = [], []
+#        apron_pix = trace_fit['apron']
+#        for offset in range(-apron_pix + 1, apron_pix + 1):
+#            xc_list.append(xlist)
+#            yc_list.append(ylower + offset)
+#            pass
+#        trace_coords.append((np.vstack(yc_list), np.vstack(xc_list)))
+#    return trace_coords
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##

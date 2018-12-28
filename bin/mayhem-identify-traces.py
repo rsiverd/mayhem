@@ -252,6 +252,10 @@ thar_norm = ads.normalize_spectrum(thar_data)
 ##------------------      Spectrum Order Identification     ----------------##
 ##--------------------------------------------------------------------------##
 
+match_summary = ads.adj_similarity_scores(thar_norm)
+
+detected_pairs, unpaired_traces = ads.resolve_trace_pairs(match_summary)
+
 
 
 

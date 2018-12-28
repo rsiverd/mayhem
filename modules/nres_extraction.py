@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2017-08-14
-# Last modified: 2018-12-27
+# Last modified: 2018-12-28
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.4.6"
+__version__ = "0.4.7"
 
 ## Modules:
 #import argparse
@@ -48,8 +48,47 @@ except ImportError:
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 
-## OBJECTS keyword parsing:
-#def  
+## Configuration:
+_fiber_config = [
+        {'fnum':0, 'impos':'top', 'ccd_yorder':2},
+        {'fnum':1, 'impos':'mid', 'ccd_yorder':1},
+        {'fnum':2, 'impos':'bot', 'ccd_yorder':0},
+        ]
+
+## Check for valid calibration OBJECTS string:
+def _is_calib_fobjects(fobjects):
+    allowed = ['none', 'thar', 'tung']
+    return all([(x in allowed) for x in fobjects.split('&')])
+
+## Get active channel mask from thar/tung in OBJECTS keyword:
+def parse_calib_fobjects(fobjects):
+    if not _is_calib_fobjects(fobjects):
+        sys.stderr.write("Not a calibration file: '%s'\n" % fobjects)
+        raise
+    active = [(x != 'none') for x in fobjects.split('&')]
+    return active
+
+def spec_assign_fibnum(fobjects, spec_data, known_pairs):
+    sys.stderr.write("fobjects: %s\n" % fobjects)
+    active_fibers = parse_calib_fobjects(fobjects)
+    active_fibidx = np.where(active_fibers)[0]
+    have_channels = [_fiber_config[x] for x in np.where(active_fibers)[0]]
+    have_channels.sort(key=lambda x: x['ccd_yorder']) # order by CCD Ypos
+    sys.stderr.write("have_channels: %s\n" % str(have_channels))
+    for tpair in known_pairs:
+        sys.stderr.write("tpair: %s\n" % str(tpair))
+        ypavg = [np.average(spec_data[tt]['ypix']) for tt in tpair]
+        order = np.argsort(ypavg)
+        fixed = np.array(tpair)[order]
+        sys.stderr.write("ypavg: %s\n" % str(ypavg))
+        sys.stderr.write("order: %s\n" % str(order))
+        sys.stderr.write("tpair[order]: %s\n" % str(fixed))
+        sys.stderr.write("\n") 
+        for tidx,fchan in zip(fixed, have_channels):
+            sys.stderr.write("tidx: %d --> %s\n" % (tidx, fchan))
+            spec_data[tidx]['fibernum'] = fchan['fnum']
+            spec_data[tidx]['fibimpos'] = fchan['impos']
+    return 0
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -392,9 +431,11 @@ class TraceData(object):
 
 ## Metadata keyword/comment mapping ():
 _trace_hkey_spec = [
-        ( 'xmin',  'XMIN', '[pixel] trace lower X limit (left side)'),
-        ( 'xmax',  'XMAX', '[pixel] trace upper X limit (right side)'),
-        ('apron', 'APRON', '[pixel] apron size used for tracing'),
+        ( 'xmin',     'XMIN', '[pixel] trace lower X limit (left side)'),
+        ( 'xmax',     'XMAX', '[pixel] trace upper X limit (right side)'),
+        ('apron',    'APRON', '[pixel] apron size used for tracing'),
+        ( 'fnum', 'FIBERNUM', 'NRES fiber/channel number (0/1/2)'),
+        ('impos', 'FIBIMPOS', 'NRES fiber/channel position (top/mid/bot)'),
         ]
 
 _metadata_order = ['EXTRVERS', 'TR_IMAGE', 'SRC_XPIX', 'SRC_YPIX',
@@ -409,7 +450,8 @@ class TraceIO(object):
     def _header_from_dict(self, fit_data):
         c_list = [self._divcmt]
         for dkey,fkey,cmnt in _trace_hkey_spec:
-            c_list.append(pf.Card(fkey, fit_data[dkey], comment=cmnt))
+            if dkey in fit_data.keys():
+                c_list.append(pf.Card(fkey, fit_data[dkey], comment=cmnt))
         return pf.Header(c_list)
 
     def _trace_to_HDU(self, fit_data):

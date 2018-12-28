@@ -32,6 +32,7 @@ import time
 import signal
 import numpy as np
 import scipy.signal as ssig
+import matplotlib.pyplot as plt
 #from numpy.lib.recfunctions import append_fields
 #from functools import partial
 #from collections import OrderedDict
@@ -251,7 +252,7 @@ thar_data = frox.extract(thar_data, lamp_data, trdata)
 thar_norm = ads.normalize_spectrum(thar_data)
 
 ##--------------------------------------------------------------------------##
-##------------------      Spectrum Order Identification     ----------------##
+##------------------    Pair Traces and Identify Channels   ----------------##
 ##--------------------------------------------------------------------------##
 
 sys.stderr.write("Comparing adjacent fibers/traces ... ")
@@ -262,15 +263,37 @@ detected_pairs, unpaired_traces = ads.resolve_trace_pairs(match_summary)
 pairs_list = [(b,a) for a,b in detected_pairs.keys()]
 sys.stderr.write("done.\n")
 
-## TODO: need a way to consistently identify a specific order as
-## starting point for downstream work. This should safely exclude
-## orders that are likely to be inconsistently identified by these
-## procedures.
+##--------------------------------------------------------------------------##
+##------------------    Store Updated d Identify Channels   ----------------##
+##--------------------------------------------------------------------------##
 
-### Look for lines (potential Argon maxima):
+## Add fiber/channel number to trace metadata:
+n_update = nrex.traces_update_fibnum(thar_fobj, 
+        trdata.get_trace_list(), pairs_list)
+
+## TODO: identify spectroscopic orders using inter-order spacing:
+
+## Updated trace info includes fiber number/position:
+if context.output_file:
+    trio.store_TraceData(context.output_file, trdata)
+
+
+### Load NIST data for fiddling:
+#nist_data, nist_hdrs = pf.getdata('NIST_spectrum.top.fits', header=True)
+#nist_data, nist_hdrs = pf.getdata('NIST_spectrum.all.fits', header=True)
+#
+#
+### TODO: need a way to consistently identify a specific order as
+### starting point for downstream work. This should safely exclude
+### orders that are likely to be inconsistently identified by these
+### procedures.
+#
+#### Look for lines (potential Argon maxima):
 #peak_pctg = 99.5
-##thar_smoo = copy.deepcopy(thar_data)
+#peak_pctg = 95.0
+###thar_smoo = copy.deepcopy(thar_data)
 #line_centers = []
+#peak_fluxes  = []
 #for odata in thar_data:
 #    peak_thresh = np.percentile(odata['spec'], peak_pctg)
 #    #odata['spec'] = nrex.boxcar_smooth(odata['spec'], 3)
@@ -279,27 +302,26 @@ sys.stderr.write("done.\n")
 #    which_high = (odata['spec'][maxima_idx] >= peak_thresh)
 #    maxima_use = maxima_idx[which_high]
 #    line_centers.append(maxima_use)
+#    peak_fluxes.append(odata['spec'][maxima_use])
 #    sys.stderr.write("peak_thresh: %10.5f\n" % peak_thresh) 
 #    #sys.stderr.write("maxima_idx: %s\n" % str(maxima_idx))
 #    #sys.stderr.write("maxima_val: %s\n" % str(maxima_val))
 #    sys.stderr.write("maxima_use: %s\n" % str(maxima_use))
 #    sys.stderr.write("\n")
-
-
-#fig = plt.figure()
-#def illustrate(tnum):
-
-## Deduce fibers in use:
-n_update = nrex.spec_assign_fibnum(thar_fobj, thar_data, pairs_list)
-
-n_update = nrex.traces_update_fibnum(thar_fobj, 
-        trdata.get_trace_list(), pairs_list)
-
-## Updated trace info includes fiber number/position:
-if context.output_file:
-    trio.store_TraceData(context.output_file, trdata)
+#intensities = np.concatenate(peak_fluxes)
 
 ## Build a single, concatenated spectrum for fiddling:
+
+## Inspection routine:
+#def qcomb(wlen, flux):
+#    plt.clf()
+#    for 
+
+#SINALP  =       0.971747764900 / Sine of echelle incidence angle
+#FL      =        375.146862776 / [mm] Camera focal length
+#Y0      =       -22.1621828561 / [mm] y-position on CCD where gamma=0
+#Z0      =    0.000267784405245 / Air (n-1) refractive index in spectrograph
+
 
 
 

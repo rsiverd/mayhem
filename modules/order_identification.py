@@ -135,7 +135,7 @@ class AdjacentDoubleSimilarity(object):
         #match_shifts = np.zeros(ncomparisons, dtype='int')
         match_summary = []
         for i in range(len(thar_norm) - 1):
-            sys.stderr.write("order: %3d\n" % i)
+            #sys.stderr.write("order: %3d\n" % i)
             thar1, thar2 = thar_norm[i:i+2]
             mshift, mscore = self.correl_calc_similarity(thar1, thar2)
             ydiff  = self._overlapped_y_separation(thar1, thar2)

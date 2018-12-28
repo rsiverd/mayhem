@@ -1,0 +1,24 @@
+
+#SINALP  =       0.971747764900 / Sine of echelle incidence angle
+#FL      =        375.146862776 / [mm] Camera focal length
+#Y0      =       -22.1621828561 / [mm] y-position on CCD where gamma=0
+#Z0      =    0.000267784405245 / Air (n-1) refractive index in spectrograph
+
+
+# Glass        -->     PBM2
+# Apex         -->  55.0 degrees
+# pixel size   -->   0.015 mm
+# rotation     -->   1.4 degrees
+
+
+# -----------------------------------------------------------------------
+# To calculate refractive index n(lambda), use Sellmeier Dispersion Equation:
+# (See TIE-29, page 5)
+n^2(lambda) -1 = (B1 * lambda^2) / (lambda^2 - C1)
+               + (B2 * lambda^2) / (lambda^2 - C2)
+               + (B3 * lambda^2) / (lambda^2 - C3)
+
+Bcoeffs  [1.39446503d0,1.59230985d-1,2.45470216d-1],$       ; PBM2
+Ccoeffs  [1.10571872d-2,5.07194882d-2,3.14440142d1],$       ; PBM2
+
+

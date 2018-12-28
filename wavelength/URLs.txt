@@ -9,3 +9,7 @@ https://www.noao.edu/kpno/tharatlas/thar/thar.html
 https://github.com/rabrahm/ceres/blob/master/coralie/coraliepipe.py
 https://github.com/rabrahm/ceres/blob/master/utils/GLOBALutils/GLOBALutils.py
 
+# -----------------------------------------------------------------------
+# Existing stuff from NRES pipeline:
+https://github.com/LCOGT/nres-pipe/blob/master/csv/spectrographs.csv
+https://github.com/LCOGT/nres-pipe/blob/master/csv/spectrographs.csv

@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2017-10-03
-# Last modified: 2018-08-06
+# Last modified: 2018-12-27
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.4.5"
+__version__ = "0.4.6"
 
 ## Modules:
 import argparse
@@ -530,9 +530,9 @@ if baffmask_path and os.path.isfile(baffmask_path):
 
 ##--------------------------------------------------------------------------##
 ## Simple smoother:
-def boxcar_smooth(values, box_size):
-    kernel = np.ones(int(floor(box_size))) / float(box_size)
-    return np.convolve(values, kernel, mode='same')
+#def boxcar_smooth(values, box_size):
+#    kernel = np.ones(int(floor(box_size))) / float(box_size)
+#    return np.convolve(values, kernel, mode='same')
 
 ##--------------------------------------------------------------------------##
 ## Load spectrum image (usually a flat):
@@ -590,7 +590,7 @@ elif trbox_smethod == 'median':
 else:
     sys.stderr.write("FIXME: unsupported trbox_smethod: %s\n" % trbox_smethod)
     sys.exit(1)
-use_avgs = boxcar_smooth(row_avgs, 7)
+use_avgs = nrex.boxcar_smooth(row_avgs, 7)
 row_indx = np.arange(row_avgs.size)
 
 ## Normalize to background:
@@ -598,7 +598,7 @@ row_indx = np.arange(row_avgs.size)
 #n_fibers = 2
 approx_order_size = int(float(use_avgs.size) / float(guess_norders))
 decent_kernel_size = 5 * approx_order_size
-#running_mean = boxcar_smooth(use_avgs, decent_kernel_size)
+#running_mean = nrex.boxcar_smooth(use_avgs, decent_kernel_size)
 
 running_25th = wf.window_filter(row_indx, row_indx, use_avgs,
         xwidth=decent_kernel_size, pctile=25)

@@ -90,6 +90,28 @@ def spec_assign_fibnum(fobjects, spec_data, known_pairs):
             spec_data[tidx]['fibimpos'] = fchan['impos']
     return 0
 
+def traces_update_fibnum(fobjects, trace_list, known_pairs):
+    sys.stderr.write("fobjects: %s\n" % fobjects)
+    active_fibers = parse_calib_fobjects(fobjects)
+    active_fibidx = np.where(active_fibers)[0]
+    have_channels = [_fiber_config[x] for x in np.where(active_fibers)[0]]
+    have_channels.sort(key=lambda x: x['ccd_yorder']) # order by CCD Ypos
+    sys.stderr.write("have_channels: %s\n" % str(have_channels))
+    for tpair in known_pairs:
+        sys.stderr.write("tpair: %s\n" % str(tpair))
+        ypavg = [trace_list[tt]['params'][0] for tt in tpair]
+        order = np.argsort(ypavg)
+        fixed = np.array(tpair)[order]
+        sys.stderr.write("ypavg: %s\n" % str(ypavg))
+        sys.stderr.write("order: %s\n" % str(order))
+        sys.stderr.write("tpair[order]: %s\n" % str(fixed))
+        sys.stderr.write("\n") 
+        for tidx,fchan in zip(fixed, have_channels):
+            sys.stderr.write("tidx: %d --> %s\n" % (tidx, fchan))
+            trace_list[tidx]['fnum' ] = fchan['fnum']
+            trace_list[tidx]['impos'] = fchan['impos']
+    return 0
+
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -452,6 +474,7 @@ class TraceIO(object):
         for dkey,fkey,cmnt in _trace_hkey_spec:
             if dkey in fit_data.keys():
                 c_list.append(pf.Card(fkey, fit_data[dkey], comment=cmnt))
+        c_list.append(self._divcmt)
         return pf.Header(c_list)
 
     def _trace_to_HDU(self, fit_data):
@@ -467,9 +490,8 @@ class TraceIO(object):
                 fit_data[dkey] = trace_HDU.header[fkey]
         return fit_data
 
-    # Save a list of traces to a FITS table:
-    def store_traces(self, filename, traces_list, hdata=None):
-        tables = []
+    # Make primary header from list of tuples:
+    def _prihdr_from_dict(self):
         prihdr = pf.Header()
         prihdr.append(self._divcmt)
         prihdr['TRIOVERS'] = (__version__, 'TraceIO code version')
@@ -484,15 +506,29 @@ class TraceIO(object):
             if len(hdata):
                 prihdr.update({k:tuple(v) for k,v in hdata.items()})
                 prihdr.append(self._divcmt)
+
+    # Save a list of traces to a FITS table:
+    def store_traces(self, filename, traces_list, hdata=None):
+        if isinstance(hdata, pf.Header):
+            prihdr = hdata.copy(strip=True)
+        else:
+            prihdr = self._prihdr_from_dict(hdata)
+        prihdr['TRIOVERS'] = (__version__, 'TraceIO code version')
         prihdu = pf.PrimaryHDU(header=prihdr)
 
-        tables.append(prihdu)
+        tables = [prihdu]
         for trace in traces_list:
             tables.append(self._trace_to_HDU(trace))
 
         hdu_list = pf.HDUList(tables)
         hdu_list.writeto(filename, overwrite=True)
         return
+
+    # Store from existing TraceData object (e.g., after update):
+    def store_TraceData(self, filename, tdobj):
+        tdata = tdobj.get_trace_list()
+        mdata = tdobj.get_metadata()
+        return self.store_traces(filename, tdata, hdata=mdata)
 
     # Load traces from the specified file:
     def load_traces(self, filename):

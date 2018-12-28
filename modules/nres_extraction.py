@@ -20,13 +20,10 @@ __version__ = "0.4.6"
 #import getopt
 #import shutil
 import signal
-#import glob
 import os
 import sys
 import time
-#import ephem
 import numpy as np
-#import datetime as dt
 #import scipy.signal as ssig
 import scipy.ndimage as ndi
 #import scipy.optimize as opti
@@ -45,6 +42,25 @@ except ImportError:
         sys.stderr.write("\nError!  No FITS I/O module found!\n"
                "Install either astropy.io.fits or pyfits and try again!\n\n")
         sys.exit(1)
+
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+
+## OBJECTS keyword parsing:
+#def  
+
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+
+## Boxcar smoothing filter:
+def boxcar_smooth(values, box_size):
+    kernel = np.ones(int(np.floor(box_size))) / float(box_size)
+    return np.convolve(values, kernel, mode='same')
+
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##

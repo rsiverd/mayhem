@@ -1,0 +1,29 @@
+# Which fibers are which?
+
+
+# software  lab_label   wavelength     image
+     fiber0    port 3         blue       top
+     fiber1    port 2       middle    middle
+     fiber2    port 1          red    bottom
+
+
+# Top-down view in lab:
+  ...................................................................
+  .                                                                 .
+  .                ______________                                   .
+  .               |     other    |                                  .
+  .               |  collimator  |                                  .
+  .               |______________|                                  .
+  .                                                                 .
+  .                                                                 .
+  .                                                                 .
+  .    ________________________________      _________              .
+  .   |                                |    |         | <-- port 1  .
+  .   |                                |    | splice  | <-- port 2  .
+  .   |        NRES spectrograph       |    |   box   | <-- port 3  .
+  .   |                                |    |         |             .
+  .   |                                |    |         |             .
+  .   |________________________________|    |_________|             .
+  .                                                                 .
+  ...................................................................
+

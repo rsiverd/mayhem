@@ -463,7 +463,7 @@ class TraceIO(object):
     def _trace_from_HDU(self, trace_HDU):
         fit_data = {'params':trace_HDU.data['params']}
         for dkey,fkey,cmnt in _trace_hkey_spec:
-            if dkey in trace_HDU.header.keys():
+            if fkey in trace_HDU.header.keys():
                 fit_data[dkey] = trace_HDU.header[fkey]
         return fit_data
 

@@ -69,45 +69,45 @@ def parse_calib_fobjects(fobjects):
     return active
 
 def spec_assign_fibnum(fobjects, spec_data, known_pairs):
-    sys.stderr.write("fobjects: %s\n" % fobjects)
+    #sys.stderr.write("fobjects: %s\n" % fobjects)
     active_fibers = parse_calib_fobjects(fobjects)
     active_fibidx = np.where(active_fibers)[0]
     have_channels = [_fiber_config[x] for x in np.where(active_fibers)[0]]
     have_channels.sort(key=lambda x: x['ccd_yorder']) # order by CCD Ypos
-    sys.stderr.write("have_channels: %s\n" % str(have_channels))
+    #sys.stderr.write("have_channels: %s\n" % str(have_channels))
     for tpair in known_pairs:
-        sys.stderr.write("tpair: %s\n" % str(tpair))
+        #sys.stderr.write("tpair: %s\n" % str(tpair))
         ypavg = [np.average(spec_data[tt]['ypix']) for tt in tpair]
         order = np.argsort(ypavg)
         fixed = np.array(tpair)[order]
-        sys.stderr.write("ypavg: %s\n" % str(ypavg))
-        sys.stderr.write("order: %s\n" % str(order))
-        sys.stderr.write("tpair[order]: %s\n" % str(fixed))
-        sys.stderr.write("\n") 
+        #sys.stderr.write("ypavg: %s\n" % str(ypavg))
+        #sys.stderr.write("order: %s\n" % str(order))
+        #sys.stderr.write("tpair[order]: %s\n" % str(fixed))
+        #sys.stderr.write("\n") 
         for tidx,fchan in zip(fixed, have_channels):
-            sys.stderr.write("tidx: %d --> %s\n" % (tidx, fchan))
+            #sys.stderr.write("tidx: %d --> %s\n" % (tidx, fchan))
             spec_data[tidx]['fibernum'] = fchan['fnum']
             spec_data[tidx]['fibimpos'] = fchan['impos']
     return 0
 
 def traces_update_fibnum(fobjects, trace_list, known_pairs):
-    sys.stderr.write("fobjects: %s\n" % fobjects)
+    #sys.stderr.write("fobjects: %s\n" % fobjects)
     active_fibers = parse_calib_fobjects(fobjects)
     active_fibidx = np.where(active_fibers)[0]
     have_channels = [_fiber_config[x] for x in np.where(active_fibers)[0]]
     have_channels.sort(key=lambda x: x['ccd_yorder']) # order by CCD Ypos
-    sys.stderr.write("have_channels: %s\n" % str(have_channels))
+    #sys.stderr.write("have_channels: %s\n" % str(have_channels))
     for tpair in known_pairs:
-        sys.stderr.write("tpair: %s\n" % str(tpair))
+        #sys.stderr.write("tpair: %s\n" % str(tpair))
         ypavg = [trace_list[tt]['params'][0] for tt in tpair]
         order = np.argsort(ypavg)
         fixed = np.array(tpair)[order]
-        sys.stderr.write("ypavg: %s\n" % str(ypavg))
-        sys.stderr.write("order: %s\n" % str(order))
-        sys.stderr.write("tpair[order]: %s\n" % str(fixed))
-        sys.stderr.write("\n") 
+        #sys.stderr.write("ypavg: %s\n" % str(ypavg))
+        #sys.stderr.write("order: %s\n" % str(order))
+        #sys.stderr.write("tpair[order]: %s\n" % str(fixed))
+        #sys.stderr.write("\n") 
         for tidx,fchan in zip(fixed, have_channels):
-            sys.stderr.write("tidx: %d --> %s\n" % (tidx, fchan))
+            #sys.stderr.write("tidx: %d --> %s\n" % (tidx, fchan))
             trace_list[tidx]['fnum' ] = fchan['fnum']
             trace_list[tidx]['impos'] = fchan['impos']
     return 0

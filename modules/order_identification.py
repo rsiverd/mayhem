@@ -153,14 +153,14 @@ class AdjacentDoubleSimilarity(object):
         match_scores   = np.array([x['mscore'] for x in match_summary])
 
         for botidx in np.argsort(match_scores)[::-1]:
-            sys.stderr.write("botidx: %d\n" % botidx)
+            #sys.stderr.write("botidx: %d\n" % botidx)
             prev_pair = (botidx - 1, botidx)
             this_pair = (botidx, botidx + 1)
             next_pair = (botidx + 1, botidx + 2)
             all_pairs = prev_pair, this_pair, next_pair
             all_items = (botidx - 1, botidx, botidx + 1)
         
-            sys.stderr.write("this_pair: %s\n" % str(this_pair))
+            #sys.stderr.write("this_pair: %s\n" % str(this_pair))
             if this_pair in possible_pairs.keys():
                 #sys.stderr.write("pair still live!\n")
                 # Grab pair information, rule out overlapping matches:
@@ -178,7 +178,7 @@ class AdjacentDoubleSimilarity(object):
         
                 pass
             else:
-                sys.stderr.write("PAIR NOT AVAILABLE!!\n")
+                #sys.stderr.write("PAIR NOT AVAILABLE!!\n")
                 pass
             pass
         return (detected_pairs, unpaired_trace)

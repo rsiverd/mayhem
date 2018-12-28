@@ -6,13 +6,13 @@
 #
 # Rob Siverd
 # Created:       2018-12-26
-# Last modified: 2018-12-26
+# Last modified: 2018-12-28
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.0.5"
+__version__ = "0.2.0"
 
 ## Python version-agnostic module reloading:
 try:
@@ -199,7 +199,7 @@ if __name__ == '__main__':
     ifgroup.add_argument('-T', '--traces', default=None, required=True,
             help='FITS file with trace position parameters')
     ifgroup.add_argument('-o', '--output_file', required=True,
-            default=None, help='output FITS file for extracted data')
+            default=None, help='output FITS file for updated traces')
     # ------------------------------------------------------------------
     # ------------------------------------------------------------------
 
@@ -296,7 +296,8 @@ n_update = nrex.traces_update_fibnum(thar_fobj,
         trdata.get_trace_list(), pairs_list)
 
 ## Updated trace info includes fiber number/position:
-trio.store_TraceData('derp.fits', trdata)
+if context.output_file:
+    trio.store_TraceData(context.output_file, trdata)
 
 ## Build a single, concatenated spectrum for fiddling:
 
@@ -305,6 +306,10 @@ trio.store_TraceData('derp.fits', trdata)
 ######################################################################
 # CHANGELOG (mayhem-identify-traces.py):
 #---------------------------------------------------------------------
+#
+#  2018-12-28:
+#     -- Increased __version__ to 0.2.0.
+#     -- Basic functionality achieved!
 #
 #  2018-12-26:
 #     -- Increased __version__ to 0.0.5.

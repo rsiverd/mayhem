@@ -31,17 +31,15 @@ import copy
 import time
 import signal
 import numpy as np
+import scipy.signal as ssig
 #from numpy.lib.recfunctions import append_fields
 #from functools import partial
 #from collections import OrderedDict
 #import multiprocessing as mp
-#np.set_printoptions(suppress=True, linewidth=160)
 #import pandas as pd
 #import statsmodels.api as sm
 #import statsmodels.formula.api as smf
 #from statsmodels.regression.quantile_regression import QuantReg
-#import PIL.Image as pli
-#import seaborn as sns
 
 ## Mayhem extraction tools:
 import nres_extraction
@@ -213,16 +211,18 @@ if __name__ == '__main__':
 ##--------------------------------------------------------------------------##
 
 ##--------------------------------------------------------------------------##
-## Load input spectrum:
+## Load ThAr spectrum:
 if context.tharfile:
-    sys.stderr.write("Loading spectrum ... ")
+    sys.stderr.write("Loading ThAr spectrum ... ")
     thar_data, thar_hdrs = pf.getdata(context.tharfile, header=True)
+    thar_fobj = thar_hdrs['OBJECTS']
     sys.stderr.write("done.\n")
 
 ## Load input lampflat:
 if context.lampflat:
     sys.stderr.write("Loading lampflat ... ")
     lamp_data, lamp_hdrs = pf.getdata(context.lampflat, header=True)
+    lamp_fobj = lamp_hdrs['OBJECTS']
     sys.stderr.write("done.\n")
 
 ## Load input trace list:
@@ -230,6 +230,8 @@ if context.traces:
     sys.stderr.write("Loading trace list ... ")
     trdata = trio.load_traces(context.traces)
     sys.stderr.write("done.\n")
+
+## Ensure corresponding channels on DOUBLE and 
 
 ##--------------------------------------------------------------------------##
 ##------------------         Dimensionality Checking        ----------------##
@@ -252,10 +254,51 @@ thar_norm = ads.normalize_spectrum(thar_data)
 ##------------------      Spectrum Order Identification     ----------------##
 ##--------------------------------------------------------------------------##
 
+sys.stderr.write("Comparing adjacent fibers/traces ... ")
 match_summary = ads.adj_similarity_scores(thar_norm)
 
+sys.stderr.write("resolving pairs ... ")
 detected_pairs, unpaired_traces = ads.resolve_trace_pairs(match_summary)
+pairs_list = [(b,a) for a,b in detected_pairs.keys()]
+sys.stderr.write("done.\n")
 
+## TODO: need a way to consistently identify a specific order as
+## starting point for downstream work. This should safely exclude
+## orders that are likely to be inconsistently identified by these
+## procedures.
+
+### Look for lines (potential Argon maxima):
+#peak_pctg = 99.5
+##thar_smoo = copy.deepcopy(thar_data)
+#line_centers = []
+#for odata in thar_data:
+#    peak_thresh = np.percentile(odata['spec'], peak_pctg)
+#    #odata['spec'] = nrex.boxcar_smooth(odata['spec'], 3)
+#    maxima_idx = ssig.argrelmax(odata['spec'], order=3)[0]
+#    #maxima_val = odata['spec'][maxima_idx] 
+#    which_high = (odata['spec'][maxima_idx] >= peak_thresh)
+#    maxima_use = maxima_idx[which_high]
+#    line_centers.append(maxima_use)
+#    sys.stderr.write("peak_thresh: %10.5f\n" % peak_thresh) 
+#    #sys.stderr.write("maxima_idx: %s\n" % str(maxima_idx))
+#    #sys.stderr.write("maxima_val: %s\n" % str(maxima_val))
+#    sys.stderr.write("maxima_use: %s\n" % str(maxima_use))
+#    sys.stderr.write("\n")
+
+
+#fig = plt.figure()
+#def illustrate(tnum):
+
+## Deduce fibers in use:
+n_update = nrex.spec_assign_fibnum(thar_fobj, thar_data, pairs_list)
+
+n_update = nrex.traces_update_fibnum(thar_fobj, 
+        trdata.get_trace_list(), pairs_list)
+
+## Updated trace info includes fiber number/position:
+trio.store_TraceData('derp.fits', trdata)
+
+## Build a single, concatenated spectrum for fiddling:
 
 
 

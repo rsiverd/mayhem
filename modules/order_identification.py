@@ -113,6 +113,11 @@ class AdjacentDoubleSimilarity(object):
         best_offset = np.argmax(cor_scores)
         return (best_offset, cor_scores[best_offset])
 
+    # Calculate Y-separation between traces using overlapped X-range:
+    def _overlapped_y_separation(self, spec1, spec2):
+        xl, xr, msk1, msk2 = self._get_overlap(spec1['xpix'], spec2['xpix'])
+        return np.average(spec2['ypix'][msk2] - spec1['ypix'][msk1])
+
     # Correlation-based similarity of two spectra:
     def correl_calc_similarity(self, spec1, spec2,
                         pctcut=75, nudgemin=0, nudgemax=20):
@@ -131,11 +136,12 @@ class AdjacentDoubleSimilarity(object):
         match_summary = []
         for i in range(len(thar_norm) - 1):
             sys.stderr.write("order: %3d\n" % i)
-            mshift, mscore = \
-                    self.correl_calc_similarity(thar_norm[i], thar_norm[i+1])
+            thar1, thar2 = thar_norm[i:i+2]
+            mshift, mscore = self.correl_calc_similarity(thar1, thar2)
+            ydiff  = self._overlapped_y_separation(thar1, thar2)
             trpair = (i, i+1)
-            result = {'trpair':trpair, 'mshift':mshift, 'mscore':mscore}
-            match_summary.append(result)
+            match_summary.append({'trpair':trpair, 'mshift':mshift, 
+                    'mscore':mscore, 'ydiff':ydiff})
         return match_summary
 
     # resolve pairs in score order:
@@ -177,6 +183,8 @@ class AdjacentDoubleSimilarity(object):
             pass
         return (detected_pairs, unpaired_trace)
 
+    # Add pixel Y-separation to existing match summary:
+    #def augment_summary_ydiff(self, match_summary):
 
 
 ##--------------------------------------------------------------------------##

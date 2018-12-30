@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2017-10-03
-# Last modified: 2018-12-27
+# Last modified: 2018-12-29
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.4.6"
+__version__ = "0.4.7"
 
 ## Modules:
 import argparse
@@ -577,7 +577,8 @@ trbox_xlower = int(trbox_xcenter - trbox_halfpix - 1.0)
 trbox_xupper = int(trbox_xcenter + trbox_halfpix + 2.0)
 trbox_columns = slice(trbox_xlower, trbox_xupper)
 
-proc_metadata['HALFBPIX'] = [trbox_halfpix, 'half-size of tracing box']
+proc_metadata['TRB_XMID'] = [trbox_xcenter, '[pixel] X-center of tracing box']
+proc_metadata['TRB_HALF'] = [trbox_halfpix, '[pixel] half-size of tracing box']
 proc_metadata['TRMETHOD'] = [trbox_smethod, 'trace box smoothing method']
 
 ##--------------------------------------------------------------------------##

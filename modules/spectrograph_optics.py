@@ -50,27 +50,34 @@ import numpy as np
 
 ##--------------------------------------------------------------------------##
 ## Calculating index of refraction for several glass types:
-bcoeffs = {
-    'SiO2'  :  np.array([0.67071081e0, 0.433322857e0, 0.877379057e0]),
-    'LLF1'  :  np.array([1.21640125e0, 1.33664540e-1, 8.83399468e-1]),
-    'PBM2'  :  np.array([1.39446503e0, 1.59230985e-1, 2.45470216e-1]),
-     'LF5'  :  np.array([1.28035628e0, 1.6350597e-1,  8.93930112e-1]), }
+class Glass(object):
 
-ccoeffs = {
-    'SiO2'  :  np.array([0.00449192312e0, 0.0132812976e0, 95.8899878e0]),
-    'LLF1'  :  np.array([8.57807248e-3,   4.20143003e-2,   1.07593060e+2]),
-    'PBM2'  :  np.array([1.10571872e-2,   5.07194882e-2,   3.14440142e1]),
-     'LF5'  :  np.array([9.29854416e-3,   4.49135769e-2,   1.10493685e2]), }
+    def __init__(self):
+        self._bcoeffs = {
+            'SiO2':np.array([0.67071081e0, 0.433322857e0, 0.877379057e0]),
+            'LLF1':np.array([1.21640125e0, 1.33664540e-1, 8.83399468e-1]),
+            'PBM2':np.array([1.39446503e0, 1.59230985e-1, 2.45470216e-1]),
+             'LF5':np.array([1.28035628e0, 1.6350597e-1,  8.93930112e-1]), }
+        self._ccoeffs = {
+            'SiO2':np.array([0.00449192312e0, 0.0132812976e0, 95.8899878e0]),
+            'LLF1':np.array([8.57807248e-3,   4.20143003e-2,   1.07593060e+2]),
+            'PBM2':np.array([1.10571872e-2,   5.07194882e-2,   3.14440142e1]),
+             'LF5':np.array([9.29854416e-3,   4.49135769e-2,   1.10493685e2]), }
+        return
 
-def glass_nn_vs_lambda(wlen_um, glasstype):
-    if not glasstype in bcoeffs.keys():
-        sys.stderr.write("Unknown glass type: %s\n" % glasstype)
-        raise
-    bvals = bcoeffs[glasstype]
-    cvals = ccoeffs[glasstype]
-    lamsq = wlen_um[:, None]**2
-    tmpnn = np.sum((lamsq * bvals) / (lamsq - cvals), axis=1)
-    return np.sqrt(tmpnn + 1.0)
+    def glass_nn_vs_lambda(self, wlen_um, glasstype):
+        if not glasstype in bcoeffs.keys():
+            sys.stderr.write("Unknown glass type: %s\n" % glasstype)
+            raise
+        bvals = bcoeffs[glasstype]
+        cvals = ccoeffs[glasstype]
+        n2 = np.ones_like(wlen_um, dtype='float')
+        for bb,cc in zip(bvals, cvals):
+            n2 += (wlen_um**2 * bb) / (wlen_um**2 - cc)
+        return np.sqrt(n2)
+        #lamsq = wlen_um[:, None]**2
+        #tmpnn = np.sum((lamsq * bvals) / (lamsq - cvals), axis=1)
+        #return np.sqrt(tmpnn + 1.0)
 
 ##--------------------------------------------------------------------------##
 ## Notes on notation, relations, identities, etc.:

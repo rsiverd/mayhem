@@ -4,15 +4,19 @@ import astropy.io.fits as pf
 
 ## A ~solved LSC spectrum as example:
 specfile = 'lscnrs01-fa09-20181125-0031-e91.fits.fz'
-wavespec = pf.getdata(specfile, extname='WAVESPEC')
-wavethar = pf.getdata(specfile, extname='WAVETHAR')
-tharflat = pf.getdata(specfile, extname='THARFLAT')
+if os.path.isfile(specfile):
+    wavespec = pf.getdata(specfile, extname='WAVESPEC')
+    wavethar = pf.getdata(specfile, extname='WAVETHAR')
+    tharflat = pf.getdata(specfile, extname='THARFLAT')
+else:
+    sys.stderr.write("File not found: %s\n" % specfile)
+    sys.exit(1)
 
 def mmm(a):
     return np.min(a), np.average(a), np.max(a)
 
 ## Typical wavelength step in each order:
-for iord,ordwl in enumerate(wavethar):
+for iord,ordwl in list(enumerate(wavethar))[::-1]:
     msgtxt  = "iord %3d:\n" % iord
     wstep   = np.diff(ordwl)
     msgtxt += "--> wlen min/avg/max: %10.5f, %10.5f, %10.5f\n" % mmm(ordwl)

@@ -94,6 +94,9 @@ incident_ang_rad = np.arcsin(center_wl_nn * np.sin(0.5 * apex_rad))
 min_dev_rad = 2.0 * incident_ang_rad - apex_rad
 #halfdev_rad = 0.5 * min_dev_rad
 
+minimum_dev_r = 2.0 * np.arcsin(center_wl_nn * np.sin(0.5 * apex_rad)) - apex_rad
+incident_ang_1_r = 0.5 * (minimum_dev_r + apex_rad)
+
 ## Calculate prism angular dispersion (vs wavelength):
 bB_ratio = np.tan(incident_ang_rad) / center_wl_nn / np.tan(0.5 * apex_rad)
 dn_dlambda = sog.glass_dn_dlambda_easy(spec_order_wlmid, nres_prism_glass)
@@ -111,9 +114,20 @@ shifts = (np.roll(order_ypos_pix, -1) - order_ypos_pix)
 zip(spec_order_list, shifts)  
 
 ## TESTING brute-force prism deflection:
-deflections_r = spectrograph_optics.prism_deflection_n(incident_ang_rad,
+incidence_1_r = incident_ang_rad * np.ones_like(spec_order_nn)
+deflections_1_r = spectrograph_optics.prism_deflection_n(incidence_1_r,
                         apex_rad, spec_order_nn)
 
+inc_change_r = deflections_1_r - min_dev_rad
+incidence_2_r = incidence_1_r + inc_change_r
+deflections_2_r = spectrograph_optics.prism_deflection_n(incidence_2_r,
+                        apex_rad, spec_order_nn)
+
+wdefl1 = spectrograph_optics.wiki_prism_deflection_n(incidence_1_r,
+                        apex_rad, spec_order_nn)
+
+ychange_mm = (2.0 * inc_change_r) * nres_focallen_mm
+ychange_pix = ychange_mm / nres_pix_size_mm
 
 ##--------------------------------------------------------------------------##
 
@@ -380,6 +394,16 @@ norm_ydelta = ydeltas / ydeltas.max()
 
 inv_blaze_wlen = 1.0 / spec_order_wlmid
 norm_inv_blaze_wlen = inv_blaze_wlen / inv_blaze_wlen.max()
+
+
+## -----------------------------------------------------------------------
+## Compare estimate with measurement:
+
+norm_ychange_pix = ychange_pix - np.average(ychange_pix)
+norm_ychange_pix /= ychange_pix.max() - ychange_pix.min()
+comp_f0_ymid_pix = np.array(f0_ymid) - np.average(f0_ymid)
+comp_f0_ymid_pix /= comp_f0_ymid_pix.max() - comp_f0_ymid_pix.min()
+
 
 ### Load NIST data for fiddling:
 #nist_data, nist_hdrs = pf.getdata('NIST_spectrum.top.fits', header=True)

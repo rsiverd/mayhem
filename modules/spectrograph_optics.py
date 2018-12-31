@@ -65,19 +65,59 @@ class Glass(object):
              'LF5':np.array([9.29854416e-3,   4.49135769e-2,   1.10493685e2]), }
         return
 
-    def glass_nn_vs_lambda(self, wlen_um, glasstype):
+    # Squared index of refraction for specified wavelengths:
+    def refraction_index_squared(self, wlen_um, glasstype):
         if not glasstype in bcoeffs.keys():
             sys.stderr.write("Unknown glass type: %s\n" % glasstype)
             raise
-        bvals = bcoeffs[glasstype]
-        cvals = ccoeffs[glasstype]
-        n2 = np.ones_like(wlen_um, dtype='float')
-        for bb,cc in zip(bvals, cvals):
-            n2 += (wlen_um**2 * bb) / (wlen_um**2 - cc)
-        return np.sqrt(n2)
-        #lamsq = wlen_um[:, None]**2
-        #tmpnn = np.sum((lamsq * bvals) / (lamsq - cvals), axis=1)
-        #return np.sqrt(tmpnn + 1.0)
+        #bvals = bcoeffs[glasstype]
+        #cvals = ccoeffs[glasstype]
+        lam_um_sq = wlen_um**2
+        n_squared = np.ones_like(wlen_um, dtype='float')
+        for bb,cc in zip(bcoeffs[glasstype], ccoeffs[glasstype]):
+            n_squared += (lam_um_sq * bb) / (lam_um_sq - cc)
+            #n_squared += (wlen_um**2 * bb) / (wlen_um**2 - cc)
+        return n_squared
+
+    #def glass_nn_vs_lambda(self, wlen_um, glasstype):
+    def refraction_index(self, wlen_um, glasstype):
+        if not glasstype in bcoeffs.keys():
+            sys.stderr.write("Unknown glass type: %s\n" % glasstype)
+            raise
+        return np.sqrt(self.refraction_index_squared(wlen_um, glasstype))
+    
+    #def deprecated():
+    #    bvals = bcoeffs[glasstype]
+    #    cvals = ccoeffs[glasstype]
+    #    n2 = np.ones_like(wlen_um, dtype='float')
+    #    for bb,cc in zip(bvals, cvals):
+    #        n2 += (wlen_um**2 * bb) / (wlen_um**2 - cc)
+    #    return np.sqrt(n2)
+    #    #lamsq = wlen_um[:, None]**2
+    #    #tmpnn = np.sum((lamsq * bvals) / (lamsq - cvals), axis=1)
+    #    #return np.sqrt(tmpnn + 1.0)
+
+    def glass_dn_dlambda_easy(self, wlen_um, glasstype, epsfrac=1e-5):
+        if not glasstype in bcoeffs.keys():
+            sys.stderr.write("Unknown glass type: %s\n" % glasstype)
+            raise
+
+        wlen_lower = wlen_um * (1.0 - epsfrac)
+        wlen_upper = wlen_um * (1.0 + epsfrac)
+
+        nn_lower = self.refraction_index(wlen_lower, glasstype)
+        nn_upper = self.refraction_index(wlen_upper, glasstype)
+
+        return (nn_upper - nn_lower) / (wlen_upper - wlen_lower)
+
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+## Prism deflection:
+def prism_deflection_n(incid_r, apex_r, n):
+    ptemp = np.sqrt(n**2 - np.sin(incid_r)**2) * np.sin(apex_r) \
+                - np.cos(apex_r) * np.sin(incid_r)
+    return incid_r - apex_r + np.arcsin(ptemp)
+
 
 ##--------------------------------------------------------------------------##
 ## Notes on notation, relations, identities, etc.:

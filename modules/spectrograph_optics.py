@@ -65,24 +65,27 @@ class Glass(object):
              'LF5':np.array([9.29854416e-3,   4.49135769e-2,   1.10493685e2]), }
         return
 
+    def _unknown_glass(self, glasstype):
+        if not glasstype in self._bcoeffs.keys():
+            sys.stderr.write("Unknown glass type: %s\n" % glasstype)
+            return True
+        else:
+            return False
+
     # Squared index of refraction for specified wavelengths:
     def refraction_index_squared(self, wlen_um, glasstype):
-        if not glasstype in bcoeffs.keys():
-            sys.stderr.write("Unknown glass type: %s\n" % glasstype)
+        if self._unknown_glass(glasstype):
             raise
-        #bvals = bcoeffs[glasstype]
-        #cvals = ccoeffs[glasstype]
         lam_um_sq = wlen_um**2
         n_squared = np.ones_like(wlen_um, dtype='float')
-        for bb,cc in zip(bcoeffs[glasstype], ccoeffs[glasstype]):
+        for bb,cc in zip(self._bcoeffs[glasstype], self._ccoeffs[glasstype]):
             n_squared += (lam_um_sq * bb) / (lam_um_sq - cc)
             #n_squared += (wlen_um**2 * bb) / (wlen_um**2 - cc)
         return n_squared
 
     #def glass_nn_vs_lambda(self, wlen_um, glasstype):
     def refraction_index(self, wlen_um, glasstype):
-        if not glasstype in bcoeffs.keys():
-            sys.stderr.write("Unknown glass type: %s\n" % glasstype)
+        if self._unknown_glass(glasstype):
             raise
         return np.sqrt(self.refraction_index_squared(wlen_um, glasstype))
     
@@ -98,8 +101,7 @@ class Glass(object):
     #    #return np.sqrt(tmpnn + 1.0)
 
     def glass_dn_dlambda_easy(self, wlen_um, glasstype, epsfrac=1e-5):
-        if not glasstype in bcoeffs.keys():
-            sys.stderr.write("Unknown glass type: %s\n" % glasstype)
+        if self._unknown_glass(glasstype):
             raise
 
         wlen_lower = wlen_um * (1.0 - epsfrac)
@@ -118,6 +120,8 @@ def prism_deflection_n(incid_r, apex_r, n):
                 - np.cos(apex_r) * np.sin(incid_r)
     return incid_r - apex_r + np.arcsin(ptemp)
 
+def wiki_prism_deflection_n(i, A, n):
+    return i - A + np.arcsin(n * np.sin(A - np.arcsin(np.sin(i) / n)))
 
 ##--------------------------------------------------------------------------##
 ## Notes on notation, relations, identities, etc.:
@@ -126,7 +130,7 @@ def prism_deflection_n(incid_r, apex_r, n):
 # lambda_B --> blaze wavelength
 # theta    --> facet illumination angle
 # alpha    --> angle of incidence
-# beta     --> angle of difraction
+# beta     --> angle of diffraction
 # gamma    --> angle of incidence relative to facet normal SPECIFICALLY
 #                   in the plane that is parallel to grooves
 

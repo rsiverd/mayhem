@@ -461,7 +461,7 @@ _trace_hkey_spec = [
         ]
 
 _metadata_order = ['EXTRVERS', 'TR_IMAGE', 'SRC_XPIX', 'SRC_YPIX',
-            'TRMETHOD', 'HALFBPIX', 'BAFFMASK', 'YPROFILE', ]
+            'TRMETHOD', 'TRB_XMID', 'TRB_HALF', 'BAFFMASK', 'YPROFILE', ]
 
 class TraceIO(object):
 

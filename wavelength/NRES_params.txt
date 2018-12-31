@@ -1,0 +1,28 @@
+# -----------------------------------------------------------------------
+# from a solved NRES frame:
+
+#SINALP  =       0.971747764900 / Sine of echelle incidence angle
+#FL      =        375.146862776 / [mm] Camera focal length
+#Y0      =       -22.1621828561 / [mm] y-position on CCD where gamma=0
+#Z0      =    0.000267784405245 / Air (n-1) refractive index in spectrograph
+
+# -----------------------------------------------------------------------
+
+# Using R4 grating with 41.59 lines/mm
+
+--> blaze angle (rad):  1.3258176636680326
+--> blaze angle (deg): 75.963756532073532
+
+Tim settings:
+* incidence angle (alpha):  1.332526404193366 rad
+* incidence angle (alpha): 76.348139050023519 deg
+* Tim's settings have GrInc ~ 76.30324
+* Header seen with alpha (implied from SINALP above) ~ 
+
+# -----------------------------------------------------------------------
+
+theta = alpha - theta_B
+
+
+# 
+

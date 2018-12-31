@@ -55,6 +55,67 @@ reload(order_identification)
 ads = order_identification.AdjacentDoubleSimilarity()
 
 ##--------------------------------------------------------------------------##
+## NRES specs:
+nres_gratio = 4.0           # NRES uses R4 grating
+nres_ruling_lmm = 41.59     # lines per mm ruled
+#nres_spacing_lmm = 24.0442  # grating lines per mm
+
+nres_prism_glass = "PBM2"   # glass type used in cross-dispersing prism
+nres_prism_apex_deg = 55.0  # apex angle of cross-dispersing prism
+
+nres_focallen_mm = 375.15   # approximate camera focal length
+nres_center_wl_um = 0.479   # [I THINK] light wavelength nearest CCD center
+nres_pix_size_mm = 0.015
+
+useful_orders = 52.0 + np.arange(67.0)
+
+## Spectrograph/optics brilliance:
+import spectrograph_optics
+reload(spectrograph_optics)
+ogt = spectrograph_optics.GratingTools(nres_gratio, 
+        lines_per_mm=nres_ruling_lmm)
+#spec_order_list = np.arange(10, 151)
+spec_order_list = np.copy(useful_orders)
+spec_order_wlmid = ogt.get_blaze_wavelengths(spec_order_list, units='um')
+spec_order_table = {kk:vv for kk,vv in zip(spec_order_list, spec_order_wlmid)}
+for ii,ww in enumerate(spec_order_wlmid):
+    sys.stderr.write("oid %3d --> %10.5f nm\n" % (ii, 1e3 * ww))
+spec_order_FSR = spec_order_wlmid / spec_order_list
+
+## Prism index of refraction for each order:
+sog = spectrograph_optics.Glass()
+spec_order_nn = sog.refraction_index(spec_order_wlmid, nres_prism_glass)
+
+## Minimum deviation angle of prism at central wavelength:
+## D = 2 * arcsin[n * sin(a / 2)] - a
+center_wl_nn = sog.refraction_index(nres_center_wl_um, nres_prism_glass)
+apex_rad = np.radians(nres_prism_apex_deg)      # NRES prism apex angle in RADIANS
+incident_ang_rad = np.arcsin(center_wl_nn * np.sin(0.5 * apex_rad))
+min_dev_rad = 2.0 * incident_ang_rad - apex_rad
+#halfdev_rad = 0.5 * min_dev_rad
+
+## Calculate prism angular dispersion (vs wavelength):
+bB_ratio = np.tan(incident_ang_rad) / center_wl_nn / np.tan(0.5 * apex_rad)
+dn_dlambda = sog.glass_dn_dlambda_easy(spec_order_wlmid, nres_prism_glass)
+prism_dispersion = bB_ratio * dn_dlambda
+spec_order_sep_mm = nres_focallen_mm * prism_dispersion * spec_order_FSR
+
+## Calculate order Y-position differences:
+order_nn_diff = spec_order_nn - center_wl_nn
+order_ypos_mm = nres_focallen_mm * 2.0 * min_dev_rad * order_nn_diff
+order_ypos_pix = order_ypos_mm / nres_pix_size_mm
+yspan_pixels = order_ypos_pix.max() - order_ypos_pix.min()
+sys.stderr.write("Y-span (pixels): %8.2f\n" % yspan_pixels)
+
+shifts = (np.roll(order_ypos_pix, -1) - order_ypos_pix)
+zip(spec_order_list, shifts)  
+
+## TESTING brute-force prism deflection:
+deflections_r = spectrograph_optics.prism_deflection_n(incident_ang_rad,
+                        apex_rad, spec_order_nn)
+
+
+##--------------------------------------------------------------------------##
 
 ## Home-brew robust statistics:
 #try:
@@ -277,6 +338,48 @@ n_update = nrex.traces_update_fibnum(thar_fobj,
 if context.output_file:
     trio.store_TraceData(context.output_file, trdata)
 
+## -----------------------------------------------------------------------
+## Brute-force Y-position of traces in central columns:
+
+## 
+all_traces = trdata.get_trace_list()
+#rx, ry = trdata._ridge_from_trace(all_traces[5])
+
+def select_xpix_range(xpix, x1, x2):
+    return np.where((x1 <= xpix) & (xpix <= x2))[0]
+
+def get_ridge_midpoints(ridges, x1, x2):
+    midpoints = []
+    for rx,ry in ridges:
+        which = np.where((x1 <= rx) & (rx <= x2))[0]
+        midpoints.append((np.average(rx[which]), np.average(ry[which])))
+    return midpoints
+
+## List of available fibers/channels:
+have_fibers = list(set([x['fnum'] for x in all_traces]))
+fib0_traces = [x for x in all_traces if x['fnum']==0]
+fib1_traces = [x for x in all_traces if x['fnum']==1]
+fib0_ridges = [trdata._ridge_from_trace(x) for x in fib0_traces]
+fib1_ridges = [trdata._ridge_from_trace(x) for x in fib1_traces]
+
+#fib0_y_central = []
+#xlower, xupper = 2300, 2350
+#for rx,ry in fib0_ridges:
+#    which = select_xpix_range(rx, xlower, xupper)
+#    ycentral = ry[which]
+#    fib0_y_central.append(np.average(ycentral))
+
+xlower, xupper = 2300, 2350
+fib0_midpts = get_ridge_midpoints(fib0_ridges, xlower, xupper)
+fib1_midpts = get_ridge_midpoints(fib1_ridges, xlower, xupper)
+f0_xmid, f0_ymid = zip(*fib0_midpts)
+f1_xmid, f1_ymid = zip(*fib1_midpts)
+
+ydeltas = np.diff(f1_ymid)[1:]
+norm_ydelta = ydeltas / ydeltas.max()
+
+inv_blaze_wlen = 1.0 / spec_order_wlmid
+norm_inv_blaze_wlen = inv_blaze_wlen / inv_blaze_wlen.max()
 
 ### Load NIST data for fiddling:
 #nist_data, nist_hdrs = pf.getdata('NIST_spectrum.top.fits', header=True)

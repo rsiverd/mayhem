@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2018-12-29
-# Last modified: 2018-12-29
+# Last modified: 2019-01-10
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.1.0"
+__version__ = "0.1.2"
 
 ## Python version-agnostic module reloading:
 try:
@@ -171,7 +171,7 @@ class GratingTools(object):
 
     @staticmethod
     def _calc_blaze_wavelength(spec_orders, groove_spacing,
-            theta_B_rad, theta_rad, gamma_rad):
+            theta_B_rad, facet_rad, gamma_rad):
         """
         Compute blaze wavelength for an array of order numbers.
         NOTE: wavelength computed in same units as groove spacing.
@@ -181,14 +181,54 @@ class GratingTools(object):
             sys.stderr.write("Error: non-integer spec_orders provided!\n")
             return np.nan * spec_orders
 
-        ang_tmp = np.sin(theta_B_rad) * np.cos(theta_rad) * np.cos(gamma_rad)
+        ang_tmp = np.sin(theta_B_rad) * np.cos(facet_rad) * np.cos(gamma_rad)
         return 2.0 * groove_spacing * ang_tmp / np.float_(spec_orders)
 
     def get_blaze_wavelengths(self, spec_orders, facet_rad=0.0, gamma_rad=0.0,
             units='nm'):
         return self._calc_blaze_wavelength(spec_orders,
                 self._groove_spacing[units], self._blaze_angle_rad, 
-                theta_rad=facet_rad, gamma_rad=gamma_rad)
+                facet_rad=facet_rad, gamma_rad=gamma_rad)
+
+    @staticmethod
+    def _calc_order_FSR(wlen_cen, spec_orders):
+        return wlen_cen / spec_orders
+    
+    @staticmethod
+    def _calc_order_width(wlen_cen, groove_spacing, 
+            theta_B_rad, facet_rad, gamma_rad):
+        """
+        Compute angular span of the order (free spectral range) with central
+        wavelength wlen_cen. 
+        
+        NOTES: 
+        * groove_spacing and wlen_cen need same units for correct result!
+        * diff_angle_rad should correspond to central wavelength (wlen_cen)
+        * wlen_cen supports numpy arrays
+        """
+        diff_angle_rad = theta_B_rad - facet_rad
+        cos_diff_gamma = np.cos(diff_angle_rad) * np.cos(gamma_rad)
+        return wlen_cen / (groove_spacing * cos_diff_gamma)
+
+    def get_order_params(self, spec_orders, facet_rad=0.0, gamma_rad=0.0,
+            units='nm'):
+        """
+        Computes central (blaze) wavelength and angular extent of specified
+        orders using chosen geometry/angles.
+
+        Outputs:
+        central_wlen -- corresponding central wavelengths in requested units
+        order_FSR    -- order free spectral ranges (units of central_wlen)
+        order_angwid -- order angular width (RADIANS)
+        """
+        use_spacing = self._groove_spacing[units]
+        central_wlen = self._calc_blaze_wavelength(spec_orders, use_spacing,
+                self._blaze_angle_rad, facet_rad, gamma_rad)
+        order_FSR = self._calc_order_FSR(central_wlen, spec_orders)
+        order_angwid = self._calc_order_width(central_wlen, use_spacing,
+                self._blaze_angle_rad, facet_rad, gamma_rad)
+        return (central_wlen, order_FSR, order_angwid)
+
 
 ##--------------------------------------------------------------------------##
 
@@ -196,7 +236,6 @@ class GratingTools(object):
 
 
 ##--------------------------------------------------------------------------##
-## New-style string formatting (more at https://pyformat.info/):
 
 
 

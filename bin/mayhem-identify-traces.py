@@ -6,13 +6,13 @@
 #
 # Rob Siverd
 # Created:       2018-12-26
-# Last modified: 2018-12-28
+# Last modified: 2019-01-10
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.2.0"
+__version__ = "0.2.5"
 
 ## Python version-agnostic module reloading:
 try:
@@ -68,6 +68,7 @@ nres_center_wl_um = 0.479   # [I THINK] light wavelength nearest CCD center
 nres_pix_size_mm = 0.015
 
 useful_orders = 52.0 + np.arange(67.0)
+useful_orders = 51.0 + np.arange(69.0)
 
 ## Spectrograph/optics brilliance:
 import spectrograph_optics
@@ -76,11 +77,13 @@ ogt = spectrograph_optics.GratingTools(nres_gratio,
         lines_per_mm=nres_ruling_lmm)
 #spec_order_list = np.arange(10, 151)
 spec_order_list = np.copy(useful_orders)
-spec_order_wlmid = ogt.get_blaze_wavelengths(spec_order_list, units='um')
+#spec_order_wlmid = ogt.get_blaze_wavelengths(spec_order_list, units='um')
+spec_order_wlmid, spec_order_FSR, spec_order_angsize = \
+        ogt.get_order_params(spec_order_list, units='um')
 spec_order_table = {kk:vv for kk,vv in zip(spec_order_list, spec_order_wlmid)}
 for ii,ww in enumerate(spec_order_wlmid):
     sys.stderr.write("oid %3d --> %10.5f nm\n" % (ii, 1e3 * ww))
-spec_order_FSR = spec_order_wlmid / spec_order_list
+#spec_order_FSR = spec_order_wlmid / spec_order_list
 
 ## Prism index of refraction for each order:
 sog = spectrograph_optics.Glass()
@@ -376,6 +379,29 @@ fib1_traces = [x for x in all_traces if x['fnum']==1]
 fib0_ridges = [trdata._ridge_from_trace(x) for x in fib0_traces]
 fib1_ridges = [trdata._ridge_from_trace(x) for x in fib1_traces]
 
+
+## -----------------------------------------------------------------------
+## -----------------------------------------------------------------------
+## -----------------------------------------------------------------------
+## Expected order angular size vs size in pixels:
+
+fib0_xwidth = np.float_([(tt['xmax'] - tt['xmin']) for tt in fib0_traces])
+fib1_xwidth = np.float_([(tt['xmax'] - tt['xmin']) for tt in fib1_traces])
+tmp_f0_xpix = fib0_xwidth[2:]
+tmp_f1_xpix = fib1_xwidth[2:]
+
+full_fib0_xwidth = fib0_xwidth[(fib0_xwidth <= 4090)]
+full_fib1_xwidth = fib1_xwidth[(fib1_xwidth <= 4090)]
+full_fib0_consec = full_fib0_xwidth / np.roll(full_fib0_xwidth, 1)
+full_fib1_consec = full_fib1_xwidth / np.roll(full_fib1_xwidth, 1)
+
+
+theory_consec = spec_order_angsize / np.roll(spec_order_angsize, 1)
+
+## -----------------------------------------------------------------------
+## -----------------------------------------------------------------------
+## -----------------------------------------------------------------------
+
 #fib0_y_central = []
 #xlower, xupper = 2300, 2350
 #for rx,ry in fib0_ridges:
@@ -399,11 +425,13 @@ norm_inv_blaze_wlen = inv_blaze_wlen / inv_blaze_wlen.max()
 ## -----------------------------------------------------------------------
 ## Compare estimate with measurement:
 
-norm_ychange_pix = ychange_pix - np.average(ychange_pix)
+norm_ychange_pix = ychange_pix - np.min(ychange_pix)
 norm_ychange_pix /= ychange_pix.max() - ychange_pix.min()
-comp_f0_ymid_pix = np.array(f0_ymid) - np.average(f0_ymid)
+comp_f0_ymid_pix = np.array(f0_ymid) - np.min(f0_ymid)
 comp_f0_ymid_pix /= comp_f0_ymid_pix.max() - comp_f0_ymid_pix.min()
 
+#norm_ychange_rng = norm_ychange_pix.max() - norm_ychange_pix.min()
+#comp_f0_ymid_rng = comp_f0_ymid_pix.max() - comp_f0_ymid_pix.min()
 
 ### Load NIST data for fiddling:
 #nist_data, nist_hdrs = pf.getdata('NIST_spectrum.top.fits', header=True)

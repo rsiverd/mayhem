@@ -52,7 +52,7 @@ import numpy as np
 ## Calculating index of refraction for several glass types:
 class Glass(object):
 
-    def __init__(self):
+    def __init__(self, glasstype):
         self._bcoeffs = {
             'SiO2':np.array([0.67071081e0, 0.433322857e0, 0.877379057e0]),
             'LLF1':np.array([1.21640125e0, 1.33664540e-1, 8.83399468e-1]),
@@ -63,6 +63,11 @@ class Glass(object):
             'LLF1':np.array([8.57807248e-3,   4.20143003e-2,   1.07593060e+2]),
             'PBM2':np.array([1.10571872e-2,   5.07194882e-2,   3.14440142e1]),
              'LF5':np.array([9.29854416e-3,   4.49135769e-2,   1.10493685e2]), }
+        if self._unknown_glass(glasstype):
+            raise
+        self._gtype = glasstype
+        self._coeffs = zip(self._bcoeffs[self._gtype],
+                           self._ccoeffs[self._gtype])
         return
 
     def _unknown_glass(self, glasstype):
@@ -73,21 +78,23 @@ class Glass(object):
             return False
 
     # Squared index of refraction for specified wavelengths:
-    def refraction_index_squared(self, wlen_um, glasstype):
-        if self._unknown_glass(glasstype):
-            raise
+    #def refraction_index_squared(self, wlen_um, glasstype):
+    def refraction_index_squared(self, wlen_um):
         lam_um_sq = wlen_um**2
         n_squared = np.ones_like(wlen_um, dtype='float')
-        for bb,cc in zip(self._bcoeffs[glasstype], self._ccoeffs[glasstype]):
+        #for bb,cc in zip(self._bcoeffs[self._gtype], self._ccoeffs[self._gtype]):
+        for bb,cc in self._coeffs:
             n_squared += (lam_um_sq * bb) / (lam_um_sq - cc)
             #n_squared += (wlen_um**2 * bb) / (wlen_um**2 - cc)
         return n_squared
 
     #def glass_nn_vs_lambda(self, wlen_um, glasstype):
-    def refraction_index(self, wlen_um, glasstype):
-        if self._unknown_glass(glasstype):
-            raise
-        return np.sqrt(self.refraction_index_squared(wlen_um, glasstype))
+    #def refraction_index(self, wlen_um, glasstype):
+    def refraction_index(self, wlen_um):
+        #if self._unknown_glass(glasstype):
+        #    raise
+        #return np.sqrt(self.refraction_index_squared(wlen_um, glasstype))
+        return np.sqrt(self.refraction_index_squared(wlen_um))
     
     #def deprecated():
     #    bvals = bcoeffs[glasstype]
@@ -101,14 +108,14 @@ class Glass(object):
     #    #return np.sqrt(tmpnn + 1.0)
 
     def glass_dn_dlambda_easy(self, wlen_um, glasstype, epsfrac=1e-5):
-        if self._unknown_glass(glasstype):
-            raise
+        #if self._unknown_glass(glasstype):
+        #    raise
 
         wlen_lower = wlen_um * (1.0 - epsfrac)
         wlen_upper = wlen_um * (1.0 + epsfrac)
 
-        nn_lower = self.refraction_index(wlen_lower, glasstype)
-        nn_upper = self.refraction_index(wlen_upper, glasstype)
+        nn_lower = self.refraction_index(wlen_lower) #, glasstype)
+        nn_upper = self.refraction_index(wlen_upper) #, glasstype)
 
         return (nn_upper - nn_lower) / (wlen_upper - wlen_lower)
 
@@ -119,6 +126,8 @@ def prism_deflection_n(incid_r, apex_r, n):
     ptemp = np.sqrt(n**2 - np.sin(incid_r)**2) * np.sin(apex_r) \
                 - np.cos(apex_r) * np.sin(incid_r)
     return incid_r - apex_r + np.arcsin(ptemp)
+
+#def prism_deflection_glass_wl(incid_r, apex_r, gtype, wlen):
 
 def wiki_prism_deflection_n(i, A, n):
     return i - A + np.arcsin(n * np.sin(A - np.arcsin(np.sin(i) / n)))

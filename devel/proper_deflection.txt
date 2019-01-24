@@ -1,0 +1,22 @@
+import spectrograph_optics
+sog = spectrograph_optics.Glass()
+
+# Spectrograph hardware config items (constants):
+nres_prism_glass = "PBM2"   # glass type used in cross-dispersing prism
+nres_prism_apex_deg = 55.0  # apex angle of cross-dispersing prism
+nres_center_wl_um = 0.479   # [I THINK] light wavelength nearest CCD center
+
+apex_rad = np.radians(nres_prism_apex_deg)
+
+center_wl_nn = sog.refraction_index(nres_center_wl_um, nres_prism_glass)
+
+pr_incident_ang_rad
+
+# Effective gamma angle is wavelength dependent:
+γ_eff(λ, λ_nom) = γ_nom + Δγ(λ, λ_nom)
+
+min_dev_rad = 2.0 * pr_incident_ang_rad - apex_rad
+Δγ(λ, λ_nom) = deflection_angle(λ, λ_nom) - minimum_deflection_angle(λ_nom)
+
+
+

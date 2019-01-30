@@ -316,19 +316,7 @@ new_sep = calc_order_sep(iter_order_wlmid) * nres_flen_pix
 
 ## Store results for external use/comparison:
 sys.stderr.write("Storing central wavelengths ... ")
-save_csv = 'lam_ctr_data.csv'
-#tmp_data = np.c_[
-#        np.arange(spec_order_list.size),
-#        spec_order_list,
-#        spec_order_wlmid,
-#        iter_order_wlmid,
-#        old_sep - old_sep.min(),
-#        new_sep - new_sep.min()]
-#hdrtxt = "oidx,spec_ord,lam_dumb,lam_iter,sep_dumb,sep_iter\n"
-#params = {'header':hdrtxt, 'comments':'',
-#        'newline':os.linesep, 'delimiter':','}
-#np.savetxt(save_csv, tmp_data, **params)
-with open(save_csv, 'w') as f:
+with open('lam_ctr_data.csv', 'w') as f:
     f.write("oidx,spec_ord,lam_dumb,lam_iter,sep_dumb,sep_iter\n")
     norm_old_sep = old_sep - old_sep.min()
     norm_new_sep = new_sep - new_sep.min()
@@ -338,8 +326,6 @@ with open(save_csv, 'w') as f:
         s1, s2 = norm_old_sep[ii], norm_new_sep[ii]
         f.write("%2d,%3d,%8.6f,%8.6f,%8.3f,%8.3f\n"
                 % (ii, so, w1, w2, s1, s2))
-        pass
-    pass
 sys.stderr.write("done.\n")
 
 

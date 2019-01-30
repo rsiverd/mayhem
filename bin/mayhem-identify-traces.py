@@ -6,13 +6,13 @@
 #
 # Rob Siverd
 # Created:       2018-12-26
-# Last modified: 2019-01-10
+# Last modified: 2019-01-30
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.2.5"
+__version__ = "0.2.9"
 
 ## Python version-agnostic module reloading:
 try:
@@ -32,15 +32,19 @@ import time
 import signal
 import numpy as np
 import scipy.signal as ssig
+import scipy.optimize as opti
 import matplotlib.pyplot as plt
-#from numpy.lib.recfunctions import append_fields
-#from functools import partial
+from numpy.lib.recfunctions import append_fields
+from functools import partial
 #from collections import OrderedDict
 #import multiprocessing as mp
 #import pandas as pd
 #import statsmodels.api as sm
 #import statsmodels.formula.api as smf
 #from statsmodels.regression.quantile_regression import QuantReg
+
+## Theil-Sen fitting:
+import theil_sen as ts
 
 ## Mayhem extraction tools:
 import nres_extraction
@@ -59,11 +63,17 @@ ads = order_identification.AdjacentDoubleSimilarity()
 nres_gratio = 4.0           # NRES uses R4 grating
 nres_ruling_lmm = 41.59     # lines per mm ruled
 #nres_spacing_lmm = 24.0442  # grating lines per mm
+nres_grating_tilt_deg = 13.786  # grating tilt w.r.t. optical bench surface
+nres_alpha_angle_rad = np.radians(90.0 - nres_grating_tilt_deg)
 
 nres_prism_glass = "PBM2"   # glass type used in cross-dispersing prism
 nres_prism_apex_deg = 55.0  # apex angle of cross-dispersing prism
 
-nres_focallen_mm = 375.15   # approximate camera focal length
+#nres_focallen_mm = 375.15   # approximate camera focal length
+nres_focallen_mm = 400.00   # TESTING
+nres_focallen_mm = 390.00   # TESTING
+nres_focallen_mm = 385.00   # TESTING
+nres_focallen_mm = 380.00   # TESTING
 nres_center_wl_um = 0.479   # [I THINK] light wavelength nearest CCD center
 nres_pix_size_mm = 0.015
 
@@ -86,12 +96,13 @@ for ii,ww in enumerate(spec_order_wlmid):
 #spec_order_FSR = spec_order_wlmid / spec_order_list
 
 ## Prism index of refraction for each order:
-sog = spectrograph_optics.Glass()
-spec_order_nn = sog.refraction_index(spec_order_wlmid, nres_prism_glass)
+#sog = spectrograph_optics.Glass()
+sog = spectrograph_optics.Glass(nres_prism_glass)
+spec_order_nn = sog.refraction_index(spec_order_wlmid) #, nres_prism_glass)
 
 ## Minimum deviation angle of prism at central wavelength:
 ## D = 2 * arcsin[n * sin(a / 2)] - a
-center_wl_nn = sog.refraction_index(nres_center_wl_um, nres_prism_glass)
+center_wl_nn = sog.refraction_index(nres_center_wl_um) #, nres_prism_glass)
 apex_rad = np.radians(nres_prism_apex_deg)      # NRES prism apex angle in RADIANS
 incident_ang_rad = np.arcsin(center_wl_nn * np.sin(0.5 * apex_rad))
 min_dev_rad = 2.0 * incident_ang_rad - apex_rad
@@ -131,6 +142,21 @@ wdefl1 = spectrograph_optics.wiki_prism_deflection_n(incidence_1_r,
 
 ychange_mm = (2.0 * inc_change_r) * nres_focallen_mm
 ychange_pix = ychange_mm / nres_pix_size_mm
+
+
+##--------------------------------------------------------------------------##
+## Reproduce Tim's wavelength model:
+y0_mm = -22.1621828561      # CCD Y-coordinate where gamma angle is 0.0
+
+## ADDITIONAL PARAMETERS:
+# * define alpha angle (incidence onto grating). This should be the set by the
+# orientation of the grating w.r.t. optical bench and (I think) is the same for
+# all wavelengths. Set once. Could also define this as facet angle.
+# * Need to know/set the gamma angle that corresponds to the minimally
+# deflected wavelength through the prism. This is effectively the "rotation" of
+# the grating on the optical bench surface away from The gamma angles of individual
+# wavelengths reaching grating are then (after one pass thru prism):
+#       -- gamma_mindef + inc_change_r
 
 ##--------------------------------------------------------------------------##
 
@@ -379,6 +405,53 @@ fib1_traces = [x for x in all_traces if x['fnum']==1]
 fib0_ridges = [trdata._ridge_from_trace(x) for x in fib0_traces]
 fib1_ridges = [trdata._ridge_from_trace(x) for x in fib1_traces]
 
+## Separate the ThAr channels too:
+f0_thar_data = [y for x,y in zip(all_traces, thar_norm) if x['fnum']==0]
+f1_thar_data = [y for x,y in zip(all_traces, thar_norm) if x['fnum']==1]
+
+#def nearest_xy(x1, y1, x2, y2, xmax=110):
+#    tdiff = []
+#    for tx,ty in zip(x1, y1):
+#        which = (np.abs(tx - x2) <= xmax)
+#        if (np.sum(which) > 0):
+#            tdiff.append(np.min(np.hypot(tx - x2[which], ty - y2[which])))
+#    return np.min(tdiff)
+#
+### Closest separations:
+#def get_minseps(ridges):
+#    ndiffs = len(ridges) - 1
+#    separations = []
+#    for ii in range(ndiffs):
+#        x1, y1 = ridges[ii]
+#        x2, y2 = ridges[ii+1]
+#        tsep = [np.min(np.hypot(x2 - tx, y2 - ty)) for tx,ty in zip(x1,y1)]
+#        separations.append(np.min(tsep))
+#    return np.array(separations)
+#
+### Closest separations:
+#def get_minseps2(ridges):
+#    ndiffs = len(ridges) - 1
+#    separations = []
+#    for ii in range(ndiffs):
+#        x1, y1 = ridges[ii]
+#        x2, y2 = ridges[ii+1]
+#        sys.stderr.write("matching orders %d,%d\n" % (ii, ii+1))
+#        separations.append(nearest_xy(x1, y1, x2, y2))
+#    return np.array(separations)
+#
+##sys.stderr.write("Timing approach 1 ... ")
+##tik = time.time()
+##yay_seps_1 = get_minseps(fib0_ridges)
+##tok = time.time()
+##sys.stderr.write("took %.3f seconds.\n" % (tok-tik))
+## TAKES 20 SECONDS
+#
+#sys.stderr.write("Timing approach 2 ... ")
+#tik = time.time()
+#yay_seps_2 = get_minseps2(fib0_ridges)
+#tok = time.time()
+#sys.stderr.write("took %.3f seconds.\n" % (tok-tik))
+## TAKES 14 SECONDS
 
 ## -----------------------------------------------------------------------
 ## -----------------------------------------------------------------------
@@ -412,14 +485,17 @@ theory_consec = spec_order_angsize / np.roll(spec_order_angsize, 1)
 xlower, xupper = 2300, 2350
 fib0_midpts = get_ridge_midpoints(fib0_ridges, xlower, xupper)
 fib1_midpts = get_ridge_midpoints(fib1_ridges, xlower, xupper)
-f0_xmid, f0_ymid = zip(*fib0_midpts)
-f1_xmid, f1_ymid = zip(*fib1_midpts)
+f0_xmid, f0_ymid = np.array(fib0_midpts).T
+f1_xmid, f1_ymid = np.array(fib1_midpts).T
 
 ydeltas = np.diff(f1_ymid)[1:]
 norm_ydelta = ydeltas / ydeltas.max()
 
 inv_blaze_wlen = 1.0 / spec_order_wlmid
 norm_inv_blaze_wlen = inv_blaze_wlen / inv_blaze_wlen.max()
+
+## Scale to match data:
+shift, scale = ts.linefit(ychange_pix, np.array(f0_ymid))
 
 
 ## -----------------------------------------------------------------------
@@ -477,6 +553,116 @@ comp_f0_ymid_pix /= comp_f0_ymid_pix.max() - comp_f0_ymid_pix.min()
 #Y0      =       -22.1621828561 / [mm] y-position on CCD where gamma=0
 #Z0      =    0.000267784405245 / Air (n-1) refractive index in spectrograph
 
+## -----------------------------------------------------------------------
+## -----------------------------------------------------------------------
+## -----------------------------------------------------------------------
+## -----------------------------------------------------------------------
+
+nres_nominal_gamma = 0.0    # [radians] gamma angle for nres_center_wl_um
+nres_prism_apex_deg = 55.0  # apex angle of cross-dispersing prism
+nres_prism_apex_rad = np.radians(nres_prism_apex_deg)
+nres_spacing_um = 1e3 / nres_ruling_lmm     # grating spacing in microns
+
+
+## -----------------------------------------------------------------------
+## Effective gamma angle is the nominal gamma angle plus the changes in prism
+## deflection angle due to difference from nominal wavelength.
+def gamma_eff(gamma_nom, wlen_um):
+    # delta_gamma = deflection_rad - min_dev_rad
+    deflect_r = spectrograph_optics.prism_deflection_n(incident_ang_rad,
+            nres_prism_apex_rad, sog.refraction_index(wlen_um))
+    return gamma_nom + deflect_r - min_dev_rad
+
+use_gamma_eff = partial(gamma_eff, nres_nominal_gamma)
+
+## From existing solutions ...
+nres_sine_alpha = 0.971747764900
+blaze_r = np.arctan(4.0)
+#facet_r = np.radians(0.5)
+facet_r = np.arcsin(nres_sine_alpha) - blaze_r
+fixed_geometry = 2.0 * nres_spacing_um * np.cos(facet_r) * np.sin(blaze_r)
+
+def lamcen_residual(wlen, order=0):
+    ls = wlen * order
+    rs = fixed_geometry * np.cos(use_gamma_eff(wlen))
+    return ls - rs
+
+def iter_calc_lamcen(order):
+    kw = {'order':order}
+    runme = partial(lamcen_residual, **kw)
+    return opti.bisect(runme, 0.0, 10.0)
+
+## FIBER CHOICE:
+fib_which = 0
+
+## -----------------------------------------------------------------------
+## Initial crack at wavelength solution:
+rlist = fib0_ridges if fib_which==0 else fib1_ridges
+xpix_beta_c = 2048.5        # X-pixel where beta=beta_c
+xpix_beta_c =    0.0        # X-pixel where beta=beta_c
+xpix_beta_c = 4080.0        # X-pixel where beta=beta_c
+xpix_beta_c = 2100.0        # X-pixel where beta=beta_c
+wavelengths = []
+for ii,spord in enumerate(spec_order_list):
+    rx, ry = rlist[ii]
+    #mmrx = (rx - xpix_beta_c) * nres_pix_size_mm
+    mmrx = (xpix_beta_c - rx) * nres_pix_size_mm
+    beta = np.arcsin(nres_sine_alpha) - np.arctan(mmrx / nres_focallen_mm)
+    #sine_beta = np.sin(np.arctan(mmrx / nres_focallen_mm))
+    center_wl = spec_order_wlmid[ii]
+    sys.stderr.write("\rOrder %d ... " % spord)
+    #center_wl = iter_calc_lamcen(spord)
+    cos_gamma = np.cos(use_gamma_eff(center_wl))
+    tlam = nres_spacing_um / float(spord) * cos_gamma \
+            * (nres_sine_alpha + np.sin(beta))
+    wavelengths.append(tlam)
+sys.stderr.write("done.\n")
+
+
+##-----------------------------------------------------------------------
+## Load Argon lines:
+clean_argon = np.genfromtxt('clean_argon.txt', dtype=None, names=True)
+clean_argon['lam_obs'] /= 1e3
+#line_list = clean_argon['lam_obs'] / 1e3
+
+lovis_pepe = np.genfromtxt('lovis_pepe.csv', dtype=None, names=True,
+        delimiter=',')
+lovis_pepe['lam_vac'] /= 1e4
+useful = (lovis_pepe['flux'] > 10000.0)
+#line_list = lovis_pepe['lam_vac'][useful] / 1e4
+
+## Visual inspection of ThAr data vs wavelength solution:
+corresponding_thar = f0_thar_data if fib_which==0 else f1_thar_data
+def oinspect(oidx, sdata=corresponding_thar, pad=0.1):
+    thar = sdata[oidx]
+    wlen = wavelengths[oidx]
+    wlrange = wlen.max() - wlen.min()
+    wl1 = wlen.min() - pad * wlrange
+    wl2 = wlen.max() + pad * wlrange
+    sys.stderr.write("oidx %d covers wavelength range: %.3f to %.3f\n" 
+            % (oidx, wlen.min(), wlen.max()))
+    which = (wl1 <= clean_argon['lam_obs']) \
+            & (clean_argon['lam_obs'] <= wl2)
+    #which = (wl1 <= line_list) & (line_list <= wl2)
+    sys.stderr.write("Lines in range: %d\n" % np.sum(which))
+    argon_lam = clean_argon['lam_obs'][which]
+    #argon_lam = line_list[which]
+    sys.stderr.write("wlen.size: %d\n" % wlen.size)
+    sys.stderr.write("xpix.size: %d\n" % thar['xpix'].size)
+    argon_pix = np.interp(argon_lam, wlen, thar['xpix'])
+    #sys.stderr.write("derp: %s\n" % str((wl1 <= clean_argon['lam_obs'])))
+
+    fig = plt.figure(1, figsize=(10,5))
+    fig.clf()
+    ax1 = fig.add_subplot(111)
+    ax1.plot(thar['xpix'], thar['spec'])
+    ax1.set_yscale('log')
+    #[ax1.axvline(x, ls=':') for x in argon_pix]
+    for x in argon_pix:
+        sys.stderr.write("adding Argon at %f ...\n" % x)
+        ax1.axvline(x, ls=':', c='r')
+    plt.draw()
+    return
 
 
 

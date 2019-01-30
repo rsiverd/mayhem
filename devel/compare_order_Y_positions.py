@@ -8,13 +8,13 @@
 #
 # Rob Siverd
 # Created:       2019-01-20
-# Last modified: 2019-01-20
+# Last modified: 2019-01-30
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.0.1"
+__version__ = "0.1.0"
 
 ## Optional matplotlib control:
 #from matplotlib import use, rc, rcParams
@@ -174,12 +174,30 @@ fulldiv = '-' * 80
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 
+## Mayhem extraction tools:
+import nres_extraction
+reload(nres_extraction)
+nrex = nres_extraction
+trio = nres_extraction.TraceIO()
+frox = nres_extraction.FlatRelativeOptimalExtraction()
+#test_traces = "./scratch/trace1_med_nres01_tung01_20181125_07d_06b_00a.fits"
+test_traces = "derp.fits"
+double_path = "images/med_nres01_thar01_20181125_07d_06b_00a.fits.fz"
+for item in (test_traces, double_path):
+    if not os.path.isfile(item):
+        sys.stderr.write("Can't find file: '%s'\n" % item)
+        sys.exit(1)
+
+## Load traces for fiddling:
+trdata = trio.load_traces(test_traces)
+
 ## Spectrograph/optics brilliance:
 import spectrograph_optics
 reload(spectrograph_optics)
 
 ##--------------------------------------------------------------------------##
 ## Spectrograph hardware config items (constants):
+nres_pixel_size_mm = 0.015  # 15-micron pixels
 nres_gratio = 4.0           # NRES uses R4 grating
 nres_ruling_lmm = 41.59     # lines per mm ruled
 nres_blaze_angle_rad = np.arctan(nres_gratio)
@@ -193,6 +211,8 @@ nres_center_wl_um = 0.479   # [I THINK] light wavelength nearest CCD center
 
 nres_nominal_gamma = 0.0    # [radians] gamma angle for nres_center_wl_um
 #nres_nominal_gamma = np.radians(1.0)
+
+nres_focallen_mm = 375.15   # approximate camera focal length
 
 
 
@@ -248,7 +268,7 @@ def iter_calc_lamcen(order):
     kw = {'order':order}
     runme = partial(lamcen_residual, **kw)
     return opti.bisect(runme, 0.0, 10.0)
-    
+
 ## NOTES:
 ## alpha = blaze_angle + facet_angle
 ##  beta = blaze_angle - facet_angle    (center)
@@ -264,13 +284,76 @@ spec_order_wlmid, spec_order_FSR, spec_order_angsize = \
 spec_order_table = {kk:vv for kk,vv in zip(spec_order_list, spec_order_wlmid)}
 
 ## New way:
-iter_order_wlmid = [iter_calc_lamcen(x) for x in spec_order_list]
+iter_order_wlmid = np.array([iter_calc_lamcen(x) for x in spec_order_list])
 iter_order_table = {kk:vv for kk,vv in zip(spec_order_list, iter_order_wlmid)}
 
 ## Comparison of methods:
 for ii,ww in enumerate(spec_order_wlmid):
     w2 = iter_order_wlmid[ii]
     sys.stderr.write("oid %3d --> %10.5f nm || %10.5f\n" % (ii, 1e3 * ww, 1e3 * w2))
+
+## Store results for external use/comparison:
+sys.stderr.write("Storing central wavelengths ... ")
+with open('lam_ctr_data.csv', 'w') as f:
+    f.write("oidx,spec_ord,lam_dumb,lam_iter\n")
+    for ii,w1 in enumerate(spec_order_wlmid):
+        so = spec_order_list[ii]
+        w2 = iter_order_wlmid[ii]
+        f.write("%2d,%3d,%8.6f,%8.6f\n" % (ii, so, w1, w2))
+        pass
+    pass
+sys.stderr.write("done.\n")
+
+
+
+##--------------------------------------------------------------------------##
+## Given a set of central wavelengths, compute order separation:
+def calc_order_sep(central_wlen_um):
+    refr_idx = sog.refraction_index(central_wlen_um)
+    deflections = spectrograph_optics.prism_deflection_n(incident_ang_rad,
+                nres_prism_apex_rad, refr_idx)
+    angle_change = deflections - min_dev_rad
+    return 2*angle_change
+
+nres_flen_pix = nres_focallen_mm / nres_pixel_size_mm
+old_sep = calc_order_sep(spec_order_wlmid) * nres_flen_pix
+new_sep = calc_order_sep(iter_order_wlmid) * nres_flen_pix
+
+
+
+
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+## Dispersion is a function of angles and wavelength:
+## dβ/dλ = n / (d * cosγ * cosβ)
+## dβ/dλ = (sinα + sinβ) / (λ * cosβ)
+#dbeta_dlambda = (nres_sine_alpha + 
+
+##--------------------------------------------------------------------------##
+## Arrays of spectrograph coordinates:
+ny, nx = 4096, 4096
+x_list = (0.5 + np.arange(nx)) / nx - 0.5            # relative (centered)
+y_list = (0.5 + np.arange(ny)) / ny - 0.5            # relative (centered)
+#xx, yy = np.meshgrid(x_list, y_list)                 # relative (centered)
+xx, yy = np.meshgrid(nx*x_list, ny*y_list)           # absolute (centered)
+#xx, yy = np.meshgrid(np.arange(nx), np.arange(ny))   # absolute
+#yy, xx = np.meshgrid(np.arange(ny), np.arange(nx), indexing='ij') # absolute
+#yy, xx = np.nonzero(np.ones_like(img_vals))          # absolute
+#yy, xx = np.mgrid[0:ny,   0:nx].astype('uint16')     # absolute (array)
+#yy, xx = np.mgrid[1:ny+1, 1:nx+1].astype('uint16')   # absolute (pixel)
+#xx *= nres_pixel_size_mm
+#yy *= nres_pixel_size_mm
+
+gamma2d = np.arcsin(yy * nres_pixel_size_mm / nres_focallen_mm)
+##gamma2d = np.arctan(yy * nres_pixel_size_mm / nres_focallen_mm)
+beta_2d = np.arcsin(xx * nres_pixel_size_mm / nres_focallen_mm) # beta - beta_c
+del xx, yy, x_list, y_list
+
+#ordernum = 100
+#wlen2d_test = nres_spacing_um * 
 
 ##--------------------------------------------------------------------------##
 ## Plot config:

@@ -145,6 +145,33 @@ ychange_pix = ychange_mm / nres_pix_size_mm
 
 
 ##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+
+## Solve for ACTUAL undeflected wavelength ...
+## --> from CAD, prism is inclined by 51.007 deg w.r.t. camera face
+## --> from CAD, deflection direct to grating is 44.827 degrees
+
+all_wavelengths = np.linspace(0.375, 0.925, 1000)
+all_indx_refrac = sog.refraction_index(all_wavelengths)
+cad_incidence_1_r = np.radians(51.007) * np.ones_like(all_indx_refrac)
+cad_deflections_r = spectrograph_optics.prism_deflection_n(cad_incidence_1_r,
+                        apex_rad, all_indx_refrac)
+def deflect_resid(guess_lam_um):
+    _cad_incid_r = np.radians(51.007)
+    _cad_gturn_r = np.radians(44.827)
+    #this_n = sog.refraction_index(guess_lam_um)
+    this_deflect_r = spectrograph_optics.prism_deflection_n(_cad_incid_r,
+            apex_rad, sog.refraction_index(guess_lam_um))
+    return this_deflect_r - _cad_gturn_r
+
+## Solve for central wavelength via bisection:
+answer = opti.bisect(deflect_resid, 0.3, 0.5)
+
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+
 ## Reproduce Tim's wavelength model:
 y0_mm = -22.1621828561      # CCD Y-coordinate where gamma angle is 0.0
 

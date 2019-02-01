@@ -1,0 +1,15 @@
+
+
+# Make transformation array:
+python ./make_xform.py
+
+# Resample image:
+is3_interp -i ./clean_med_nres01_tung01_20181125_07d_06b_00a.fits \
+            -A ./nres_xform.txt
+mv -f interp.fits rotated_tung.fits
+
+is3_interp -i ./med_nres01_thar01_20181125_07d_06b_00a.fits.fz \
+            -A ./nres_xform.txt
+mv -f interp.fits rotated_thar.fits
+
+

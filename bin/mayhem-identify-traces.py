@@ -79,7 +79,8 @@ nres_center_wl_um = 0.479   # [I THINK] light wavelength nearest CCD center
 nres_pix_size_mm = 0.015
 
 useful_orders = 52.0 + np.arange(67.0)
-useful_orders = 51.0 + np.arange(69.0)
+#useful_orders = 51.0 + np.arange(69.0)
+useful_orders = 54.0 + np.arange(67.0)
 
 ## Spectrograph/optics brilliance:
 import spectrograph_optics
@@ -87,6 +88,8 @@ reload(spectrograph_optics)
 nrp = spectrograph_optics.Prism(nres_prism_glass, nres_prism_apex_deg)
 ogt = spectrograph_optics.GratingTools(nres_gratio, 
         lines_per_mm=nres_ruling_lmm)
+dppgp = spectrograph_optics.DoublePassPrismGratingPrism()
+
 #spec_order_list = np.arange(10, 151)
 spec_order_list = np.copy(useful_orders)
 #spec_order_wlmid = ogt.get_blaze_wavelengths(spec_order_list, units='um')
@@ -532,7 +535,7 @@ inv_blaze_wlen = 1.0 / spec_order_wlmid
 norm_inv_blaze_wlen = inv_blaze_wlen / inv_blaze_wlen.max()
 
 ## Scale to match data:
-shift, scale = ts.linefit(ychange_pix, np.array(f0_ymid))
+#shift, scale = ts.linefit(ychange_pix, np.array(f0_ymid))
 
 
 ## -----------------------------------------------------------------------
@@ -656,6 +659,43 @@ for ii,spord in enumerate(spec_order_list):
     wavelengths.append(tlam)
 sys.stderr.write("done.\n")
 
+
+##-----------------------------------------------------------------------
+## Quick test of central wavelength code:
+lam_cen_dppgp = dppgp.calc_central_wlen_um(spec_order_list)
+
+ctr_wlen, ctr_gamma = dppgp.fancy_deflections(spec_order_list)
+
+#defl1_0, rbeam_0, defl2_0, h2_0 = dppgp.two_pass_deflection(ctr_wlen[0])
+#defl1_z, rbeam_z, defl2_z, h2_z = dppgp.two_pass_deflection(ctr_wlen[-1])
+ctr_headings, pg_yshifts, pc_yshifts = \
+        np.array([dppgp.two_pass_deflection(x) for x in ctr_wlen]).T
+dp_yshifts_mm = pg_yshifts + pc_yshifts
+dp_yshifts_pix = dp_yshifts_mm / nres_pix_size_mm
+#dp_yshifts_range = dp_yshifts_pix.max() - dp_yshifts_pix.min()
+#normed_dp_yshifts = (dp_yshifts_pix - dp_yshifts_pix.min()) / dp_yshifts_range
+
+def shift_normalizer(ypos):
+    yrange = ypos.max() - ypos.min()
+    ynudge = ypos - ypos.min()
+    return ynudge / yrange
+
+fig = plt.figure(8, figsize=(12,7))
+fig.clf()
+ax1 = fig.add_subplot(121)
+ax1.grid(True)
+ax1.plot(shift_normalizer(ychange_mm), label='ychange_mm')
+ax1.plot(shift_normalizer(dp_yshifts_mm), label='dp_yshifts_mm')
+ax1.plot(shift_normalizer(ydeltas), label='YDELTAS')
+ax1.legend(loc='upper left')
+ax2 = fig.add_subplot(122)
+ax2.grid(True)
+ax2.plot(shift_normalizer(pg_yshifts), label='prism-GRATING shifts')
+ax2.plot(shift_normalizer(pc_yshifts), label='prism-CAMERA  shifts')
+ax2.plot(shift_normalizer(ydeltas), label='DATA')
+ax2.legend(loc='best')
+fig.tight_layout()
+plt.draw()
 
 ##-----------------------------------------------------------------------
 ## Load Argon lines:

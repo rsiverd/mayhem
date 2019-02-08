@@ -6,13 +6,13 @@
 #
 # Rob Siverd
 # Created:       2018-12-26
-# Last modified: 2019-01-30
+# Last modified: 2019-02-08
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.2.9"
+__version__ = "0.3.0"
 
 ## Python version-agnostic module reloading:
 try:
@@ -69,6 +69,7 @@ nres_alpha_angle_rad = np.radians(90.0 - nres_grating_tilt_deg)
 nres_prism_glass = "PBM2"   # glass type used in cross-dispersing prism
 nres_prism_apex_deg = 55.0  # apex angle of cross-dispersing prism
 
+
 #nres_focallen_mm = 375.15   # approximate camera focal length
 nres_focallen_mm = 400.00   # TESTING
 nres_focallen_mm = 390.00   # TESTING
@@ -83,6 +84,7 @@ useful_orders = 51.0 + np.arange(69.0)
 ## Spectrograph/optics brilliance:
 import spectrograph_optics
 reload(spectrograph_optics)
+nrp = spectrograph_optics.Prism(nres_prism_glass, nres_prism_apex_deg)
 ogt = spectrograph_optics.GratingTools(nres_gratio, 
         lines_per_mm=nres_ruling_lmm)
 #spec_order_list = np.arange(10, 151)
@@ -129,16 +131,19 @@ zip(spec_order_list, shifts)
 
 ## TESTING brute-force prism deflection:
 incidence_1_r = incident_ang_rad * np.ones_like(spec_order_nn)
-deflections_1_r = spectrograph_optics.prism_deflection_n(incidence_1_r,
-                        apex_rad, spec_order_nn)
+#deflections_1_r = spectrograph_optics.prism_deflection_n(incidence_1_r,
+#                        apex_rad, spec_order_nn)
+deflections_1_r = nrp.deflection_rad_n2(incidence_1_r, spec_order_nn**2)
 
 inc_change_r = deflections_1_r - min_dev_rad
 incidence_2_r = incidence_1_r + inc_change_r
-deflections_2_r = spectrograph_optics.prism_deflection_n(incidence_2_r,
-                        apex_rad, spec_order_nn)
+#deflections_2_r = spectrograph_optics.prism_deflection_n(incidence_2_r,
+#                        apex_rad, spec_order_nn)
+deflections_2_r = nrp.deflection_rad_n2(incidence_2_r, spec_order_nn**2)
 
-wdefl1 = spectrograph_optics.wiki_prism_deflection_n(incidence_1_r,
-                        apex_rad, spec_order_nn)
+##wdefl1 = spectrograph_optics.wiki_prism_deflection_n(incidence_1_r,
+##                        apex_rad, spec_order_nn)
+#wdefl1 = nrp.deflection_rad_n(incidence_1_r, spec_order_nn)
 
 ychange_mm = (2.0 * inc_change_r) * nres_focallen_mm
 ychange_pix = ychange_mm / nres_pix_size_mm
@@ -152,20 +157,25 @@ ychange_pix = ychange_mm / nres_pix_size_mm
 ## --> from CAD, deflection direct to grating is 44.827 degrees
 
 all_wavelengths = np.linspace(0.375, 0.925, 1000)
-all_indx_refrac = sog.refraction_index(all_wavelengths)
-cad_incidence_1_r = np.radians(51.007) * np.ones_like(all_indx_refrac)
-cad_deflections_r = spectrograph_optics.prism_deflection_n(cad_incidence_1_r,
-                        apex_rad, all_indx_refrac)
+#all_indx_refrac = sog.refraction_index(all_wavelengths)
+cad_incidence_1_r = np.radians(51.007) * np.ones_like(all_wavelengths)
+#cad_deflections_r = spectrograph_optics.prism_deflection_n(cad_incidence_1_r,
+#                        apex_rad, all_indx_refrac)
+cad_deflections_r = nrp.deflection_rad_wl(cad_incidence_1_r, all_wavelengths)
 def deflect_resid(guess_lam_um):
     _cad_incid_r = np.radians(51.007)
     _cad_gturn_r = np.radians(44.827)
     #this_n = sog.refraction_index(guess_lam_um)
-    this_deflect_r = spectrograph_optics.prism_deflection_n(_cad_incid_r,
-            apex_rad, sog.refraction_index(guess_lam_um))
+    #this_deflect_r = spectrograph_optics.prism_deflection_n(_cad_incid_r,
+    #        apex_rad, sog.refraction_index(guess_lam_um))
+    this_deflect_r = nrp.deflection_rad_wl(_cad_incid_r, guess_lam_um)
     return this_deflect_r - _cad_gturn_r
 
 ## Solve for central wavelength via bisection:
 answer = opti.bisect(deflect_resid, 0.3, 0.5)
+
+#ppp = spectrograph_optics.Prism(nres_prism_glass, nres_prism_apex_deg)
+#derpderp = ppp.deflection_rad_wl(cad_incidence_1_r, all_wavelengths)
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -596,8 +606,9 @@ nres_spacing_um = 1e3 / nres_ruling_lmm     # grating spacing in microns
 ## deflection angle due to difference from nominal wavelength.
 def gamma_eff(gamma_nom, wlen_um):
     # delta_gamma = deflection_rad - min_dev_rad
-    deflect_r = spectrograph_optics.prism_deflection_n(incident_ang_rad,
-            nres_prism_apex_rad, sog.refraction_index(wlen_um))
+    #deflect_r = spectrograph_optics.prism_deflection_n(incident_ang_rad,
+    #        nres_prism_apex_rad, sog.refraction_index(wlen_um))
+    deflect_r = nrp.deflection_rad_wl(incident_ang_rad, wlen_um)
     return gamma_nom + deflect_r - min_dev_rad
 
 use_gamma_eff = partial(gamma_eff, nres_nominal_gamma)

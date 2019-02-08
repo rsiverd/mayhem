@@ -80,7 +80,7 @@ nres_pix_size_mm = 0.015
 
 useful_orders = 52.0 + np.arange(67.0)
 #useful_orders = 51.0 + np.arange(69.0)
-useful_orders = 54.0 + np.arange(67.0)
+#useful_orders = 54.0 + np.arange(67.0)
 
 ## Spectrograph/optics brilliance:
 import spectrograph_optics
@@ -116,37 +116,13 @@ min_dev_rad = 2.0 * incident_ang_rad - apex_rad
 minimum_dev_r = 2.0 * np.arcsin(center_wl_nn * np.sin(0.5 * apex_rad)) - apex_rad
 incident_ang_1_r = 0.5 * (minimum_dev_r + apex_rad)
 
-## Calculate prism angular dispersion (vs wavelength):
-bB_ratio = np.tan(incident_ang_rad) / center_wl_nn / np.tan(0.5 * apex_rad)
-dn_dlambda = sog.glass_dn_dlambda_easy(spec_order_wlmid, nres_prism_glass)
-prism_dispersion = bB_ratio * dn_dlambda
-spec_order_sep_mm = nres_focallen_mm * prism_dispersion * spec_order_FSR
-
-## Calculate order Y-position differences:
-order_nn_diff = spec_order_nn - center_wl_nn
-order_ypos_mm = nres_focallen_mm * 2.0 * min_dev_rad * order_nn_diff
-order_ypos_pix = order_ypos_mm / nres_pix_size_mm
-yspan_pixels = order_ypos_pix.max() - order_ypos_pix.min()
-sys.stderr.write("Y-span (pixels): %8.2f\n" % yspan_pixels)
-
-shifts = (np.roll(order_ypos_pix, -1) - order_ypos_pix)
-zip(spec_order_list, shifts)  
-
 ## TESTING brute-force prism deflection:
 incidence_1_r = incident_ang_rad * np.ones_like(spec_order_nn)
-#deflections_1_r = spectrograph_optics.prism_deflection_n(incidence_1_r,
-#                        apex_rad, spec_order_nn)
 deflections_1_r = nrp.deflection_rad_n2(incidence_1_r, spec_order_nn**2)
 
 inc_change_r = deflections_1_r - min_dev_rad
 incidence_2_r = incidence_1_r + inc_change_r
-#deflections_2_r = spectrograph_optics.prism_deflection_n(incidence_2_r,
-#                        apex_rad, spec_order_nn)
 deflections_2_r = nrp.deflection_rad_n2(incidence_2_r, spec_order_nn**2)
-
-##wdefl1 = spectrograph_optics.wiki_prism_deflection_n(incidence_1_r,
-##                        apex_rad, spec_order_nn)
-#wdefl1 = nrp.deflection_rad_n(incidence_1_r, spec_order_nn)
 
 ychange_mm = (2.0 * inc_change_r) * nres_focallen_mm
 ychange_pix = ychange_mm / nres_pix_size_mm
@@ -162,23 +138,15 @@ ychange_pix = ychange_mm / nres_pix_size_mm
 all_wavelengths = np.linspace(0.375, 0.925, 1000)
 #all_indx_refrac = sog.refraction_index(all_wavelengths)
 cad_incidence_1_r = np.radians(51.007) * np.ones_like(all_wavelengths)
-#cad_deflections_r = spectrograph_optics.prism_deflection_n(cad_incidence_1_r,
-#                        apex_rad, all_indx_refrac)
 cad_deflections_r = nrp.deflection_rad_wl(cad_incidence_1_r, all_wavelengths)
 def deflect_resid(guess_lam_um):
     _cad_incid_r = np.radians(51.007)
     _cad_gturn_r = np.radians(44.827)
-    #this_n = sog.refraction_index(guess_lam_um)
-    #this_deflect_r = spectrograph_optics.prism_deflection_n(_cad_incid_r,
-    #        apex_rad, sog.refraction_index(guess_lam_um))
     this_deflect_r = nrp.deflection_rad_wl(_cad_incid_r, guess_lam_um)
     return this_deflect_r - _cad_gturn_r
 
 ## Solve for central wavelength via bisection:
 answer = opti.bisect(deflect_resid, 0.3, 0.5)
-
-#ppp = spectrograph_optics.Prism(nres_prism_glass, nres_prism_apex_deg)
-#derpderp = ppp.deflection_rad_wl(cad_incidence_1_r, all_wavelengths)
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -621,17 +589,17 @@ nres_sine_alpha = 0.971747764900
 blaze_r = np.arctan(4.0)
 #facet_r = np.radians(0.5)
 facet_r = np.arcsin(nres_sine_alpha) - blaze_r
-fixed_geometry = 2.0 * nres_spacing_um * np.cos(facet_r) * np.sin(blaze_r)
+#fixed_geometry = 2.0 * nres_spacing_um * np.cos(facet_r) * np.sin(blaze_r)
 
-def lamcen_residual(wlen, order=0):
-    ls = wlen * order
-    rs = fixed_geometry * np.cos(use_gamma_eff(wlen))
-    return ls - rs
-
-def iter_calc_lamcen(order):
-    kw = {'order':order}
-    runme = partial(lamcen_residual, **kw)
-    return opti.bisect(runme, 0.0, 10.0)
+#def lamcen_residual(wlen, order=0):
+#    ls = wlen * order
+#    rs = fixed_geometry * np.cos(use_gamma_eff(wlen))
+#    return ls - rs
+#
+#def iter_calc_lamcen(order):
+#    kw = {'order':order}
+#    runme = partial(lamcen_residual, **kw)
+#    return opti.bisect(runme, 0.0, 10.0)
 
 ## FIBER CHOICE:
 fib_which = 0

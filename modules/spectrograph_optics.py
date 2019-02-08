@@ -33,10 +33,10 @@ import numpy as np
 #import scipy.linalg as sla
 #import scipy.signal as ssig
 #import scipy.ndimage as ndi
-#import scipy.optimize as opti
+import scipy.optimize as opti
 #import scipy.interpolate as stp
 #import scipy.spatial.distance as ssd
-#from functools import partial
+from functools import partial
 #from collections import OrderedDict
 #import multiprocessing as mp
 #np.set_printoptions(suppress=True, linewidth=160)
@@ -118,10 +118,26 @@ class Glass(object):
 class Prism(object):
 
     def __init__(self, glasstype, apex_deg):
+        #self._apex_deg = apex_deg
+        #self._apex_rad = np.radians(apex_deg)
+        self._material = Glass(glasstype)
+        self.set_apex_deg(apex_deg)
+        return
+
+    # -------------------------------------
+    # Getters and setters:
+    def get_apex_rad(self):
+        return self._apex_rad
+
+    def get_apex_deg(self):
+        return self._apex_deg
+
+    def set_apex_deg(self, apex_deg):
         self._apex_deg = apex_deg
         self._apex_rad = np.radians(apex_deg)
-        self._material = Glass(glasstype)
         return
+
+    # -------------------------------------
 
     @staticmethod
     def _wiki_deflection_rad_n(i, A, n):
@@ -267,9 +283,73 @@ class GratingTools(object):
 
 
 ##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+## More sophisticated grating+prism class (closer to real design):
+class DoublePassPrismGratingPrism(object):
 
+    def __init__(self):
+        # PARAMETERS LIST:
+        # 1. prism:
+        #       * glass type
+        #       * apex angle (degrees)
+        #
+        # 2. grating:
+        #       * blaze ratio (i.e., R4)
+        #       * groove spacing in lines/mm
+        #
+        # 3. layout:
+        #       * angle of initial beam w.r.t. optical axis (assume 0?)
+        #       * rotation of prism apex w.r.t. optical axis. Let 0 degrees
+        #           represent apex perpendicular to optical axis.
+        #       * direction to grating w.r.t. optical axis. This is really
+        #           the prism deflection angle that "points" to the grating
+        #       * alpha or sine(alpha), tilt of grating w.r.t. optical bench.
+        #           --> could also be expressed as facet angle
+        #       * rotation of grating w.r.t. optical bench normal. This is
+        #           effectively the nominal gamma angle of the ray pointing
+        #           directly at the grating. EQUIVALENTLY can use orientation
+        #           of grating on optical bench (same units as prism base)
 
+        # For prism apex 'perpendicular' to optical axis, incidence ~ apex/2
+        self.prism_glass = "PBM2"
+        self.apex_angle_deg = 55.0
+        self.prism_turn_deg = 23.507         # how far prism base is "turned"
+        self.input_turn_deg = 0.0            # positive angles go towards grating
+                                        # MAY VARY WITH WAVELENGTH???
+        self.prism_front_incid_deg = 0.5 * self.apex_angle_deg \
+                                + self.prism_turn_deg - self.input_turn_deg
+        self.probj = Prism(self.prism_glass, self.apex_angle_deg)
 
+        self.grating_ruling_lmm = 41.59 # lines per millimeter
+        self.grating_spacing_um = 1e3 / self.grating_ruling_lmm
+        self.grating_turn_deg = 44.827  # angle made with nominal z-axis
+        self.grating_tilt_deg = 13.786  # angle made with optical bench
+
+        self.grating_turn_rad = np.radians(self.grating_turn_deg)
+        self.grating_tilt_rad = np.radians(self.grating_tilt_deg)
+
+        self.alpha_angle_rad  = np.radians(90.0 - self.grating_tilt_deg)
+        self.blaze_angle_rad  = np.arctan(4.)
+        self.facet_angle_rad  = self.alpha_angle_rad - self.blaze_angle_rad
+
+        self.fixed_geometry   = 2.0 * self.grating_spacing_um \
+                * np.cos(self.facet_angle_rad) * np.sin(self.blaze_angle_rad)
+        return
+
+    def _gamma_eff(self, wavelength_um):
+        incid_1_r = np.radians(self.prism_front_incid_deg)
+        deflect_r = self.probj.deflection_rad_wl(incid_1_r, wavelength_um)
+        return deflect_r - self.grating_turn_rad
+
+    def _lamcen_residual(self, wavelength_um, order=0):
+        ls = wavelength_um * order
+        rs = self.fixed_geometry * np.cos(self._gamma_eff(wavelength_um))
+        return ls - rs
+
+    def iter_calc_lamcen(self, order):
+        kw = {'order':order}
+        runme = partial(self._lamcen_residual, **kw)
+        return opti.bisect(runme, 0.0, 10.0)
 
 ##--------------------------------------------------------------------------##
 

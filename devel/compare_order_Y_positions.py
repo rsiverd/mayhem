@@ -8,13 +8,13 @@
 #
 # Rob Siverd
 # Created:       2019-01-20
-# Last modified: 2019-01-30
+# Last modified: 2019-02-08
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.1.0"
+__version__ = "0.1.5"
 
 ## Optional matplotlib control:
 #from matplotlib import use, rc, rcParams
@@ -218,6 +218,7 @@ nres_focallen_mm = 375.15   # approximate camera focal length
 
 ##--------------------------------------------------------------------------##
 sog = spectrograph_optics.Glass(nres_prism_glass)
+nrp = spectrograph_optics.Prism(nres_prism_glass, nres_prism_apex_deg)
 ogt = spectrograph_optics.GratingTools(nres_gratio,
         lines_per_mm=nres_ruling_lmm)
 
@@ -236,8 +237,9 @@ min_dev_rad = 2.0 * incident_ang_rad - nres_prism_apex_rad
 ## deflection angle due to difference from nominal wavelength.
 def gamma_eff(gamma_nom, wlen_um):
     # delta_gamma = deflection_rad - min_dev_rad
-    deflect_r = spectrograph_optics.prism_deflection_n(incident_ang_rad,
-            nres_prism_apex_rad, sog.refraction_index(wlen_um))
+    #deflect_r = spectrograph_optics.prism_deflection_n(incident_ang_rad,
+    #        nres_prism_apex_rad, sog.refraction_index(wlen_um))
+    deflect_r = nrp.deflection_rad_wl(incident_ang_rad, wlen_um)
     return gamma_nom + deflect_r - min_dev_rad
 
 use_gamma_eff = partial(gamma_eff, nres_nominal_gamma)
@@ -298,8 +300,9 @@ for ii,ww in enumerate(spec_order_wlmid):
 ## Given a set of central wavelengths, compute order separation:
 def calc_order_sep(central_wlen_um):
     refr_idx = sog.refraction_index(central_wlen_um)
-    deflections = spectrograph_optics.prism_deflection_n(incident_ang_rad,
-                nres_prism_apex_rad, refr_idx)
+    #deflections = spectrograph_optics.prism_deflection_n(incident_ang_rad,
+    #            nres_prism_apex_rad, refr_idx)
+    deflections = nrp.deflection_rad_n(incident_ang_rad, refr_idx)
     angle_change = deflections - min_dev_rad
     return 2*angle_change
 

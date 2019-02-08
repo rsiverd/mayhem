@@ -1,0 +1,19 @@
+Prism:
+
+vtx1 [collimator, top]: (-62.6152, 56, -615.298)
+vtx2 [collimator, bot]: (--62.6739, -65.774, -614.866)
+
+
+front face of prism is angled at 51.007 degrees relative to optical axis
+front face of prism is angled by 27.5 degrees relative to front face of prism mount (half the 55 degree wedge angle, good!)
+
+front and rear faces of prism mount are parallel
+front edge of prism mount inclined 23.507 degrees w.r.t. front face of camera
+rear edge of prism mount inclined 156.493 degrees w.r.t. front face of camera (same)
+
+front edge of grating mount rotated 21.32 degrees w.r.t. rear face of prism mount
+front edge of grating mount rotated 44.827 degrees w.r.t. optical axis
+--> sanity check: 23.507 + 21.32 = 44.827
+
+grating inclined 80.27 degrees w.r.t. optical axis
+grating inclined 13.786 degrees w.r.t. optical bench

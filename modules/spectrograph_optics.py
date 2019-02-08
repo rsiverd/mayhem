@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2018-12-29
-# Last modified: 2019-01-10
+# Last modified: 2019-02-08
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.1.2"
+__version__ = "0.1.5"
 
 ## Python version-agnostic module reloading:
 try:
@@ -78,35 +78,16 @@ class Glass(object):
             return False
 
     # Squared index of refraction for specified wavelengths:
-    #def refraction_index_squared(self, wlen_um, glasstype):
     def refraction_index_squared(self, wlen_um):
         lam_um_sq = wlen_um**2
         n_squared = np.ones_like(wlen_um, dtype='float')
-        #for bb,cc in zip(self._bcoeffs[self._gtype], self._ccoeffs[self._gtype]):
         for bb,cc in self._coeffs:
             n_squared += (lam_um_sq * bb) / (lam_um_sq - cc)
-            #n_squared += (wlen_um**2 * bb) / (wlen_um**2 - cc)
         return n_squared
 
-    #def glass_nn_vs_lambda(self, wlen_um, glasstype):
-    #def refraction_index(self, wlen_um, glasstype):
     def refraction_index(self, wlen_um):
-        #if self._unknown_glass(glasstype):
-        #    raise
-        #return np.sqrt(self.refraction_index_squared(wlen_um, glasstype))
         return np.sqrt(self.refraction_index_squared(wlen_um))
     
-    #def deprecated():
-    #    bvals = bcoeffs[glasstype]
-    #    cvals = ccoeffs[glasstype]
-    #    n2 = np.ones_like(wlen_um, dtype='float')
-    #    for bb,cc in zip(bvals, cvals):
-    #        n2 += (wlen_um**2 * bb) / (wlen_um**2 - cc)
-    #    return np.sqrt(n2)
-    #    #lamsq = wlen_um[:, None]**2
-    #    #tmpnn = np.sum((lamsq * bvals) / (lamsq - cvals), axis=1)
-    #    #return np.sqrt(tmpnn + 1.0)
-
     def glass_dn_dlambda_easy(self, wlen_um, glasstype, epsfrac=1e-5):
         #if self._unknown_glass(glasstype):
         #    raise
@@ -131,6 +112,31 @@ def prism_deflection_n(incid_r, apex_r, n):
 
 def wiki_prism_deflection_n(i, A, n):
     return i - A + np.arcsin(n * np.sin(A - np.arcsin(np.sin(i) / n)))
+
+##--------------------------------------------------------------------------##
+## Prism object to calculate deflections for the specified material and shape:
+class Prism(object):
+
+    def __init__(self, glasstype, apex_deg):
+        self._apex_deg = apex_deg
+        self._apex_rad = np.radians(apex_deg)
+        self._material = Glass(glasstype)
+        return
+
+    def deflection_rad(self, incidence_r, wavelength_um):
+        """Calculate deflection angle given incidence angle and wavelength
+        in microns. Units of RADIANS used throughout."""
+        n2 = self._material.refraction_index_squared(wavelength_um)
+        ptemp = np.sqrt(n2 - np.sin(incidence_r)**2) * np.sin(self._apex_rad) \
+                - np.cos(self._apex_rad) * np.sin(incidence_r)
+        return incidence_r - self._apex_rad + np.arcsin(ptemp)
+
+    def deflection_deg(self, incidence_d, wavelength_um):
+        """Calculate deflection angle given incidence angle and wavelength
+        in microns. Units of RADIANS used throughout."""
+        incidence_r = np.radians(incidence_deg)
+        return np.degrees(self.deflection_rad(incidence_r, wavelength_um))
+
 
 ##--------------------------------------------------------------------------##
 ## Notes on notation, relations, identities, etc.:

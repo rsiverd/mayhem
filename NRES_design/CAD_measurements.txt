@@ -17,3 +17,12 @@ front edge of grating mount rotated 44.827 degrees w.r.t. optical axis
 
 grating inclined 80.27 degrees w.r.t. optical axis
 grating inclined 13.786 degrees w.r.t. optical bench
+
+
+distance face of grating to face2 of prism = 18.8998 mm
+distance face of grating to face1 of prism = 
+
+grating center-of-mass (mm): (-206.81, 24.30, -952.40)
+prism center-of-mass (mm):   ( -45.68, -5.00, -720.12)
+
+distance between CMs ~ 284 mm

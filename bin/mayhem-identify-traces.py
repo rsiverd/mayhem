@@ -6,7 +6,7 @@
 #
 # Rob Siverd
 # Created:       2018-12-26
-# Last modified: 2019-02-08
+# Last modified: 2019-02-09
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
@@ -42,6 +42,11 @@ from functools import partial
 #import statsmodels.api as sm
 #import statsmodels.formula.api as smf
 #from statsmodels.regression.quantile_regression import QuantReg
+
+## Rotation matries and more:
+import fov_rotation
+reload(fov_rotation)
+r3d = fov_rotation.Rotate3D()
 
 ## Theil-Sen fitting:
 import theil_sen as ts
@@ -167,26 +172,6 @@ y0_mm = -22.1621828561      # CCD Y-coordinate where gamma angle is 0.0
 #       -- gamma_mindef + inc_change_r
 
 ##--------------------------------------------------------------------------##
-
-## Home-brew robust statistics:
-#try:
-#    import robust_stats
-#    reload(robust_stats)
-#    rs = robust_stats
-#except ImportError:
-#    sys.stderr.write("\nError!  robust_stats module not found!\n"
-#           "Please install and try again ...\n\n")
-#    sys.exit(1)
-
-## Home-brew KDE:
-#try:
-#    import my_kde
-#    reload(my_kde)
-#    mk = my_kde
-#except ImportError:
-#    sys.stderr.write("\nError!  my_kde module not found!\n"
-#           "Please install and try again ...\n\n")
-#    sys.exit(1)
 
 ## FITS I/O:
 try:
@@ -499,8 +484,8 @@ f1_xmid, f1_ymid = np.array(fib1_midpts).T
 ydeltas = np.diff(f1_ymid)[1:]
 norm_ydelta = ydeltas / ydeltas.max()
 
-inv_blaze_wlen = 1.0 / spec_order_wlmid
-norm_inv_blaze_wlen = inv_blaze_wlen / inv_blaze_wlen.max()
+#inv_blaze_wlen = 1.0 / spec_order_wlmid
+#norm_inv_blaze_wlen = inv_blaze_wlen / inv_blaze_wlen.max()
 
 ## Scale to match data:
 #shift, scale = ts.linefit(ychange_pix, np.array(f0_ymid))
@@ -604,6 +589,44 @@ facet_r = np.arcsin(nres_sine_alpha) - blaze_r
 ## FIBER CHOICE:
 fib_which = 0
 
+##-----------------------------------------------------------------------
+## Quick test of central wavelength code:
+lam_cen_dppgp = dppgp.calc_central_wlen_um(spec_order_list)
+
+ctr_wlen, ctr_gamma = dppgp.fancy_deflections(spec_order_list)
+
+ctr_headings, pg_yshifts, pc_yshifts = \
+        np.array([dppgp.two_pass_deflection(x) for x in ctr_wlen]).T
+dp_yshifts_mm = pg_yshifts + pc_yshifts
+dp_yshifts_pix = dp_yshifts_mm / nres_pix_size_mm
+#dp_yshifts_range = dp_yshifts_pix.max() - dp_yshifts_pix.min()
+#normed_dp_yshifts = (dp_yshifts_pix - dp_yshifts_pix.min()) / dp_yshifts_range
+
+## -----------------------------------------------------------------------
+## Transform CCD -> spectrograph coordinates:
+def ccd2spec_xy(ccdx, ccdy, rot_deg):
+    if ccdx.shape != ccdy.shape:
+        raise ValueError("CCD coordinate arrays have mismatched shape\n:"
+                + "%s != %s\n" % (str(ccdx.shape), str(ccdy.shape)))
+    if len(ccdx.shape) != 1:
+        raise ValueError("Expected 1-D input, have shape %s" % str(ccdx.shape))
+    # MEMORY INTENSIVE!!
+    old_dim = ccdx.shape
+    #ccd_xyz = np.vstack((ccdx.flatten(), 
+    #                     ccdy.flatten(),
+    #                     np.zeros(ccdx.size)))
+    ccd_xyz = np.vstack((ccdx, ccdy, np.zeros(ccdx.size)))
+    sx, sy, _ = r3d.zrot(np.radians(rot_deg), ccd_xyz)
+    return sx.A1, sy.A1
+    #return np.squeeze(np.asarray(sx)), np.squeeze(np.asarray(sy))
+    #return np.array(sx), np.array(sy)
+    #return sx.reshape(old_dim), sy.reshape(old_dim)
+    #return np.array(sx).reshape(old_dim), np.array(sy).reshape(old_dim)
+
+## -----------------------------------------------------------------------
+## Coordinate rotation time!
+spec_rotation = 13.091
+
 ## -----------------------------------------------------------------------
 ## Initial crack at wavelength solution:
 rlist = fib0_ridges if fib_which==0 else fib1_ridges
@@ -611,37 +634,33 @@ xpix_beta_c = 2048.5        # X-pixel where beta=beta_c
 xpix_beta_c =    0.0        # X-pixel where beta=beta_c
 xpix_beta_c = 4080.0        # X-pixel where beta=beta_c
 xpix_beta_c = 2100.0        # X-pixel where beta=beta_c
+xpix_beta_c = 2000.0        # X-pixel where beta=beta_c
+xpix_beta_c = 2100.0        # X-pixel where beta=beta_c
 wavelengths = []
 for ii,spord in enumerate(spec_order_list):
     rx, ry = rlist[ii]
     #mmrx = (rx - xpix_beta_c) * nres_pix_size_mm
+    #sxx, syy = ccd2spec_xy(rx - 2048.5, ry - 2048.5, -spec_rotation)
     mmrx = (xpix_beta_c - rx) * nres_pix_size_mm
+    #mmrx = (xpix_beta_c - sxx) * nres_pix_size_mm
+    #mmrx = -sxx * nres_pix_size_mm
     beta = np.arcsin(nres_sine_alpha) - np.arctan(mmrx / nres_focallen_mm)
     #sine_beta = np.sin(np.arctan(mmrx / nres_focallen_mm))
-    center_wl = spec_order_wlmid[ii]
+    #center_wl = spec_order_wlmid[ii]
+    center_wl = ctr_wlen[ii]
     sys.stderr.write("\rOrder %d ... " % spord)
     #center_wl = iter_calc_lamcen(spord)
-    cos_gamma = np.cos(use_gamma_eff(center_wl))
+    #cos_gamma = np.cos(use_gamma_eff(center_wl))
+    cos_gamma = np.cos(ctr_gamma[ii])
     tlam = nres_spacing_um / float(spord) * cos_gamma \
             * (nres_sine_alpha + np.sin(beta))
     wavelengths.append(tlam)
 sys.stderr.write("done.\n")
 
-
 ##-----------------------------------------------------------------------
-## Quick test of central wavelength code:
-lam_cen_dppgp = dppgp.calc_central_wlen_um(spec_order_list)
-
-ctr_wlen, ctr_gamma = dppgp.fancy_deflections(spec_order_list)
-
-#defl1_0, rbeam_0, defl2_0, h2_0 = dppgp.two_pass_deflection(ctr_wlen[0])
-#defl1_z, rbeam_z, defl2_z, h2_z = dppgp.two_pass_deflection(ctr_wlen[-1])
-ctr_headings, pg_yshifts, pc_yshifts = \
-        np.array([dppgp.two_pass_deflection(x) for x in ctr_wlen]).T
-dp_yshifts_mm = pg_yshifts + pc_yshifts
-dp_yshifts_pix = dp_yshifts_mm / nres_pix_size_mm
-#dp_yshifts_range = dp_yshifts_pix.max() - dp_yshifts_pix.min()
-#normed_dp_yshifts = (dp_yshifts_pix - dp_yshifts_pix.min()) / dp_yshifts_range
+##-----------------------------------------------------------------------
+##-----------------------------------------------------------------------
+## Some plotting ...
 
 def shift_normalizer(ypos):
     yrange = ypos.max() - ypos.min()
@@ -674,27 +693,53 @@ clean_argon['lam_obs'] /= 1e3
 lovis_pepe = np.genfromtxt('lovis_pepe.csv', dtype=None, names=True,
         delimiter=',')
 lovis_pepe['lam_vac'] /= 1e4
-useful = (lovis_pepe['flux'] > 10000.0)
+#useful = (lovis_pepe['flux'] > 10000.0)
+#useful = (lovis_pepe['flux'] > 1000.0)
+useful = (lovis_pepe['flux'] > 1000.0)
 #line_list = lovis_pepe['lam_vac'][useful] / 1e4
+
+lp_subset = lovis_pepe[useful]
+line_list = lp_subset['lam_vac']
+
+max_lines_per_order = 20
 
 ## Visual inspection of ThAr data vs wavelength solution:
 corresponding_thar = f0_thar_data if fib_which==0 else f1_thar_data
 def oinspect(oidx, sdata=corresponding_thar, pad=0.1):
     thar = sdata[oidx]
     wlen = wavelengths[oidx]
+    sys.stderr.write("wlen.size: %d\n" % wlen.size)
+    sys.stderr.write("xpix.size: %d\n" % thar['xpix'].size)
     wlrange = wlen.max() - wlen.min()
     wl1 = wlen.min() - pad * wlrange
     wl2 = wlen.max() + pad * wlrange
     sys.stderr.write("oidx %d covers wavelength range: %.3f to %.3f\n" 
             % (oidx, wlen.min(), wlen.max()))
+    known_lines = []
+    line_fluxes = []
+
+    # Include 'clean_argon' lines:
     which = (wl1 <= clean_argon['lam_obs']) \
             & (clean_argon['lam_obs'] <= wl2)
-    #which = (wl1 <= line_list) & (line_list <= wl2)
-    sys.stderr.write("Lines in range: %d\n" % np.sum(which))
-    argon_lam = clean_argon['lam_obs'][which]
+    #argon_lam = clean_argon['lam_obs'][which]
+    known_lines.extend(clean_argon['lam_obs'][which])
+    line_fluxes.extend(clean_argon['rel_flux'][which])
+    sys.stderr.write("Known lines: %d\n" % len(known_lines))
+    
+    # include Lovis and Pepe stuff:
+    #sys.stderr.write("Lines in range: %d\n" % np.sum(which))
+    which = (wl1 <= lp_subset['lam_vac']) & (lp_subset['lam_vac']<= wl2)
     #argon_lam = line_list[which]
-    sys.stderr.write("wlen.size: %d\n" % wlen.size)
-    sys.stderr.write("xpix.size: %d\n" % thar['xpix'].size)
+    known_lines.extend(lp_subset['lam_vac'][which])
+    line_fluxes.extend(lp_subset['flux'][which])
+    
+    # identify brightest NMAX: 
+    known_lines = np.array(known_lines)
+    line_fluxes = np.array(line_fluxes)
+    keepers = np.argsort(line_fluxes)[-max_lines_per_order:]
+    #argon_lam = np.array(sorted(known_lines))
+    argon_lam = known_lines[keepers]
+    sys.stderr.write("Known lines: %d\n" % len(known_lines))
     argon_pix = np.interp(argon_lam, wlen, thar['xpix'])
     #sys.stderr.write("derp: %s\n" % str((wl1 <= clean_argon['lam_obs'])))
 

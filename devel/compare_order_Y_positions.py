@@ -315,6 +315,24 @@ new_sep = calc_order_sep(iter_order_wlmid) * nres_flen_pix
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
+## Test of even better code:
+dppgp = spectrograph_optics.DoublePassPrismGratingPrism()
+lam_cen_dppgp = dppgp.calc_central_wlen_um(spec_order_list)
+
+ctr_wlen, ctr_gamma = dppgp.fancy_deflections(spec_order_list)
+
+#defl1_0, rbeam_0, defl2_0, h2_0 = dppgp.two_pass_deflection(ctr_wlen[0])
+#defl1_z, rbeam_z, defl2_z, h2_z = dppgp.two_pass_deflection(ctr_wlen[-1])
+ctr_headings, pg_yshifts, pc_yshifts = \
+        np.array([dppgp.two_pass_deflection(x) for x in ctr_wlen]).T
+dp_yshifts = pg_yshifts + pc_yshifts
+
+
+
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
 
 
 ## Store results for external use/comparison:

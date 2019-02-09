@@ -112,7 +112,9 @@ def ccd2spec_xy(ccdx, ccdy, rot_deg):
     #                     np.zeros(ccdx.size)))
     ccd_xyz = np.vstack((ccdx, ccdy, np.zeros(ccdx.size)))
     sx, sy, _ = r3d.zrot(np.radians(rot_deg), ccd_xyz)
-    return np.array(sx), np.array(sy)
+    return sx.A1, sy.A1
+    #return np.squeeze(np.asarray(sx)), np.squeeze(np.asarray(sy))
+    #return np.array(sx), np.array(sy)
     #return sx.reshape(old_dim), sy.reshape(old_dim)
 
 ny, nx = 4096, 4096

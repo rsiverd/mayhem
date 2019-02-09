@@ -284,6 +284,10 @@ class GratingTools(object):
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
+## Grating class (to be overloaded for double pass:
+
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
 ## More sophisticated grating+prism class (closer to real design):
 class DoublePassPrismGratingPrism(object):
 
@@ -314,17 +318,28 @@ class DoublePassPrismGratingPrism(object):
         self.prism_glass = "PBM2"
         self.apex_angle_deg = 55.0
         self.prism_turn_deg = 23.507         # how far prism base is "turned"
-        self.input_turn_deg = 0.0            # positive angles go towards grating
+        self.input_turn_deg = 2.0            # positive angles go towards grating
                                         # MAY VARY WITH WAVELENGTH???
-        self.prism_front_incid_deg = 0.5 * self.apex_angle_deg \
-                                + self.prism_turn_deg - self.input_turn_deg
-        self.probj = Prism(self.prism_glass, self.apex_angle_deg)
+
+        # Front and rear prism face orientations w.r.t. z-axis:
+        self.prism_face1_deg = self.prism_turn_deg + 0.5 * self.apex_angle_deg
+        self.prism_face2_deg = self.prism_turn_deg - 0.5 * self.apex_angle_deg
+
+        self.prism_front_incid_deg = self.prism_face1_deg - self.input_turn_deg
+        self.pr_obj = Prism(self.prism_glass, self.apex_angle_deg)
 
         self.grating_ruling_lmm = 41.59 # lines per millimeter
         self.grating_spacing_um = 1e3 / self.grating_ruling_lmm
         self.grating_turn_deg = 44.827  # angle made with nominal z-axis
+        #self.grating_turn_deg = 42.000  # angle made with nominal z-axis
+        #self.grating_turn_deg = 42.000  # angle made with nominal z-axis
+        #self.grating_turn_deg = 44.000  # angle made with nominal z-axis
+        #self.grating_turn_deg = 43.000  # angle made with nominal z-axis
         self.grating_tilt_deg = 13.786  # angle made with optical bench
+        #self.grating_tilt_deg = 13.000  # angle made with optical bench
 
+
+        self.input_turn_rad   = np.radians(self.input_turn_deg)
         self.grating_turn_rad = np.radians(self.grating_turn_deg)
         self.grating_tilt_rad = np.radians(self.grating_tilt_deg)
 
@@ -334,22 +349,102 @@ class DoublePassPrismGratingPrism(object):
 
         self.fixed_geometry   = 2.0 * self.grating_spacing_um \
                 * np.cos(self.facet_angle_rad) * np.sin(self.blaze_angle_rad)
+
+        ## deal with angle changes between prism/grating for second prism pass:
+        #pass1_out_heading = self.input_turn_deg + np.degrees(deflect_r)
+        #gamma_eff_grating = pass1_out_heading - self.grating_turn_rad
+        #pass1_out_incid_d = pass1_out_heading - self.prism_face2_deg    # emergent
+        #pass2_new_incid_d = pass1_out_incid_d - 2.0 * gamma_eff_grating
+
+        # Lastly include some distances:
+        self.coll_focallen_mm = 380.0
+        #self.coll_focallen_mm = 375.0
+        #self.prism_grating_mm = 284.0       # approximately
+        self.prism_grating_mm = 275.0       # approximately
+        #self.prism_grating_mm = 250.0       # approximately
+        self.prism_grating_mm = 100.0       # approximately
+        self.lens_compression = 2.0
         return
 
-    def _gamma_eff(self, wavelength_um):
+    # ---------------------------------------------------------
+    # Joint prism+grating central wavelength and deflection:
+    def _prism_pass1_deflection(self, wavelength_um):
+        """
+        Calculate the deflection angle and new direction of travel for the
+        specified wavelength after first pass through prism (using configured
+        prism and layout). Assumes all rays incident on prism are parallel.
+        Output angles are in RADIANS.
+        """
         incid_1_r = np.radians(self.prism_front_incid_deg)
-        deflect_r = self.probj.deflection_rad_wl(incid_1_r, wavelength_um)
-        return deflect_r - self.grating_turn_rad
+        deflect_r = self.pr_obj.deflection_rad_wl(incid_1_r, wavelength_um)
+        return deflect_r
+
+    def _deflection_gamma(self, wavelength_um):
+        """
+        Calculate the effective gamma angle at the grating for the specified
+        wavelength using configured prism and layout. Assumes all rays
+        incident on prism are parallel. Output angle in RADIANS.
+        """
+        deflect_r = self._prism_pass1_deflection(wavelength_um)
+        #incid_1_r = np.radians(self.prism_front_incid_deg)
+        #deflect_r = self.pr_obj.deflection_rad_wl(incid_1_r, wavelength_um)
+        #heading_r = self.input_turn_deg + deflect_r     # outbound direction
+        return self.input_turn_rad + deflect_r - self.grating_turn_rad
 
     def _lamcen_residual(self, wavelength_um, order=0):
         ls = wavelength_um * order
-        rs = self.fixed_geometry * np.cos(self._gamma_eff(wavelength_um))
+        rs = self.fixed_geometry * np.cos(self._deflection_gamma(wavelength_um))
         return ls - rs
 
-    def iter_calc_lamcen(self, order):
+    def _iter_calc_lamcen(self, order):
         kw = {'order':order}
         runme = partial(self._lamcen_residual, **kw)
         return opti.bisect(runme, 0.0, 10.0)
+
+    def calc_central_wlen_um(self, spec_order_list):
+        return np.array([self._iter_calc_lamcen(x) for x in spec_order_list])
+
+    def gamma_from_wlen_um(self, wlen_list_um):
+        return np.array([self._deflection_gamma(x) for x in wlen_list_um])
+
+    def fancy_deflections(self, spec_order_list):
+        order_ctr_wlen_um = self.calc_central_wlen_um(spec_order_list)
+        order_ctr_gamma_r = self.gamma_from_wlen_um(order_ctr_wlen_um)
+        return order_ctr_wlen_um, order_ctr_gamma_r
+
+    def two_pass_deflection(self, wavelength_um):
+        """
+        incid_1_r   --> angle of incidence of light onto prism (first pass)
+        deflect_1_r --> deflection angle produced by first pass
+        heading_1_r --> direction of deflected ray in benchtop units
+        gamma_eff_r --> effective gamma angle at grating for this wavelength
+        excid_1_r   --> angle of deflected ray to exit face normal
+
+        incid_2_r   --> angle of incidence on prism face 2 (second pass)
+        deflect_2_r --> deflection angle produced by second pass
+        """
+        incid_1_r   = np.radians(self.prism_front_incid_deg)
+        deflect_1_r = self.pr_obj.deflection_rad_wl(incid_1_r, wavelength_um)
+        heading_1_r = self.input_turn_rad + deflect_1_r
+        gamma_eff_r = heading_1_r - self.grating_turn_rad
+        excid_1_r   = heading_1_r - np.radians(self.prism_face2_deg)
+
+        # Non-zero gamma causes change in incidence for second pass:
+        incid_2_r = excid_1_r - 2.0 * gamma_eff_r
+        refl_beam_r = heading_1_r + np.pi - 2 * gamma_eff_r
+        deflect_2_r = self.pr_obj.deflection_rad_wl(incid_2_r, wavelength_um)
+        heading_2_r = refl_beam_r - deflect_2_r
+
+        # Total Y-shift produced by a combination of prism<-->grating offset
+        # and deflection over the collimator focal length:
+        pg_yshift =  2.0 * self.prism_grating_mm * np.tan(gamma_eff_r)
+        pc_yshift = -1.0 * self.coll_focallen_mm * np.tan(heading_2_r - np.pi)
+        wlen_nm = 1e3 * wavelength_um
+        gamma_deg = np.degrees(gamma_eff_r)
+        sys.stderr.write("λ=%6.1f nm, γ= %6.3f: PG,PC shifts: %6.2f, %6.2f | i2=%5.2f\n"
+                % (wlen_nm, gamma_deg, pg_yshift, pc_yshift, np.degrees(incid_2_r)))
+        return heading_2_r, pg_yshift, pc_yshift
+        #return deflect_1_r, refl_beam_r, deflect_2_r, heading_2_r
 
 ##--------------------------------------------------------------------------##
 

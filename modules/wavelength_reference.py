@@ -109,15 +109,25 @@ wavelen_dir = os.path.join(mayhem_root, 'wavelength')
 #    raise
 
 ## NIST Argon list (cleaned up a bit):
-nist_argon_path = os.path.join(wavelen_dir, 'NIST', 'clean_argon.txt')
+nist_argon_path = os.path.join(wavelen_dir, 'NIST', 'clean_argon.csv')
 lovis_pepe_path = os.path.join(wavelen_dir, 'lovis_pepe_2007', 'lovis_pepe.csv')
 
 
 ##--------------------------------------------------------------------------##
-## Load NIST Argon line list:
-def load_nist_Ar_data_OLD(data_file=nist_argon_path):
+## Load NIST Argon line list. Data file columns include:
+##  lam_obs_vac_nm, err_lam_obs_vac_nm
+##  lam_ritz_vac_nm, err_lam_ritz_vac_nm
+##  rel_intensity, einstein_aki, ion_name
+def load_nist_argon_pd(data_file=nist_argon_path):
+    ndata = pd.read_csv(data_file)
+    ndata = ndata.assign(lam_obs_nm=lambda x: x.lam_obs_vac_nm)
+    ndata = ndata.assign(lam_obs_aa=lambda x: x.lam_obs_vac_nm * 10.)
+    ndata = ndata.assign(lam_obs_um=lambda x: x.lam_obs_vac_nm / 1e3)
+    return ndata
+
+def load_nist_argon(data_file=nist_argon_path):
     nist_data = np.genfromtxt(data_file, dtype=None, names=True)
-    lam_obs_um = nist_data['lam_obs'] / 1e3
+    lam_vac_um = nist_data['lam_obs'] / 1e3
     nist_data = append_fields(nist_data, 'lam_obs_um', lam_obs_um)
     nist_data = append_fields(nist_data, 'lam_obs_nm', nist_data['lam_obs'])
     return nist_data

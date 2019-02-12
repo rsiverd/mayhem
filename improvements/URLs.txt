@@ -1,4 +1,5 @@
 
 # Snell's law in vector form:
 https://physics.stackexchange.com/questions/435512/snells-law-in-vector-form
+http://www.starkeffects.com/snells-law-vector.shtml
 

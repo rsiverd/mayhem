@@ -42,6 +42,7 @@ from functools import partial
 #import statsmodels.api as sm
 #import statsmodels.formula.api as smf
 #from statsmodels.regression.quantile_regression import QuantReg
+import itertools as itt
 
 ## Rotation matries and more:
 import fov_rotation
@@ -736,6 +737,7 @@ import wl_solve_test
 reload(wl_solve_test)
 tlf = wl_solve_test.LineFinder()
 afsr = wl_solve_test.ApproxFSR()
+wlsm = wl_solve_test.WLSegMatch()
 
 ## Compute line positions for every order:
 sys.stderr.write("Computing line positions for fib_which=%d ...\n" % fib_which)
@@ -762,6 +764,145 @@ for sord,ctrwl_nm in zip(spec_order_list, 1e3 * ctr_wlen):
 
 ## ----------------------------------------------------------------------- ##
 ## ----------------------------------------------------------------------- ##
+## Segment matching for lines?
+
+#def list_segments(xcoords):
+#    pairs = itt.combinations(range(len(xcoords)), 2)
+#    ii,jj = zip(*pairs)
+#    x_sep = np.log10(xcoords[jj,] - xcoords[ii,])
+#    params = np.column_stack((xcoords[ii], x_sep))
+#    indices = np.column_stack((ii, jj)).astype('uint16')
+#    return {'idx':indices, 'seg':params}
+#    #return np.log10(diffs)
+#
+
+## ----------------------------------------------------------------------- ##
+## ----------------------------------------------------------------------- ##
+## Brute force comparison ...
+soi = lambda x: int(spec_order_list[x])
+wl_refpoints_nm = {}
+
+## 11th order (spec order 62) has two booming lines in it:
+#tord = int(spec_order_list[11])
+wl_refpoints_nm[soi( 2)] = np.array([871.162590, 875.043326, 876.064871, 
+                877.798276, 884.361065, 887.126858])
+wl_refpoints_nm[soi( 3)] = np.array([857.547551, 866.786549, 
+                                            867.032496, 871.162590])
+wl_refpoints_nm[soi( 4)] = np.array([841.052601, 841.904021, 842.031154,
+            842.353957, 842.697974, 844.780782,
+            844.883236, 848.068736, 848.086191, 852.378507])
+
+
+
+wl_refpoints_nm[soi(11)] = np.array([750.59341792, 751.67241877])
+wl_refpoints_nm[soi(12)] = np.array([738.60150497])
+wl_refpoints_nm[soi(13)] = np.array([727.49377621])
+wl_refpoints_nm[soi(14)] = np.array([717.0870892])
+wl_refpoints_nm[soi(15)] = np.array([706.9167041])
+wl_refpoints_nm[soi(16)] = np.array([696.735506])
+wl_refpoints_nm[soi(20)] = np.array([651.416368, 653.314665, 655.597097,
+                657.903089, 658.572414, 659.035969, 659.330542, 659.575998])
+wl_refpoints_nm[soi(21)] = np.array([641.367089, 641.538735, 645.906730,
+                646.439855, 649.253065, 651.416368])
+
+
+
+## ----------------------------------------------------------------------- ##
+## ----------------------------------------------------------------------- ##
+
+## Quick Gaussian evaluator:
+def eval_gauss(xgrid, mu, sigma, height=1.0):
+    zz = (xgrid - mu) / sigma
+    ggrid = height * np.exp(-0.5 * zz * zz)
+    return ggrid
+
+def grid_tally_gauss(xgrid, centers, gsigma):
+    return np.sum([eval_gauss(xgrid, x, gsigma) for x in centers], axis=0)
+
+## Cross-reference X-coordinates (determine degree of overlap) by
+## replacing lines with profiles of some width and multiplying.
+def crude_crossref(xvals1, xvals2, gsigma, pad=0.05, sfactor=1.0):
+    xmin = min(xvals1.min(), xvals2.min())
+    xmax = max(xvals1.max(), xvals2.max())
+    x_lo = np.floor(xmin - pad * (xmax - xmin))
+    x_hi = np.ceil(xmax + pad * (xmax - xmin))
+    npix = x_hi - x_lo + 1
+    xgrid = np.arange(npix) + x_lo
+    sys.stderr.write("xmin,xmax: %8.2f,%8.2f\n" % (xmin, xmax))
+    #sys.stderr.write("x_lo: %8.2f\n" % x_lo)
+    #sys.stderr.write("x_hi: %8.2f\n" % x_hi)
+    gvals1 = grid_tally_gauss(xgrid, xvals1, gsigma)
+    gvals2 = grid_tally_gauss(xgrid, xvals2, gsigma)
+    gs1, gs2 = np.sum(gvals1), np.sum(gvals2)
+    gcc = np.sum(gvals1 * gvals2)
+    g12 = np.sqrt(gs1 * gs2)
+    return gcc / g12
+    #return gvals1, gvals2
+
+## How to check the fit for a specific order:
+fancy = True
+using_wlmod = wavelength2 if fancy else wavelengths
+def wlcheck(oidx):
+    sord = int(spec_order_list[oidx])
+    tdata = corresponding_thar[oidx]
+    #wlref_wl_nm = spec_order_line_sets[oidx]
+    line_ref_nm = spec_order_line_sets[oidx]
+    #line_wl_um = line_wl_nm / 1e3   # convert to um
+    model_wl_nm = using_wlmod[sord] * 1e3   # convert to nm
+    lcenter_pix = measured_line_xpix[oidx]
+    #lcenter_lam = np.interp(lcenter_pix, tdata['xpix'], model_wl_nm)
+        #ar_xpixels = np.interp(ar_lines, wlen, thar['xpix'])
+    #sys.stderr.write("lcenter_lam: %s\n" % str(lcenter_lam))
+    line_ref_xx = np.interp(line_ref_nm, model_wl_nm, tdata['xpix'])
+    #sys.stderr.write("\nDetected line centers (X):\n")
+    #[sys.stderr.write("--> %8.2f\n" % x) for x in lcenter_pix]
+    #sys.stderr.write("\nExpected line positions:")
+    #[sys.stderr.write("--> %8.2f\n" % x) for x in line_ref_xx]
+    result = crude_crossref(lcenter_pix, line_ref_xx, 5.0)
+    sys.stderr.write("result: %10.5f\n" % result)
+    return result
+    #return tdata, model_wl_nm, line_wl_nm
+
+
+tidx = 45
+tord = int(spec_order_list[tidx])
+tdata = corresponding_thar[tidx]
+line_ref_nm = spec_order_line_sets[tidx]
+model_wl_nm = using_wlmod[tord] * 1e3
+line_xpix = measured_line_xpix[tidx]
+line_refx = np.interp(line_ref_nm, model_wl_nm, tdata['xpix'])
+#segs_meas = list_segments(line_xpix)
+#segs_lref = list_segments(line_refx)
+#diffs = segs_meas[:, None] - segs_lref[None, :]
+#nseg_dims = (len(segs_meas), len(segs_lref))
+#nobj_dims = (len(line_xpix), len(line_refx))
+
+wlsm.set_measured_peaks(line_xpix)
+wlsm.set_reference_lines(line_refx)
+
+#scale_nbins = 50
+#scale_range = (-0.2, 0.2)
+#nb_attempts = [30, 35, 40, 45, 50, 55, 60]
+
+#mh_results = multi_search(diffs, scale_range, nb_attempts)
+
+#hh, edges = np.histogram(diffs.flatten(), 
+#        bins=scale_nbins, range=scale_range)
+#peak = np.unravel_index(hh.argmax(), hh.shape)
+##vparams = [0.5*(ee[ii]+ee[ii+1]) for (ee,ii) in zip(edges, peak)]
+#vpeak = 0.5 * (edges[peak[0]] + edges[peak[0]+1])
+#bsize = (max(scale_range) - min(scale_range)) / float(scale_nbins)
+
+## Extract pairings:
+#tol = 0.75 * bsize
+#hits = np.abs(diffs - vpeak) < 0.5*bsize
+
+
+
+#sys.exit(0)
+
+## ----------------------------------------------------------------------- ##
+## ----------------------------------------------------------------------- ##
 
 ###-----------------------------------------------------------------------
 
@@ -769,14 +910,17 @@ max_lines_per_order = 30
 
 ## Visual inspection of ThAr data vs wavelength solution:
 corresponding_thar = f0_thar_data if fib_which==0 else f1_thar_data
-def oinspect(oidx, ww2=False, sdata=corresponding_thar, pad=0.1):
+def oinspect(oidx, ww2=False, wlmode=False,
+        sdata=corresponding_thar, pad=0.1):
     thar = sdata[oidx]
     sord = thar_specord[oidx]
     wlen = 1e3 * wavelength2[sord] if ww2 else 1e3 * wavelengths[sord]
+    wl2pix = lambda x: np.interp(x, wlen, thar['xpix'])
+    pix2wl = lambda x: np.interp(x, thar['xpix'], wlen)
     #wlen *= 1e3     # switch to nm
     #wlen = wavelengths[oidx] * 1e3  # switch to nm
-    sys.stderr.write("wlen.size: %d\n" % wlen.size)
-    sys.stderr.write("xpix.size: %d\n" % thar['xpix'].size)
+    #sys.stderr.write("wlen.size: %d\n" % wlen.size)
+    #sys.stderr.write("xpix.size: %d\n" % thar['xpix'].size)
     wlrange = wlen.max() - wlen.min()
     wl1 = wlen.min() - pad * wlrange
     wl2 = wlen.max() + pad * wlrange
@@ -786,32 +930,45 @@ def oinspect(oidx, ww2=False, sdata=corresponding_thar, pad=0.1):
     fig = plt.figure(1, figsize=(10,5))
     fig.clf()
     ax1 = fig.add_subplot(111)
+    ax1.grid(True)
 
-    ax1.plot(thar['xpix'], thar['spec'])
+    #ax1.plot(thar['xpix'], thar['spec'])
+    ax1.plot(wlen, thar['spec'])
     #ax1.set_yscale('log')
     ax1.set_yscale('linear')
-    #[ax1.axvline(x, ls=':') for x in argon_pix]
-    #for x in argon_pix:
-    #    sys.stderr.write("adding Argon at %f ...\n" % x)
-    #    ax1.axvline(x, ls=':', c='r')
+    ax1.set_xlabel('Wavelength (nm)')
+    ax1.set_xlim(wl1, wl2)
 
     # Overplot NIST Argon lines:
-    #ar_lines = get_nist_lines(wl1, wl2, reltol=0.05) #reltol=0.001)
     ar_lines = wlf.get_nist_lines(wl1, wl2, reltol=0.05) #reltol=0.001)
     if (ar_lines.size > 0):
-        ar_xpixels = np.interp(ar_lines, wlen, thar['xpix'])
-        for line in ar_xpixels[:-1]:
+        #ar_xpixels = np.interp(ar_lines, wlen, thar['xpix'])
+        #ar_show = wl2pix(ar_lines)     # pixels
+        ar_show = ar_lines              # wavelength
+        for line in ar_show[:-1]:
             ax1.axvline(line, ls=':', c='r')
-        ax1.axvline(ar_lines[-1], ls=':', c='r', label='NIST Argon')
+        ax1.axvline(ar_show[-1], ls=':', c='r', label='NIST Argon')
 
     # Overplot Lovis & Pepe (2007) lines:
-    #thar_lines = get_lope_lines(wl1, wl2, reltol=0.05)
     thar_lines = wlf.get_lope_lines(wl1, wl2, reltol=0.05)
     if (thar_lines.size > 0):
-        thar_xpix = np.interp(thar_lines, wlen, thar['xpix'])
-        for line in thar_xpix[:-1]:
+        #thar_xpix = wl2pix(thar_lines)
+        #thar_show = wl2pix(thar_lines)  # pixels
+        thar_show = thar_lines          # wavelength
+        for line in thar_show[:-1]:
             ax1.axvline(line, ls=':', c='g')
-        ax1.axvline(thar_lines[-1], ls=':', c='g', label='Lovis & Pepe (2007)')
+        ax1.axvline(thar_show[-1], ls=':', c='g', label='Lovis_Pepe_2007')
+
+    #return
+    ax3 = ax1.twiny()
+    ax3.set_xlim(ax1.get_xlim())
+    ax3.set_xlabel("X Pixel")
+    xpix_ticks_xpix = 1e3 * np.arange(5)
+    xpix_ticks_wlen = pix2wl(xpix_ticks_xpix)
+    #ax3.set_xticks(xpix_ticks_wlen, xpix_ticks_xpix)
+    ax3.set_xticks(xpix_ticks_wlen)
+    ax3.set_xticklabels(xpix_ticks_xpix)
+
 
     ax1.legend(loc='upper right')
     fig.tight_layout()

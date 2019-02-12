@@ -1,0 +1,8 @@
+labcam-fl09-20170310-0010-z00.fits 2017-03-10T02:00:57.138 300.0      STARFLAT none&tung&zetaOri
+labcam-fl09-20170310-0011-z00.fits 2017-03-10T02:19:42.560 300.0      STARFLAT zetaOri&tung&none
+labcam-fl09-20170310-0012-z00.fits 2017-03-10T02:26:42.438 300.0      STARFLAT zetaOri&tung&none
+labcam-fl09-20170310-0013-z00.fits 2017-03-10T02:33:59.417 300.0      STARFLAT zetaOri&tung&none
+labcam-fl09-20170310-0014-z00.fits 2017-03-10T02:51:14.336 300.0      STARFLAT none&tung&zetaOri
+labcam-fl09-20170310-0035-z00.fits 2017-03-10T17:34:47.128 300.0 MASTER_DOUBLE    thar&thar&none
+labcam-fl09-20170310-0036-z00.fits 2017-03-10T17:40:33.000 300.0 MASTER_DOUBLE    thar&thar&none
+labcam-fl09-20170310-0037-z00.fits 2017-03-10T17:46:18.489 300.0 MASTER_DOUBLE    thar&thar&none

@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2019-02-08
-# Last modified: 2019-02-09
+# Last modified: 2019-02-12
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 ## Python version-agnostic module reloading:
 try:
@@ -109,8 +109,11 @@ wavelen_dir = os.path.join(mayhem_root, 'wavelength')
 #    raise
 
 ## NIST Argon list (cleaned up a bit):
-nist_argon_path = os.path.join(wavelen_dir, 'NIST', 'clean_argon.csv')
-lovis_pepe_path = os.path.join(wavelen_dir, 'lovis_pepe_2007', 'lovis_pepe.csv')
+nist_dir = os.path.join(wavelen_dir, 'NIST')
+lope_dir = os.path.join(wavelen_dir, 'lovis_pepe_2007')
+nist_argon_path = os.path.join(nist_dir, 'clean_argon.csv')
+lovis_pepe_path = os.path.join(lope_dir, 'lovis_pepe.csv')
+nist_fft_thar_path = os.path.join(nist_dir, 'NIST_spectrum.all.fits')
 
 
 ##--------------------------------------------------------------------------##
@@ -144,83 +147,129 @@ def load_lovis_pepe_thar(data_file=lovis_pepe_path):
 
 
 ##--------------------------------------------------------------------------##
-## Quick ASCII I/O:
-#data_file = 'data.txt'
-#all_data = np.genfromtxt(data_file, dtype=None)
-#all_data = np.genfromtxt(data_file, dtype=None, names=True, autostrip=True)
-#all_data = np.genfromtxt(data_file, dtype=None, names=True, autostrip=True,
-#                 delimiter='|', comments='%0%0%0%0')
-#                 loose=True, invalid_raise=False)
-#all_data = aia.read(data_file)
-#all_data = pd.read_csv(data_file)
-#all_data = pd.read_table(data_file, delim_whitespace=True)
-#all_data = pd.read_table(data_file, sep='|')
-#fields = all_data.dtype.names
-#if not fields:
-#    x = all_data[:, 0]
-#    y = all_data[:, 1]
-#else:
-#    x = all_data[fields[0]]
-#    y = all_data[fields[1]]
-
 ##--------------------------------------------------------------------------##
-## Quick FITS I/O:
-#data_file = 'image.fits'
-#img_vals = pf.getdata(data_file)
-#hdr_keys = pf.getheader(data_file)
-#img_vals, hdr_keys = pf.getdata(data_file, header=True)
-#img_vals, hdr_keys = pf.getdata(data_file, header=True, uint=True) # USHORT
-#img_vals, hdr_keys = fitsio.read(data_file, header=True)
-
-#date_obs = hdr_keys['DATE-OBS']
-#site_lat = hdr_keys['LATITUDE']
-#site_lon = hdr_keys['LONGITUD']
-
-## Initialize time:
-#img_time = astt.Time(hdr_keys['DATE-OBS'], scale='utc', format='isot')
-#img_time += astt.TimeDelta(0.5 * hdr_keys['EXPTIME'], format='sec')
-#jd_image = img_time.jd
-
-## Initialize location:
-#observer = ephem.Observer()
-#observer.lat = np.radians(site_lat)
-#observer.lon = np.radians(site_lon)
-#observer.date = img_time.datetime
-
-#pf.writeto('new.fits', img_vals)
-#qsave('new.fits', img_vals)
-#qsave('new.fits', img_vals, header=hdr_keys)
-
-## Star extraction:
-#pse.set_image(img_vals, gain=3.6)
-#objlist = pse.analyze(sigthresh=5.0)
-
 ##--------------------------------------------------------------------------##
-## Solve prep:
-#ny, nx = img_vals.shape
-#x_list = (0.5 + np.arange(nx)) / nx - 0.5            # relative (centered)
-#y_list = (0.5 + np.arange(ny)) / ny - 0.5            # relative (centered)
-#xx, yy = np.meshgrid(x_list, y_list)                 # relative (centered)
-#xx, yy = np.meshgrid(nx*x_list, ny*y_list)           # absolute (centered)
-#xx, yy = np.meshgrid(np.arange(nx), np.arange(ny))   # absolute
-#yy, xx = np.meshgrid(np.arange(ny), np.arange(nx), indexing='ij') # absolute
-#yy, xx = np.nonzero(np.ones_like(img_vals))          # absolute
-#yy, xx = np.mgrid[0:ny,   0:nx].astype('uint16')     # absolute (array)
-#yy, xx = np.mgrid[1:ny+1, 1:nx+1].astype('uint16')   # absolute (pixel)
+##--------------------------------------------------------------------------##
+## On-demand delivery of line lists for wavelength calibration:
+class WLFetcher(object):
 
-## 1-D vectors:
-#x_pix, y_pix, ivals = xx.flatten(), yy.flatten(), img_vals.flatten()
-#w_vec = np.ones_like(ivals)            # start with uniform weights
-#design_matrix = np.column_stack((np.ones(x_pix.size), x_pix, y_pix))
+    def __init__(self, vlevel=0,
+            nist_path=nist_argon_path,
+            lope_path=lovis_pepe_path):
+        self._vlevel    = vlevel
+        self._nist_path = nist_path
+        self._lope_path = lope_path
+        self._nist_data = None
+        self._lope_data = None
+        self.load_lines()
+        return
 
-## Image fitting (statsmodels etc.):
-#data = sm.datasets.stackloss.load()
-#ols_res = sm.OLS(ivals, design_matrix).fit()
-#rlm_res = sm.RLM(ivals, design_matrix).fit()
-#rlm_model = sm.RLM(ivals, design_matrix, M=sm.robust.norms.HuberT())
-#rlm_res = rlm_model.fit()
-#data = pd.DataFrame({'xpix':x_pix, 'ypix':y_pix})
-#rlm_model = sm.RLM.from_formula("ivals ~ xpix + ypix", data)
+    # --------------------------------------------
+    # Verbosity-specific messages:
+    def vlwrite(self, msg_vlevel, msg_text):
+        if (self._vlevel >= msg_vlevel):
+            sys.stderr.write(msg_text)
+        return
+
+    # --------------------------------------------
+    # Load the NIST Argon line list:
+    @staticmethod
+    def _load_nist_argon(data_file):
+        ndata = pd.read_csv(data_file)
+        ndata = ndata.assign(lam_obs_nm=lambda x: x.lam_obs_vac_nm)
+        ndata = ndata.assign(lam_obs_aa=lambda x: x.lam_obs_vac_nm * 10.)
+        ndata = ndata.assign(lam_obs_um=lambda x: x.lam_obs_vac_nm / 1e3)
+        return ndata
+
+    # Load Lovis & Pepe line list:
+    @staticmethod
+    def _load_lovis_pepe_thar(data_file):
+        ldata = pd.read_csv(data_file)
+        ldata = ldata.assign(lam_vac_nm=lambda x: x.lam_vac / 10.)
+        ldata = ldata.assign(lam_vac_um=lambda x: x.lam_vac_nm / 1e3)
+        return ldata
+
+    ## Load Lovis & Pepe line list:
+    #@staticmethod
+    #def _load_lovis_pepe_thar_old(data_file):
+    #    lope_data = np.genfromtxt(data_file, 
+    #            dtype=None, names=True, delimiter=',')
+    #    lam_vac_nm = lope_data['lam_vac'] / 10.0
+    #    lope_data = append_fields(lope_data, 'lam_vac_nm', lam_vac_nm)
+    #    lope_data = append_fields(lope_data, 'lam_vac_um', lam_vac_nm / 1e3)
+    #    return lope_data
+
+    # Load all the line lists:
+    def load_lines(self):
+        self._nist_data = self._load_nist_argon(self._nist_path)
+        #self._nist_fcol = 'rel_intensity'
+        self._lope_data = self._load_lovis_pepe_thar(self._lope_path)
+        #self._lope_fcol = 'flux'
+        return
+
+    # --------------------------------------------
+ 
+    # Line selection with some smarts:
+    def get_nist_lines(self, wl1, wl2, reltol=0.001, minflx=100.,
+            lamcol='lam_obs_nm', flxcol='rel_intensity'):
+        twlen = self._nist_data[lamcol]
+        tflux = self._nist_data[flxcol]
+        which = (wl1 < twlen) & (twlen < wl2) & (tflux > minflx)
+        neato = self._nist_data[which]
+        nkept = which.sum()
+        self.vlwrite(1, "NIST Argon: %d lines found.\n" % nkept)
+        if self._vlevel >= 2:
+            for ww,ff in neato[[lamcol, flxcol]].values:
+                sys.stderr.write("%10.5f --- %10.3f\n" % (ww, ff))
+        if not nkept:
+            return np.array([])
+    
+        # stick to brightest of lines found:
+        thresh = neato[flxcol].max() * reltol
+        #sys.stderr.write("thresh: %10.5f\n" % thresh)
+        smart = (neato[flxcol] >= thresh)   # relative to high peak
+        bright = neato[smart]
+        self.vlwrite(1, "After peak-rel-cut, have %d lines.\n" % smart.sum())
+        return bright[lamcol].values
+
+    # Retrieve lines by wavelength range from Lovis+Pepe (2007):
+    def get_lope_lines(self, wl1, wl2, nmax=30, reltol=0.1, minflx=100.,
+            lamcol='lam_vac_nm', flxcol='flux'):
+        twlen = self._lope_data[lamcol]
+        tflux = self._lope_data[flxcol]
+        flcut = np.percentile(tflux, 75)
+        #which = (wl1 < twlen) & (twlen < wl2) & (tflux > flcut)
+        which = (wl1 < twlen) & (twlen < wl2) & (tflux > minflx)
+        neato = self._lope_data[which]
+        nkept = which.sum()
+        self.vlwrite(1, "Lovis+Pepe: %d lines found.\n" % nkept)
+        if self._vlevel >= 2:
+            for ww,ff in zip(neato[lamcol], neato[flxcol]):
+                sys.stderr.write("%10.5f --- %10.3f\n" % (ww, ff))
+        if not nkept:
+            return np.array([])
+    
+        # stick to brightest of lines found:
+        thresh = neato[flxcol].max() * reltol
+        smart = (neato[flxcol] >= thresh)   # relative to high peak
+        bright = neato[smart]
+        self.vlwrite(1, "After peak-rel-cut, have %d lines.\n" % smart.sum())
+    
+        #top_few_idx = np.argsort(neato[flxcol])[-nmax:]
+        top_few_idx = np.argsort(bright[flxcol])[-nmax:]
+        self.vlwrite(1, "Selecting top %d with highest flux ...\n" % nmax)
+        return bright[lamcol].values[top_few_idx]
+        #return neato[lamcol][top_few_idx].values
+
+    def get_combined_lines(self, wl1, wl2, mtol=0.001):
+        ll_nist = self.get_nist_lines(wl1, wl2)
+        ll_lope = self.get_lope_lines(wl1, wl2)
+        ll_comb = np.array(sorted(ll_lope.tolist() + ll_nist.tolist()))
+        return ll_comb
+
+
+    # --------------------------------------------
+
 
 
 

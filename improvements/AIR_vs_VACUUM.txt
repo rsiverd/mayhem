@@ -1,0 +1,8 @@
+
+I do not yet implement anything that accounts for the index refraction of
+air in the spectrograph. As this could affect a lot of things, it is probably
+worth doing. In particular, should:
+* Determine and document what kinds of wavelengths are present in the various
+      line lists I use for reference.
+* Determine what kind of wavelength is most appropriate for calibrating NRES
+      (does it matter?).

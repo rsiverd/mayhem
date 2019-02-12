@@ -1,0 +1,17 @@
+
+As of today (2019-02-12), the prism in the DoublePassPrismGratingPrism() model
+only disperses and is limited operate exclusively in the plane parallel to the
+optical bench and perpendicular to echelle dispersion. The prism has no effect
+in the vertical (perpendicular to bench) direction; the path of light rays
+in the dispersion direction ignores the prism. In reality, I suspect there
+should be at LEAST a displacement along this axis (and maybe dispersion is
+affected too, this is unclear) as the light ray passes through the prism.
+Given that we use a dispersive prism, I suspect this displacement is wavelength
+dependent. If true, this means the PRISM plays a role in the dispersion within
+individual orders that should not be ignored.
+
+Things to implement:
+* vector form of Snell's law (see PDF in this folder and stackexchange link
+   in the URL list)
+* estimation of the vertical image displacement due to passage through prism
+

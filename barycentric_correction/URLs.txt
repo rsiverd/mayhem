@@ -1,0 +1,10 @@
+
+# EXOFAST barycentric correction utility:
+http://astroutils.astronomy.ohio-state.edu/exofast/barycorr.html
+
+# Barycentric corrections at 1 mm/sec
+http://sites.psu.edu/astrowright/2014/09/16/barycentric-corrections-at-1-mms/
+
+# PyAstronomy barycentric velocity correction:
+https://www.hs.uni-hamburg.de/DE/Ins/Per/Czesla/PyA/PyA/pyaslDoc/aslDoc/baryvel.html
+

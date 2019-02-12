@@ -725,10 +725,17 @@ plt.draw()
 
 ## ----------------------------------------------------------------------- ##
 ## ----------------------------------------------------------------------- ##
+## Wavelength references:
+import wavelength_reference
+reload(wavelength_reference)
+#wlr = wavelength_reference
+wlf = wavelength_reference.WLFetcher()
+
 ## Wavelength fitting helpers:
 import wl_solve_test
 reload(wl_solve_test)
 tlf = wl_solve_test.LineFinder()
+afsr = wl_solve_test.ApproxFSR()
 
 ## Compute line positions for every order:
 sys.stderr.write("Computing line positions for fib_which=%d ...\n" % fib_which)
@@ -744,14 +751,17 @@ for i,tdata in enumerate(corresponding_thar, 1):
     measured_line_xpix.append(linepos)
 sys.stderr.write("done.\n")
 
-## ----------------------------------------------------------------------- ##
-## ----------------------------------------------------------------------- ##
-## Wavelength references:
-import wavelength_reference
-reload(wavelength_reference)
-#wlr = wavelength_reference
-wlf = wavelength_reference.WLFetcher()
+## Approximate (greedy) wavelength limits for the specified order:
+spec_order_wl_lims = []
+spec_order_line_sets = []
+for sord,ctrwl_nm in zip(spec_order_list, 1e3 * ctr_wlen):
+    wl_lims_nm = afsr.greedy_wl_limits(ctrwl_nm, sord, nFSR=1.5)
+    comb_lines = wlf.get_combined_lines(*wl_lims_nm)
+    spec_order_wl_lims.append(wl_lims_nm)
+    spec_order_line_sets.append(comb_lines)
 
+## ----------------------------------------------------------------------- ##
+## ----------------------------------------------------------------------- ##
 
 ###-----------------------------------------------------------------------
 

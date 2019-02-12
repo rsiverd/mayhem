@@ -6,7 +6,7 @@
 #
 # Rob Siverd
 # Created:       2018-12-26
-# Last modified: 2019-02-09
+# Last modified: 2019-02-12
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
@@ -74,6 +74,7 @@ nres_alpha_angle_rad = np.radians(90.0 - nres_grating_tilt_deg)
 nres_prism_glass = "PBM2"   # glass type used in cross-dispersing prism
 nres_prism_apex_deg = 55.0  # apex angle of cross-dispersing prism
 
+bluemost_order = 119        # spectroscopic order of 'upper' order
 
 #nres_focallen_mm = 375.15   # approximate camera focal length
 nres_focallen_mm = 400.00   # TESTING
@@ -84,7 +85,7 @@ nres_center_wl_um = 0.479   # [I THINK] light wavelength nearest CCD center
 nres_pix_size_mm = 0.015
 
 useful_orders = 52.0 + np.arange(67.0)
-#useful_orders = 51.0 + np.arange(69.0)
+useful_orders = 51.0 + np.arange(69.0)
 #useful_orders = 54.0 + np.arange(67.0)
 
 ## Spectrograph/optics brilliance:
@@ -401,6 +402,7 @@ fib1_ridges = [trdata._ridge_from_trace(x) for x in fib1_traces]
 ## Separate the ThAr channels too:
 f0_thar_data = [y for x,y in zip(all_traces, thar_norm) if x['fnum']==0]
 f1_thar_data = [y for x,y in zip(all_traces, thar_norm) if x['fnum']==1]
+thar_specord = bluemost_order - np.arange(len(f0_thar_data))[::-1]
 
 #def nearest_xy(x1, y1, x2, y2, xmax=110):
 #    tdiff = []
@@ -604,7 +606,8 @@ dp_yshifts_pix = dp_yshifts_mm / nres_pix_size_mm
 
 ## -----------------------------------------------------------------------
 ## Transform CCD -> spectrograph coordinates:
-def ccd2spec_xy(ccdx, ccdy, rot_deg):
+def ccd2spec_xy(ccdx, ccdy, rot_deg, xnudge=0, ynudge=0,
+        xcenter=0, ycenter=0):
     if ccdx.shape != ccdy.shape:
         raise ValueError("CCD coordinate arrays have mismatched shape\n:"
                 + "%s != %s\n" % (str(ccdx.shape), str(ccdy.shape)))
@@ -615,9 +618,9 @@ def ccd2spec_xy(ccdx, ccdy, rot_deg):
     #ccd_xyz = np.vstack((ccdx.flatten(), 
     #                     ccdy.flatten(),
     #                     np.zeros(ccdx.size)))
-    ccd_xyz = np.vstack((ccdx, ccdy, np.zeros(ccdx.size)))
+    ccd_xyz = np.vstack((ccdx - xcenter, ccdy - ycenter, np.zeros(ccdx.size)))
     sx, sy, _ = r3d.zrot(np.radians(rot_deg), ccd_xyz)
-    return sx.A1, sy.A1
+    return sx.A1 + xcenter + xnudge, sy.A1 + ycenter + ynudge
     #return np.squeeze(np.asarray(sx)), np.squeeze(np.asarray(sy))
     #return np.array(sx), np.array(sy)
     #return sx.reshape(old_dim), sy.reshape(old_dim)
@@ -629,6 +632,7 @@ spec_rotation = 13.091
 
 ## -----------------------------------------------------------------------
 ## Initial crack at wavelength solution:
+nres_focallen_mm = 391.0
 rlist = fib0_ridges if fib_which==0 else fib1_ridges
 xpix_beta_c = 2048.5        # X-pixel where beta=beta_c
 xpix_beta_c =    0.0        # X-pixel where beta=beta_c
@@ -636,28 +640,61 @@ xpix_beta_c = 4080.0        # X-pixel where beta=beta_c
 xpix_beta_c = 2100.0        # X-pixel where beta=beta_c
 xpix_beta_c = 2000.0        # X-pixel where beta=beta_c
 xpix_beta_c = 2100.0        # X-pixel where beta=beta_c
-wavelengths = []
+xpix_beta_c = 2050.0        # X-pixel where beta=beta_c
+xpix_beta_c = 2010.0        # X-pixel where beta=beta_c
+xpix_beta_c = 2150.0        # X-pixel where beta=beta_c
+xpix_beta_c = 2200.0        # X-pixel where beta=beta_c
+xpix_beta_c = 2300.0        # X-pixel where beta=beta_c
+xpix_beta_c = 2615.0        # X-pixel where beta=beta_c
+wavelengths = {}
+wavelength2 = {}
+some_xpix = []
+some_mmsx = []
+#xpix_bet2_c = 1850.0
+xpix_bet2_c = 1800.0
+#xpix_bet2_c = 2000.0
 for ii,spord in enumerate(spec_order_list):
+    sys.stderr.write("\rOrder %3d ... " % spord)
+    sys.stderr.write("\n")
     rx, ry = rlist[ii]
+    center_wl = ctr_wlen[ii]
+    cos_gamma = np.cos(ctr_gamma[ii])
     #mmrx = (rx - xpix_beta_c) * nres_pix_size_mm
-    #sxx, syy = ccd2spec_xy(rx - 2048.5, ry - 2048.5, -spec_rotation)
-    sxx, syy = ccd2spec_xy(rx, ry, spec_rotation)
-    #sxx += 100
-    #mmrx = (xpix_beta_c - rx) * nres_pix_size_mm
-    mmrx = (xpix_beta_c - sxx) * nres_pix_size_mm
-    #mmrx = -sxx * nres_pix_size_mm
+    mmrx = (xpix_beta_c - rx) * nres_pix_size_mm
+    #beta = np.arcsin(nres_sine_alpha) - np.arcsin(mmrx / nres_focallen_mm)
     beta = np.arcsin(nres_sine_alpha) - np.arctan(mmrx / nres_focallen_mm)
+    sys.stderr.write("--> beta min,max: %8.5f, %8.5f\n" % 
+            (np.degrees(np.min(beta)), np.degrees(np.max(beta))))
     #sine_beta = np.sin(np.arctan(mmrx / nres_focallen_mm))
     #center_wl = spec_order_wlmid[ii]
-    center_wl = ctr_wlen[ii]
-    sys.stderr.write("\rOrder %d ... " % spord)
     #center_wl = iter_calc_lamcen(spord)
     #cos_gamma = np.cos(use_gamma_eff(center_wl))
-    cos_gamma = np.cos(ctr_gamma[ii])
     tlam = nres_spacing_um / float(spord) * cos_gamma \
             * (nres_sine_alpha + np.sin(beta))
-    wavelengths.append(tlam)
+    wavelengths[int(spord)] = tlam
+    #wavelengths.append(tlam)
+
+    sxx, syy = ccd2spec_xy(rx, ry, spec_rotation, xnudge=-100)
+    #sxx, syy = ccd2spec_xy(rx, ry, spec_rotation, 
+    #        xcenter=2048.5, ycenter=2048.5, xnudge=-100)
+    mmsx = (xpix_bet2_c - sxx) * nres_pix_size_mm
+    bet2 = np.arcsin(nres_sine_alpha) - np.arctan(mmsx / nres_focallen_mm)
+    sys.stderr.write("--> bet2 min,max: %8.5f, %8.5f\n" % 
+            (np.degrees(np.min(bet2)), np.degrees(np.max(bet2))))
+    slam = nres_spacing_um / float(spord) * cos_gamma \
+            * (nres_sine_alpha + np.sin(bet2))
+    wavelength2[int(spord)] = slam
+    #wavelength2.append(slam)
+    some_xpix.append(sxx)
+    some_mmsx.append(mmsx)
 sys.stderr.write("done.\n")
+
+mean_xpix = [x.mean() for x in some_xpix]
+lower, upper = np.min(mean_xpix), np.max(mean_xpix)
+spread = upper - lower
+sys.stderr.write("lower:  %9.3f\n" % lower)
+sys.stderr.write("upper:  %9.3f\n" % upper)
+sys.stderr.write("spread: %9.3f\n" % spread)
 
 ##-----------------------------------------------------------------------
 ##-----------------------------------------------------------------------
@@ -688,60 +725,82 @@ plt.draw()
 
 ## ----------------------------------------------------------------------- ##
 ## ----------------------------------------------------------------------- ##
+## Wavelength fitting helpers:
+import wl_solve_test
+reload(wl_solve_test)
+tlf = wl_solve_test.LineFinder()
+
+## Compute line positions for every order:
+sys.stderr.write("Computing line positions for fib_which=%d ...\n" % fib_which)
+corresponding_thar = f0_thar_data if fib_which==0 else f1_thar_data
+measured_line_xpix = []
+slow_args = {'pctile':True, 'shallow':0.01}
+#fast_args = {'pctile':False, 'shallow':0.1}
+fast_args = {'pctile':False, 'shallow':0.01}
+for i,tdata in enumerate(corresponding_thar, 1):
+    sys.stderr.write("\rScanning order %d of %d ... "
+            % (i, len(corresponding_thar)))
+    linepos = tlf.extract_lines_xpix(tdata['xpix'], tdata['spec'], **fast_args)
+    measured_line_xpix.append(linepos)
+sys.stderr.write("done.\n")
+
+## ----------------------------------------------------------------------- ##
+## ----------------------------------------------------------------------- ##
 ## Wavelength references:
 import wavelength_reference
 reload(wavelength_reference)
-wlr = wavelength_reference
+#wlr = wavelength_reference
+wlf = wavelength_reference.WLFetcher()
 
-nist_data = wlr.load_nist_argon_pd()
-lope_data = wlr.load_lovis_pepe_thar()
+#nist_data = wlr.load_nist_argon_pd()
+#lope_data = wlr.load_lovis_pepe_thar()
 
-## Line selection with some smarts:
-def get_nist_lines(wl1, wl2, reltol=0.001, minflx=100.,
-        lamcol='lam_obs_nm', flxcol='rel_intensity'):
-    twlen = nist_data[lamcol]
-    tflux = nist_data[flxcol]
-    which = (wl1 < twlen) & (twlen < wl2) & (tflux > minflx)
-    neato = nist_data[which]
-    nkept = which.sum()
-    sys.stderr.write("NIST Argon: %d lines found.\n" % nkept)
-    for ww,ff in neato[[lamcol, flxcol]].values:
-        sys.stderr.write("%10.5f --- %10.3f\n" % (ww, ff))
-    if not nkept:
-        return np.array([])
+### Line selection with some smarts:
+#def get_nist_lines(wl1, wl2, reltol=0.001, minflx=100.,
+#        lamcol='lam_obs_nm', flxcol='rel_intensity'):
+#    twlen = nist_data[lamcol]
+#    tflux = nist_data[flxcol]
+#    which = (wl1 < twlen) & (twlen < wl2) & (tflux > minflx)
+#    neato = nist_data[which]
+#    nkept = which.sum()
+#    sys.stderr.write("NIST Argon: %d lines found.\n" % nkept)
+#    for ww,ff in neato[[lamcol, flxcol]].values:
+#        sys.stderr.write("%10.5f --- %10.3f\n" % (ww, ff))
+#    if not nkept:
+#        return np.array([])
+#
+#    # stick to brightest of lines found:
+#    thresh = neato[flxcol].max() * reltol
+#    #sys.stderr.write("thresh: %10.5f\n" % thresh)
+#    smart = (neato[flxcol] >= thresh)   # relative to high peak
+#    bright = neato[smart]
+#    sys.stderr.write("After peak-rel-cut, have %d lines.\n" % smart.sum())
+#    return bright[lamcol].values
 
-    # stick to brightest of lines found:
-    thresh = neato[flxcol].max() * reltol
-    #sys.stderr.write("thresh: %10.5f\n" % thresh)
-    smart = (neato[flxcol] >= thresh)   # relative to high peak
-    bright = neato[smart]
-    sys.stderr.write("After peak-rel-cut, have %d lines.\n" % smart.sum())
-    return bright[lamcol].values
-
-def get_lope_lines(wl1, wl2, nmax=20, reltol=0.1, minflx=100.,
-        lamcol='lam_vac_nm', flxcol='flux'):
-    twlen = lope_data[lamcol]
-    tflux = lope_data[flxcol]
-    flcut = np.percentile(tflux, 75)
-    #which = (wl1 < twlen) & (twlen < wl2) & (tflux > flcut)
-    which = (wl1 < twlen) & (twlen < wl2) & (tflux > minflx)
-    neato = lope_data[which]
-    nkept = which.sum()
-    sys.stderr.write("Lovis+Pepe: %d lines found.\n" % nkept)
-    #for ww,ff in zip(neato[lamcol], neato[flxcol]):
-    #    sys.stderr.write("%10.5f --- %10.3f\n" % (ww, ff))
-    if not nkept:
-        return np.array([])
-
-    # stick to brightest of lines found:
-    thresh = neato[flxcol].max() * reltol
-    smart = (neato[flxcol] >= thresh)   # relative to high peak
-    bright = neato[smart]
-    sys.stderr.write("After peak-rel-cut, have %d lines.\n" % smart.sum())
-
-    top_few_idx = np.argsort(neato[flxcol])[-nmax:]
-    sys.stderr.write("Selecting top %d with highest flux ...\n" % nmax)
-    return neato[lamcol][top_few_idx]
+#def get_lope_lines(wl1, wl2, nmax=30, reltol=0.1, minflx=100.,
+#        lamcol='lam_vac_nm', flxcol='flux'):
+#    twlen = lope_data[lamcol]
+#    tflux = lope_data[flxcol]
+#    flcut = np.percentile(tflux, 75)
+#    #which = (wl1 < twlen) & (twlen < wl2) & (tflux > flcut)
+#    which = (wl1 < twlen) & (twlen < wl2) & (tflux > minflx)
+#    neato = lope_data[which]
+#    nkept = which.sum()
+#    sys.stderr.write("Lovis+Pepe: %d lines found.\n" % nkept)
+#    #for ww,ff in zip(neato[lamcol], neato[flxcol]):
+#    #    sys.stderr.write("%10.5f --- %10.3f\n" % (ww, ff))
+#    if not nkept:
+#        return np.array([])
+#
+#    # stick to brightest of lines found:
+#    thresh = neato[flxcol].max() * reltol
+#    smart = (neato[flxcol] >= thresh)   # relative to high peak
+#    bright = neato[smart]
+#    sys.stderr.write("After peak-rel-cut, have %d lines.\n" % smart.sum())
+#
+#    top_few_idx = np.argsort(neato[flxcol])[-nmax:]
+#    sys.stderr.write("Selecting top %d with highest flux ...\n" % nmax)
+#    return neato[lamcol][top_few_idx]
 
 
 ###-----------------------------------------------------------------------
@@ -761,13 +820,16 @@ def get_lope_lines(wl1, wl2, nmax=20, reltol=0.1, minflx=100.,
 #lp_subset = lovis_pepe[useful]
 #line_list = lp_subset['lam_vac']
 
-max_lines_per_order = 20
+max_lines_per_order = 30
 
 ## Visual inspection of ThAr data vs wavelength solution:
 corresponding_thar = f0_thar_data if fib_which==0 else f1_thar_data
-def oinspect(oidx, sdata=corresponding_thar, pad=0.1):
+def oinspect(oidx, ww2=False, sdata=corresponding_thar, pad=0.1):
     thar = sdata[oidx]
-    wlen = wavelengths[oidx] * 1e3  # switch to nm
+    sord = thar_specord[oidx]
+    wlen = 1e3 * wavelength2[sord] if ww2 else 1e3 * wavelengths[sord]
+    #wlen *= 1e3     # switch to nm
+    #wlen = wavelengths[oidx] * 1e3  # switch to nm
     sys.stderr.write("wlen.size: %d\n" % wlen.size)
     sys.stderr.write("xpix.size: %d\n" % thar['xpix'].size)
     wlrange = wlen.max() - wlen.min()
@@ -816,7 +878,8 @@ def oinspect(oidx, sdata=corresponding_thar, pad=0.1):
     #    ax1.axvline(x, ls=':', c='r')
 
     # Overplot NIST Argon lines:
-    ar_lines = get_nist_lines(wl1, wl2)
+    #ar_lines = get_nist_lines(wl1, wl2, reltol=0.05) #reltol=0.001)
+    ar_lines = wlf.get_nist_lines(wl1, wl2, reltol=0.05) #reltol=0.001)
     if (ar_lines.size > 0):
         ar_xpixels = np.interp(ar_lines, wlen, thar['xpix'])
         for line in ar_xpixels[:-1]:
@@ -824,14 +887,15 @@ def oinspect(oidx, sdata=corresponding_thar, pad=0.1):
         ax1.axvline(ar_lines[-1], ls=':', c='r', label='NIST Argon')
 
     # Overplot Lovis & Pepe (2007) lines:
-    thar_lines = get_lope_lines(wl1, wl2)
+    #thar_lines = get_lope_lines(wl1, wl2, reltol=0.05)
+    thar_lines = wlf.get_lope_lines(wl1, wl2, reltol=0.05)
     if (thar_lines.size > 0):
         thar_xpix = np.interp(thar_lines, wlen, thar['xpix'])
         for line in thar_xpix[:-1]:
             ax1.axvline(line, ls=':', c='g')
         ax1.axvline(thar_lines[-1], ls=':', c='g', label='Lovis & Pepe (2007)')
 
-    ax1.legend()
+    ax1.legend(loc='upper right')
     fig.tight_layout()
     plt.draw()
     return

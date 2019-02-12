@@ -752,73 +752,8 @@ reload(wavelength_reference)
 #wlr = wavelength_reference
 wlf = wavelength_reference.WLFetcher()
 
-#nist_data = wlr.load_nist_argon_pd()
-#lope_data = wlr.load_lovis_pepe_thar()
-
-### Line selection with some smarts:
-#def get_nist_lines(wl1, wl2, reltol=0.001, minflx=100.,
-#        lamcol='lam_obs_nm', flxcol='rel_intensity'):
-#    twlen = nist_data[lamcol]
-#    tflux = nist_data[flxcol]
-#    which = (wl1 < twlen) & (twlen < wl2) & (tflux > minflx)
-#    neato = nist_data[which]
-#    nkept = which.sum()
-#    sys.stderr.write("NIST Argon: %d lines found.\n" % nkept)
-#    for ww,ff in neato[[lamcol, flxcol]].values:
-#        sys.stderr.write("%10.5f --- %10.3f\n" % (ww, ff))
-#    if not nkept:
-#        return np.array([])
-#
-#    # stick to brightest of lines found:
-#    thresh = neato[flxcol].max() * reltol
-#    #sys.stderr.write("thresh: %10.5f\n" % thresh)
-#    smart = (neato[flxcol] >= thresh)   # relative to high peak
-#    bright = neato[smart]
-#    sys.stderr.write("After peak-rel-cut, have %d lines.\n" % smart.sum())
-#    return bright[lamcol].values
-
-#def get_lope_lines(wl1, wl2, nmax=30, reltol=0.1, minflx=100.,
-#        lamcol='lam_vac_nm', flxcol='flux'):
-#    twlen = lope_data[lamcol]
-#    tflux = lope_data[flxcol]
-#    flcut = np.percentile(tflux, 75)
-#    #which = (wl1 < twlen) & (twlen < wl2) & (tflux > flcut)
-#    which = (wl1 < twlen) & (twlen < wl2) & (tflux > minflx)
-#    neato = lope_data[which]
-#    nkept = which.sum()
-#    sys.stderr.write("Lovis+Pepe: %d lines found.\n" % nkept)
-#    #for ww,ff in zip(neato[lamcol], neato[flxcol]):
-#    #    sys.stderr.write("%10.5f --- %10.3f\n" % (ww, ff))
-#    if not nkept:
-#        return np.array([])
-#
-#    # stick to brightest of lines found:
-#    thresh = neato[flxcol].max() * reltol
-#    smart = (neato[flxcol] >= thresh)   # relative to high peak
-#    bright = neato[smart]
-#    sys.stderr.write("After peak-rel-cut, have %d lines.\n" % smart.sum())
-#
-#    top_few_idx = np.argsort(neato[flxcol])[-nmax:]
-#    sys.stderr.write("Selecting top %d with highest flux ...\n" % nmax)
-#    return neato[lamcol][top_few_idx]
-
 
 ###-----------------------------------------------------------------------
-### Load Argon lines:
-##clean_argon = np.genfromtxt('clean_argon.txt', dtype=None, names=True)
-##clean_argon['lam_obs'] /= 1e3
-###line_list = clean_argon['lam_obs'] / 1e3
-#
-#lovis_pepe = np.genfromtxt('lovis_pepe.csv', dtype=None, names=True,
-#        delimiter=',')
-#lovis_pepe['lam_vac'] /= 1e4
-##useful = (lovis_pepe['flux'] > 10000.0)
-##useful = (lovis_pepe['flux'] > 1000.0)
-#useful = (lovis_pepe['flux'] > 1000.0)
-##line_list = lovis_pepe['lam_vac'][useful] / 1e4
-#
-#lp_subset = lovis_pepe[useful]
-#line_list = lp_subset['lam_vac']
 
 max_lines_per_order = 30
 
@@ -837,33 +772,6 @@ def oinspect(oidx, ww2=False, sdata=corresponding_thar, pad=0.1):
     wl2 = wlen.max() + pad * wlrange
     sys.stderr.write("oidx %d covers wavelength range: %.3f to %.3f\n" 
             % (oidx, wlen.min(), wlen.max()))
-    #known_lines = []
-    #line_fluxes = []
-
-    ## Include 'clean_argon' lines:
-    #which = (wl1 <= clean_argon['lam_obs']) \
-    #        & (clean_argon['lam_obs'] <= wl2)
-    ##argon_lam = clean_argon['lam_obs'][which]
-    #known_lines.extend(clean_argon['lam_obs'][which])
-    #line_fluxes.extend(clean_argon['rel_flux'][which])
-    #sys.stderr.write("Known lines: %d\n" % len(known_lines))
-
-    ## include Lovis and Pepe stuff:
-    ##sys.stderr.write("Lines in range: %d\n" % np.sum(which))
-    #which = (wl1 <= lp_subset['lam_vac']) & (lp_subset['lam_vac']<= wl2)
-    ##argon_lam = line_list[which]
-    #known_lines.extend(lp_subset['lam_vac'][which])
-    #line_fluxes.extend(lp_subset['flux'][which])
-    
-    ## identify brightest NMAX: 
-    #known_lines = np.array(known_lines)
-    #line_fluxes = np.array(line_fluxes)
-    #keepers = np.argsort(line_fluxes)[-max_lines_per_order:]
-    ##argon_lam = np.array(sorted(known_lines))
-    #argon_lam = known_lines[keepers]
-    #sys.stderr.write("Known lines: %d\n" % len(known_lines))
-    #argon_pix = np.interp(argon_lam, wlen, thar['xpix'])
-    ##sys.stderr.write("derp: %s\n" % str((wl1 <= clean_argon['lam_obs'])))
 
     fig = plt.figure(1, figsize=(10,5))
     fig.clf()

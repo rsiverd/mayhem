@@ -13,3 +13,11 @@ fitsarith -qHi /tmp/norm01.fits -M /tmp/norm12.fits -o /tmp/prod11.fits
 # --> when tracing was performed
 # --> etc.
 
+# -----------------------------------------------------------------------
+# Want better handling of prism optics. In particular, wavelength-dependent
+# displacement along the 'vertical' axis might effectively be a component of
+# the dispersion along the "echelle" axis that otherwise won't be easily
+# modeled.
+
+
+

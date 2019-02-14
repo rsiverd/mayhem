@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2018-12-29
-# Last modified: 2019-02-08
+# Last modified: 2019-02-14
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.1.5"
+__version__ = "0.1.6"
 
 ## Python version-agnostic module reloading:
 try:
@@ -241,6 +241,28 @@ class GratingTools(object):
         return self._calc_blaze_wavelength(spec_orders,
                 self._groove_spacing[units], self._blaze_angle_rad, 
                 facet_rad=facet_rad, gamma_rad=gamma_rad)
+
+    @staticmethod
+    def _calc_line_tilt_ctr(blaze_rad, gamma_rad):
+        """Calculate line tilt at order center (at blaze wavelength).
+        Formulae from Barnes (2004) thesis, page 11:
+        tan(φ) = (sin(α) + sin(β)) / cos(β) * (sin(γ) / cos(γ))
+               = λ * dβ/dλ * tan(γ)
+        tan(φ) = 2 * tan(θ_B) * tan(γ)      # at blaze wavelength λ_B
+        """
+        return np.arctan(2.0 * np.tan(blaze_rad) * np.tan(gamma_rad))
+
+    @staticmethod
+    def _calc_line_tilt_any(alpha_rad, beta_rad, gamma_rad):
+        """Calculate line tilt at order center (at blaze wavelength).
+        Formulae from Barnes (2004) thesis, page 11:
+        tan(φ) = (sin(α) + sin(β)) / cos(β) * (sin(γ) / cos(γ))
+               = λ * dβ/dλ * tan(γ)
+        tan(φ) = 2 * tan(θ_B) * tan(γ)      # at blaze wavelength λ_B
+        """
+        numer = (np.sin(alpha_rad) + np.sin(beta_rad)) * np.sin(gamma_rad)
+        denom = np.cos(beta_rad) * np.cos(gamma_rad)
+        return np.arctan(numer / denom)
 
     @staticmethod
     def _calc_order_FSR(wlen_cen, spec_orders):

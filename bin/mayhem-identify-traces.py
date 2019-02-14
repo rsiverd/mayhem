@@ -6,13 +6,13 @@
 #
 # Rob Siverd
 # Created:       2018-12-26
-# Last modified: 2019-02-12
+# Last modified: 2019-02-14
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.3.0"
+__version__ = "0.3.2"
 
 ## Python version-agnostic module reloading:
 try:
@@ -560,17 +560,17 @@ nres_prism_apex_rad = np.radians(nres_prism_apex_deg)
 nres_spacing_um = 1e3 / nres_ruling_lmm     # grating spacing in microns
 
 
-## -----------------------------------------------------------------------
-## Effective gamma angle is the nominal gamma angle plus the changes in prism
-## deflection angle due to difference from nominal wavelength.
-def gamma_eff(gamma_nom, wlen_um):
-    # delta_gamma = deflection_rad - min_dev_rad
-    #deflect_r = spectrograph_optics.prism_deflection_n(incident_ang_rad,
-    #        nres_prism_apex_rad, sog.refraction_index(wlen_um))
-    deflect_r = nrp.deflection_rad_wl(incident_ang_rad, wlen_um)
-    return gamma_nom + deflect_r - min_dev_rad
+### -----------------------------------------------------------------------
+### Effective gamma angle is the nominal gamma angle plus the changes in prism
+### deflection angle due to difference from nominal wavelength.
+#def gamma_eff(gamma_nom, wlen_um):
+#    # delta_gamma = deflection_rad - min_dev_rad
+#    #deflect_r = spectrograph_optics.prism_deflection_n(incident_ang_rad,
+#    #        nres_prism_apex_rad, sog.refraction_index(wlen_um))
+#    deflect_r = nrp.deflection_rad_wl(incident_ang_rad, wlen_um)
+#    return gamma_nom + deflect_r - min_dev_rad
 
-use_gamma_eff = partial(gamma_eff, nres_nominal_gamma)
+#use_gamma_eff = partial(gamma_eff, nres_nominal_gamma)
 
 ## From existing solutions ...
 nres_sine_alpha = 0.971747764900
@@ -604,6 +604,10 @@ dp_yshifts_mm = pg_yshifts + pc_yshifts
 dp_yshifts_pix = dp_yshifts_mm / nres_pix_size_mm
 #dp_yshifts_range = dp_yshifts_pix.max() - dp_yshifts_pix.min()
 #normed_dp_yshifts = (dp_yshifts_pix - dp_yshifts_pix.min()) / dp_yshifts_range
+
+## Compute corresponding line tilts (TESTING):
+ctr_line_tilts = ogt._calc_line_tilt_ctr(blaze_r, ctr_gamma)
+ctr_tilts_deg  = np.degrees(ctr_line_tilts)
 
 ## -----------------------------------------------------------------------
 ## Transform CCD -> spectrograph coordinates:
@@ -871,14 +875,33 @@ line_ref_nm = spec_order_line_sets[tidx]
 model_wl_nm = using_wlmod[tord] * 1e3
 line_xpix = measured_line_xpix[tidx]
 line_refx = np.interp(line_ref_nm, model_wl_nm, tdata['xpix'])
-#segs_meas = list_segments(line_xpix)
-#segs_lref = list_segments(line_refx)
-#diffs = segs_meas[:, None] - segs_lref[None, :]
+segs_meas_data = wlsm._list_segments(line_xpix)
+segs_lref_data = wlsm._list_segments(line_refx)
+segs_meas = segs_meas_data['seg']
+segs_lref = segs_lref_data['seg']
+diffs = segs_meas[:, None] - segs_lref[None, :]
 #nseg_dims = (len(segs_meas), len(segs_lref))
 #nobj_dims = (len(line_xpix), len(line_refx))
 
 wlsm.set_measured_peaks(line_xpix)
 wlsm.set_reference_lines(line_refx)
+
+#len_range = (-0.2, 0.2)
+len_tol   = np.log10(1.1)
+len_bins  = 11
+len_range = wlsm.bintol_range(len_bins, len_tol)
+tdivs = (3,)
+
+use_ranges = (len_range,)
+use_nbins  = (len_bins,)
+best_pars = wlsm.dither_hist_best_fit(use_ranges, use_nbins,
+        tdivs, mode='weighted')
+
+line_pairs = wlsm.matched_source_indexes()
+midx, ridx = zip(*line_pairs) 
+
+print(line_xpix[midx,])
+print(line_refx[ridx,])
 
 #scale_nbins = 50
 #scale_range = (-0.2, 0.2)

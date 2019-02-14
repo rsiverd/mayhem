@@ -875,11 +875,11 @@ line_ref_nm = spec_order_line_sets[tidx]
 model_wl_nm = using_wlmod[tord] * 1e3
 line_xpix = measured_line_xpix[tidx]
 line_refx = np.interp(line_ref_nm, model_wl_nm, tdata['xpix'])
-segs_meas_data = wlsm._list_segments(line_xpix)
-segs_lref_data = wlsm._list_segments(line_refx)
-segs_meas = segs_meas_data['seg']
-segs_lref = segs_lref_data['seg']
-diffs = segs_meas[:, None] - segs_lref[None, :]
+#segs_meas_data = wlsm._list_segments(line_xpix)
+#segs_lref_data = wlsm._list_segments(line_refx)
+#segs_meas = segs_meas_data['seg']
+#segs_lref = segs_lref_data['seg']
+#diffs = segs_meas[:, None] - segs_lref[None, :]
 #nseg_dims = (len(segs_meas), len(segs_lref))
 #nobj_dims = (len(line_xpix), len(line_refx))
 

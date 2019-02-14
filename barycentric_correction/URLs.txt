@@ -8,3 +8,7 @@ http://sites.psu.edu/astrowright/2014/09/16/barycentric-corrections-at-1-mms/
 # PyAstronomy barycentric velocity correction:
 https://www.hs.uni-hamburg.de/DE/Ins/Per/Czesla/PyA/PyA/pyaslDoc/aslDoc/baryvel.html
 
+# Barycentric/Heliocentric Light Travel Time corrections with astropy:
+http://docs.astropy.org/en/stable/time/index.html#barycentric-and-heliocentric-light-travel-time-corrections
+
+

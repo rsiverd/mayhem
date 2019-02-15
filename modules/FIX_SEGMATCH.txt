@@ -1,0 +1,69 @@
+# -----------------------------------------------------------------------
+
+* Segments do not need to include the raw data points (i.e., x, y, mag). Those
+      are preserved in the _raw_data array and can be recalled using the 'idx'
+      values affiliated with each segment.
+         --> Keeping the raw values OUT of the segment 'deltas' eliminates the
+               need to keep track of which 'seg' columns should be used to
+               compute diffs (and which should be ignored). This, in turn,
+               simplifies the differences calculation.
+     ***** make sure this is true. Maybe those parameters are used in one of
+            the routines I didn't play with today.
+
+# -----------------------------------------------------------------------
+
+* Ensure that input data are always at least 2D (even if just a single coord).
+      This, in turn, ensures that the all-vs-all 'diffs' is 3D (with datum on
+      3rd axis), allowing the same syntax to work in all cases.
+
+# -----------------------------------------------------------------------
+
+* Keep track internally of the kind/units of the different segment properties.
+   For 1-D input (e.g., X coords only), segments are length-only. Using
+      log-length instead conveniently provides scale factor.
+
+   For 2-D input with two spatial coords (e.g., X,Y or RA,DE), segments
+      consist of a length (or log-length) and an orientation angle.
+
+   For 3-D input with X, Y, mag, segments consist of length (or log-length),
+      orientation angle, and magnitude difference.
+
+Different segment-listing routines will likely be needed for the different
+dimensionalities of input, especially if I hope to continue supporting
+magnitude and/or depth cuts.
+
+# -----------------------------------------------------------------------
+
+* Extend the utility of this matching system by developing the machinery
+   to process input catalogs piece-wise (to avoid exploding memory demands).
+   It is not obvious how to make this work ...
+
+--> All possible segments (subject to cuts applied in listing) from one
+catalog must ultimately be differenced from all possible segments of the
+other catalog. Making intelligent choices (i.e., restrictions on delta-mag)
+can significantly reduce parameter space but not enough to enable handling of
+input lists with more than ~40 objects (which isn't that many!).
+
+I think the most sensible improvement will exploit the incremental build-up of
+votes in parameter space. Currently in the dither_hist method (best results) we
+1) start with empty cumulative segment and object voting spaces
+2a) iterate over nudges (dithers) in the histogram bins (the locations of the
+      bin edges specifically). For each of these bin arrangements, we do a
+      multi-dimensional histogram of the (large) diffs array and identify the
+      most highly populated bins. We keep track of the most populated param
+      combo from each bin-set for later averaging.
+2b) For each 'winning' parameter combination (one per bin-set), votes are cast
+      in segment and object space to identify corresponding features. The
+      individual votes from each round are added to the cumulative voting
+      space from which the most likely correspondences are taken.
+
+Since the cumulative object and segment votes are already constructed in a
+piece-wise fashion, there is perhaps room for a divide-and-conquer approach.
+The implementation difficulty depends fairly significantly on whether:
+* all segments from each catalog can be produced simultaneously (even if their
+   all-vs-all differences cannot be stored at once)
+* the sheer number of segments alone is too great. In this case, coding
+complexity would probably escalate quite rapidly.
+
+# -----------------------------------------------------------------------
+

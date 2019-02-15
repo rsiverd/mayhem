@@ -887,8 +887,9 @@ wlsm.set_measured_peaks(line_xpix)
 wlsm.set_reference_lines(line_refx)
 
 #len_range = (-0.2, 0.2)
-len_tol   = np.log10(1.1)
-len_bins  = 11
+#len_tol   = np.log10(1.1)
+len_tol   = np.log10(1.05)
+len_bins  = 30
 len_range = wlsm.bintol_range(len_bins, len_tol)
 tdivs = (3,)
 
@@ -902,6 +903,8 @@ midx, ridx = zip(*line_pairs)
 
 print(line_xpix[midx,])
 print(line_refx[ridx,])
+
+ttpix, ttref = wlsm.get_matched_coords()
 
 #scale_nbins = 50
 #scale_range = (-0.2, 0.2)

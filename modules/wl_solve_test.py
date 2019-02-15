@@ -562,7 +562,8 @@ class WLSegMatch(object):
         if (len(pairs) == 0):
             sys.stderr.write("WARNING: no matches!\n")
             return (None, None)
-        return [coo[x, :2] for x,coo in zip(zip(*pairs), self._raw_data)]
+        return [coo[x,] for x,coo in zip(zip(*pairs), self._raw_data)]
+        #return [coo[x, :2] for x,coo in zip(zip(*pairs), self._raw_data)]
 
 
 ##--------------------------------------------------------------------------##

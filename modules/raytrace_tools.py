@@ -67,10 +67,48 @@ def calc_surface_vectors(v_incident, surf_norm, n1_n2_ratio):
     return v_reflect, v_refract
 
 ##--------------------------------------------------------------------------##
+## Intersection of a line and plane. In this model, both lines and planes are
+## described by (point, unit_vector pairs). In the case of a line, the unit
+## vector points "along" the line. For the plane, the vector is surface normal. 
+#def line_plane_intersection(line, plane):
+    #lpoint, lvector =  line['point'],  line['vector']
+    #ppoint, pvector = plane['point'], plane['vector']
 
+def line_plane_intersection(lpoint, lvector, ppoint, pnormal):
+    """
+    All inputs should be 3-element numpy ndarray type. The case of parallel
+    line and plane should be handled ~correctly.
 
+    lpoint  -  any point (x, y, z) on the line
+    lvector -  any vector (dx, dy, dz) along the line
+    ppoint  -  any point (x, y, z) on the plane
+    pnormal -  any vector (dx, dy, dz) normal to plane surface
 
+    Returns:
+    distance      -  scalar distance along line from line-point to intersection
+    intersection  -  (x, y, z) point of intersection
+    """
 
+    pl_sep = np.dot(ppoint - lpoint, pnormal)
+    angsep = np.dot(lvector, pnormal)
+    # Parallel line/plane is handled separately:
+    if (angsep == 0.0):
+        sys.stderr.write("WARNING: line and plane are PARALLEL!\n")
+        if (pl_sep == 0.0):
+            sys.stderr.write("Line lies within plane!\n")
+            return lpoint
+            #return (0.0, lpoint)
+        else:
+            sys.stderr.write("Line and plane do not intersect!\n")
+            return None
+            #return None, None
+    # If not parallel, get distance and intersection: 
+    distance = pl_sep / angsep
+    return lpoint + distance * lvector
+    #isect = lpoint + distance * lvector
+    #truedist = np.sqrt(np.sum((isect - lpoint)**2))
+    #sys.stderr.write("truedist: %10.5f\n" % truedist)
+    #return distance, isect
 
 
 

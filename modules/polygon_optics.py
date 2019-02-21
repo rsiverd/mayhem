@@ -18,13 +18,13 @@
 #
 # Rob Siverd
 # Created:       2019-02-20
-# Last modified: 2019-02-20
+# Last modified: 2019-02-21
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 ## Python version-agnostic module reloading:
 try:
@@ -43,12 +43,6 @@ import numpy as np
 #from numpy.lib.recfunctions import append_fields
 #import datetime as dt
 #from dateutil import parser as dtp
-#import scipy.linalg as sla
-#import scipy.signal as ssig
-#import scipy.ndimage as ndi
-#import scipy.optimize as opti
-#import scipy.interpolate as stp
-#import scipy.spatial.distance as ssd
 #from functools import partial
 #from collections import OrderedDict
 #import multiprocessing as mp

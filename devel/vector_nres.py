@@ -249,8 +249,8 @@ apex_angle_rad = np.radians(apex_angle_deg)
 #half_short_mm  = long_length_mm * np.sin(0.5 * apex_angle_rad)
 prism_turn_deg = 23.507 # prism base 'turn' w.r.t. optical axis
 short_edge_mm = 190.0
-large_edge_mm = 0.5 * short_edge_mm / np.sin(0.5 * apex_angle_rad)
-symmetryax_mm = 0.5 * short_edge_mm / np.tan(0.5 * apex_angle_rad)
+#large_edge_mm = 0.5 * short_edge_mm / np.sin(0.5 * apex_angle_rad)
+#symmetryax_mm = 0.5 * short_edge_mm / np.tan(0.5 * apex_angle_rad)
 height_mm     = 130.0
 
 #vtx1_bot = np.array([ 0.5 * short_edge_mm,            0.0, 0.0])
@@ -277,9 +277,9 @@ height_mm     = 130.0
 #prism_vtx = np.array(prism_vtx.T)
 ##prism_vtx = prism_vtx.A1.reshape(3, -1).T
 
-pr_obj = polygon_optics.PolygonPrism(apex_angle_deg, short_edge_mm, height_mm)
-pr_obj.zrotate(np.radians(-90.0))
-pr_obj.zrotate(np.radians(prism_turn_deg))
+prpoly = polygon_optics.PolygonPrism(apex_angle_deg, short_edge_mm, height_mm)
+prpoly.zrotate(np.radians(-90.0))
+prpoly.zrotate(np.radians(prism_turn_deg))
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -296,23 +296,28 @@ gr_height_mm =  50.5
 grating_turn_deg = 44.827
 grating_tilt_deg = 13.786
 
-vtx1_bot = np.array([        0.0,          0.0,  0.0])
-vtx2_bot = np.array([gr_width_mm,          0.0,  0.0])
-vtx3_bot = np.array([gr_width_mm, gr_length_mm,  0.0])
-vtx4_bot = np.array([        0.0, gr_length_mm,  0.0])
+#vtx1_bot = np.array([        0.0,          0.0,  0.0])
+#vtx2_bot = np.array([gr_width_mm,          0.0,  0.0])
+#vtx3_bot = np.array([gr_width_mm, gr_length_mm,  0.0])
+#vtx4_bot = np.array([        0.0, gr_length_mm,  0.0])
 g_normal = np.array([        0.0,          0.0, -1.0])  # grating normal
-grating_vtx_bot = np.array([vtx1_bot, vtx2_bot, vtx3_bot, vtx4_bot])
-grating_vtx = np.vstack((grating_vtx_bot, 
-                         grating_vtx_bot + np.array([0.0, 0.0, gr_height_mm])))
-grating_vtx -= np.average(grating_vtx, axis=0)
+#grating_vtx_bot = np.array([vtx1_bot, vtx2_bot, vtx3_bot, vtx4_bot])
+#grating_vtx = np.vstack((grating_vtx_bot, 
+#                         grating_vtx_bot + np.array([0.0, 0.0, gr_height_mm])))
+#grating_vtx -= np.average(grating_vtx, axis=0)
 
-grating_vtx = grating_vtx.T     # transpose for rotations
-grating_vtx = r3d.xrotate_xyz(np.radians(-grating_tilt_deg), grating_vtx)
-grating_vtx = r3d.zrotate_xyz(np.radians(grating_turn_deg), grating_vtx)
-grating_vtx = np.array(grating_vtx.T)
+#grating_vtx = grating_vtx.T     # transpose for rotations
+#grating_vtx = r3d.xrotate_xyz(np.radians(-grating_tilt_deg), grating_vtx)
+#grating_vtx = r3d.zrotate_xyz(np.radians(grating_turn_deg), grating_vtx)
+#grating_vtx = np.array(grating_vtx.T)
 g_normal = r3d.xrotate_xyz(np.radians(-grating_tilt_deg), g_normal).A1
 g_normal = r3d.zrotate_xyz(np.radians(grating_turn_deg), g_normal).A1
-grating_vtx += np.array([-165.0, 235.0, 0.0])
+#grating_vtx += np.array([-165.0, 235.0, 0.0])
+
+grpoly = polygon_optics.PolygonGrating(gr_width_mm, gr_length_mm, gr_height_mm)
+grpoly.xrotate(np.radians(-grating_tilt_deg))
+grpoly.zrotate(np.radians(grating_turn_deg))
+grpoly.shift_xyz(-165.0, 235.0, 0.0)
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -335,48 +340,6 @@ def edges_from_vertices(vtx_array):
     edges.extend([vtx_top[:, :2][x,] for x in idxpairs])
     #sys.stderr.write("edges: %s\n" % str(edges))
     return edges
-
-##--------------------------------------------------------------------------##
-## Solve prep:
-#ny, nx = img_vals.shape
-#x_list = (0.5 + np.arange(nx)) / nx - 0.5            # relative (centered)
-#y_list = (0.5 + np.arange(ny)) / ny - 0.5            # relative (centered)
-#xx, yy = np.meshgrid(x_list, y_list)                 # relative (centered)
-#xx, yy = np.meshgrid(nx*x_list, ny*y_list)           # absolute (centered)
-#xx, yy = np.meshgrid(np.arange(nx), np.arange(ny))   # absolute
-#yy, xx = np.meshgrid(np.arange(ny), np.arange(nx), indexing='ij') # absolute
-#yy, xx = np.nonzero(np.ones_like(img_vals))          # absolute
-#yy, xx = np.mgrid[0:ny,   0:nx].astype('uint16')     # absolute (array)
-#yy, xx = np.mgrid[1:ny+1, 1:nx+1].astype('uint16')   # absolute (pixel)
-
-## 1-D vectors:
-#x_pix, y_pix, ivals = xx.flatten(), yy.flatten(), img_vals.flatten()
-#w_vec = np.ones_like(ivals)            # start with uniform weights
-#design_matrix = np.column_stack((np.ones(x_pix.size), x_pix, y_pix))
-
-## Image fitting (statsmodels etc.):
-#data = sm.datasets.stackloss.load()
-#ols_res = sm.OLS(ivals, design_matrix).fit()
-#rlm_res = sm.RLM(ivals, design_matrix).fit()
-#rlm_model = sm.RLM(ivals, design_matrix, M=sm.robust.norms.HuberT())
-#rlm_res = rlm_model.fit()
-#data = pd.DataFrame({'xpix':x_pix, 'ypix':y_pix})
-#rlm_model = sm.RLM.from_formula("ivals ~ xpix + ypix", data)
-
-##--------------------------------------------------------------------------##
-## Plot config:
-
-# gridspec examples:
-# https://matplotlib.org/users/gridspec.html
-
-#gs1 = gridspec.GridSpec(4, 4)
-#gs1.update(wspace=0.025, hspace=0.05)  # set axis spacing
-
-#ax1 = plt.subplot2grid((3, 3), (0, 0), colspan=3) # top-left + center + right
-#ax2 = plt.subplot2grid((3, 3), (1, 0), colspan=2) # mid-left + mid-center
-#ax3 = plt.subplot2grid((3, 3), (1, 2), rowspan=2) # mid-right + bot-right
-#ax4 = plt.subplot2grid((3, 3), (2, 0))            # bot-left
-#ax5 = plt.subplot2grid((3, 3), (2, 1))            # bot-center
 
 
 ##--------------------------------------------------------------------------##
@@ -401,28 +364,22 @@ ax1.grid(True)
 # -----------------------------------------------------------------------
 # Prism vertices:
 #for x,y,z in prism_vtx:
-for x,y,z in pr_obj.get_vertices():
+for x,y,z in prpoly.get_vertices():
     ax1.scatter(x, y, lw=0, s=30, c='b')
 
 # Prism edges:
-vx, vy, vz = zip(*pr_obj.get_vertices())
+vx, vy, vz = zip(*prpoly.get_vertices())
 for p1,p2 in itt.combinations(range(3), 2):
     ax1.plot([vx[p1], vx[p2]], [vy[p1], vy[p2]], c='b')
     pass
 
 # -----------------------------------------------------------------------
 # Grating vertices:
-for x,y,z in grating_vtx:
+for x,y,z in grpoly.get_vertices():
     ax1.scatter(x, y, lw=0, s=30, c='g')
 
 # Grating edges:
-#vx, vy, vz = zip(*grating_vtx[np.arange(4)])
-vx, vy, vz = grating_vtx[np.arange(4)].T
-#for p1,p2 in itt.combinations(range(3), 2):
-#    ax1.plot([vx[p1], vx[p2]], [vy[p1], vy[p2]], c='g')
-#    pass
-#ax1.plot(vx, vy)
-for pair in edges_from_vertices(grating_vtx):
+for pair in edges_from_vertices(grpoly.get_vertices()):
     vx, vy = pair.T
     ax1.plot(vx, vy, c='g')
 

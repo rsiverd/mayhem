@@ -315,6 +315,10 @@ class DoublePassPrismGratingPrism(object):
 
     def __init__(self):
         # PARAMETERS LIST:
+        # 0. coordinate system:
+        #       * x-axis points "right" towards input fiber (grating at -X).
+        #       * y-axis points "ahead" from camera to grating (optical axis)
+        #       * z-axis points "up" towards sky from bench surface
         # 1. prism:
         #       * glass type
         #       * apex angle (degrees)

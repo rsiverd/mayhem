@@ -76,6 +76,10 @@ import fov_rotation
 reload(fov_rotation)
 r3d = fov_rotation.Rotate3D()
 
+## Polygon kit:
+import polygon_optics
+reload(polygon_optics)
+
 ##--------------------------------------------------------------------------##
 
 ## Fast FITS I/O:
@@ -249,30 +253,33 @@ large_edge_mm = 0.5 * short_edge_mm / np.sin(0.5 * apex_angle_rad)
 symmetryax_mm = 0.5 * short_edge_mm / np.tan(0.5 * apex_angle_rad)
 height_mm     = 130.0
 
-vtx1_bot = np.array([-0.5 * short_edge_mm,            0.0, 0.0])
-vtx2_bot = np.array([                 0.0,  symmetryax_mm, 0.0])
-vtx3_bot = np.array([ 0.5 * short_edge_mm,            0.0, 0.0])
-vtx1_top = vtx1_bot + np.array([0.0, 0.0, height_mm])
-vtx2_top = vtx2_bot + np.array([0.0, 0.0, height_mm])
-vtx3_top = vtx3_bot + np.array([0.0, 0.0, height_mm])
-#short_side_flat
+#vtx1_bot = np.array([ 0.5 * short_edge_mm,            0.0, 0.0])
+#vtx2_bot = np.array([                 0.0,  symmetryax_mm, 0.0])
+#vtx3_bot = np.array([-0.5 * short_edge_mm,            0.0, 0.0])
+#vtx1_top = vtx1_bot + np.array([0.0, 0.0, height_mm])
+#vtx2_top = vtx2_bot + np.array([0.0, 0.0, height_mm])
+#vtx3_top = vtx3_bot + np.array([0.0, 0.0, height_mm])
+##short_side_flat
+#
+### Collect vertices:
+#prism_vtx = np.array([vtx1_bot, vtx2_bot, vtx3_bot,
+#                        vtx1_top, vtx2_top, vtx3_top])
+#prism_vtx -= np.array([0.0, 0.0, 0.5*height_mm])    # center on z-axis
+##prism_vtx -= np.array([0.0, 0.5*symmetryax_mm, 0.0])
+#prism_vtx -= np.average(prism_vtx, axis=0)    # offset to origin
+##prism_vtx = prism_vtx.T
+##orig_vtx = np.copy(prism_vtx)
+#
+### Rotate by some angle:
+##pvx, pvy, pvz = prism_vtx.T
+#prism_vtx = r3d.zrotate_xyz(np.radians(-90.0), prism_vtx.T)
+#prism_vtx = r3d.zrotate_xyz(np.radians(prism_turn_deg), prism_vtx)
+#prism_vtx = np.array(prism_vtx.T)
+##prism_vtx = prism_vtx.A1.reshape(3, -1).T
 
-## Collect vertices:
-prism_vtx = np.array([vtx1_bot, vtx2_bot, vtx3_bot,
-                        vtx1_top, vtx2_top, vtx3_top])
-prism_vtx -= np.array([0.0, 0.0, 0.5*height_mm])    # center on z-axis
-#prism_vtx -= np.array([0.0, 0.5*symmetryax_mm, 0.0])
-prism_vtx -= np.average(prism_vtx, axis=0)    # offset to origin
-#prism_vtx = prism_vtx.T
-#orig_vtx = np.copy(prism_vtx)
-
-## Rotate by some angle:
-#pvx, pvy, pvz = prism_vtx.T
-prism_vtx = r3d.zrotate_xyz(np.radians(-90.0), prism_vtx.T)
-prism_vtx = r3d.zrotate_xyz(np.radians(prism_turn_deg), prism_vtx)
-prism_vtx = np.array(prism_vtx.T)
-#prism_vtx = prism_vtx.A1.reshape(3, -1).T
-
+pr_obj = polygon_optics.PolygonPrism(apex_angle_deg, short_edge_mm, height_mm)
+pr_obj.zrotate(np.radians(-90.0))
+pr_obj.zrotate(np.radians(prism_turn_deg))
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -393,11 +400,12 @@ ax1.grid(True)
 
 # -----------------------------------------------------------------------
 # Prism vertices:
-for x,y,z in prism_vtx:
+#for x,y,z in prism_vtx:
+for x,y,z in pr_obj.get_vertices():
     ax1.scatter(x, y, lw=0, s=30, c='b')
 
 # Prism edges:
-vx, vy, vz = zip(*prism_vtx)
+vx, vy, vz = zip(*pr_obj.get_vertices())
 for p1,p2 in itt.combinations(range(3), 2):
     ax1.plot([vx[p1], vx[p2]], [vy[p1], vy[p2]], c='b')
     pass

@@ -85,31 +85,78 @@ _rot_map = {
 class OpticalPolygon(object):
 
     def __init__(self):
+        self._vtx   = {}
+        self._faces = {}
         return
 
     # ------------------------------------
     # Property getters:
+    def get_center(self):
+        return np.average(self._vtx['all'], axis=0)
+
     def get_vertices(self, which='all'):
         return self._vtx[which]
 
     # ------------------------------------
+    # Polygon face initializer:
+    def _calc_normal(self, face_vtx_list, reverse=False):
+        v1, v2, v3 = face_vtx_list[:3, :]
+        d21 = v2 - v1
+        d31 = v3 - v1
+        normvec = np.cross(d21, d31)
+        return normvec / self._vec_length(normvec)
+
+    def _face_center(self, face_vtx_list):
+        midpoint = np.average(face_vtx_list, axis=0)
+        return midpoint
+
+    def _make_face(self, face_vtx_list):
+        face = {}
+        face['vertices'] = np.copy(face_vtx_list)
+        face['center'] = self._face_center(face_vtx_list)
+        face['normal'] = self._calc_normal(face_vtx_list)
+        return face
+
+    @staticmethod
+    def _vec_length(vector):
+        return np.sqrt(np.sum(vector**2))
+
+    # ------------------------------------
     # Polygon movements:
     def recenter_origin(self):
-        centroid = np.average(self._vtx['all'], axis=0)
+        centroid = self.get_center()
         return self.shift_vec(-centroid)
 
     def shift_xyz(self, dx, dy, dz):
         return self.shift_vec(np.array([dx, dy, dz]))
 
     def shift_vec(self, displacement):
+        # All vertices are displaced:
         for kk,vv in self._vtx.items():
             self._vtx[kk] = vv + displacement
+ 
+        # For faces, shift center and vertices (normal unchanged):
+        for ff in self._faces.keys():
+            for kk in ('center', 'vertices',):
+                self._faces[ff][kk] += displacement
         return
 
     def _rotate(self, ang_rad, axname):
+        # NOTE: 2-D point sets need transposition but vectors do not
+        _rfunc = _rot_map[axname]
+
+        # Rotate vertices (point sets):
         for kk,vv in self._vtx.items():
-            temp = _rot_map[axname](ang_rad, vv.T)
+            temp = _rfunc(ang_rad, vv.T)
             self._vtx[kk] = np.array(temp.T)
+
+        # Rotate faces:
+        for ff in self._faces.keys():
+            for kk in ('center', 'normal'):
+                self._faces[ff][kk] = _rfunc(ang_rad, self._faces[ff][kk]).A1
+            for kk in ('vertices',):
+                temp = _rfunc(ang_rad, self._faces[ff][kk].T)
+                self._faces[ff][kk] = np.array(temp.T)
         return
 
     def xrotate(self, ang_rad):
@@ -128,6 +175,7 @@ class OpticalPolygon(object):
 class PolygonPrism(OpticalPolygon):
 
     def __init__(self, apex_angle_deg, apex_edge_mm, height_mm, unit='mm'):
+        super(PolygonPrism, self).__init__()
         self._unit       = unit
         #self._apex_deg   = apex_angle_deg
         self._apex_rad   = np.radians(apex_angle_deg)
@@ -140,7 +188,15 @@ class PolygonPrism(OpticalPolygon):
         self._vtx['top'] = self._vtx['bot'] \
                             + np.array([0.0, 0.0, self._height_mm])
         self._vtx['all'] = np.vstack((self._vtx['bot'], self._vtx['top']))
+        #self.barycenter  = self.get_center()
         self.recenter_origin()
+        self._faces = {}
+        self._faces['top'] = self._make_face(self._vtx['top'])
+        self._faces['bot'] = self._make_face(self._vtx['bot'][::-1, :])
+        #pr_norm_top = self._calc_normal(self.get_vertices('top'))
+        #pr_norm_bot = self._calc_normal(self.get_vertices('bot')[::-1, :])
+        #sys.stderr.write("pr_norm_top: %s\n" % str(pr_norm_top))
+        #sys.stderr.write("pr_norm_bot: %s\n" % str(pr_norm_bot))
         return
 
     def _bottom_vertices(self):
@@ -153,6 +209,7 @@ class PolygonPrism(OpticalPolygon):
 class PolygonGrating(OpticalPolygon):
 
     def __init__(self, width_mm, length_mm, height_mm, unit='mm'):
+        super(PolygonGrating, self).__init__()
         self._unit      = unit
         self._width_mm  = width_mm
         self._length_mm = length_mm
@@ -164,6 +221,14 @@ class PolygonGrating(OpticalPolygon):
                             + np.array([0.0, 0.0, self._height_mm])
         self._vtx['all'] = np.vstack((self._vtx['bot'], self._vtx['top']))
         self.recenter_origin()
+        #sys.stderr.write("Initial 'bot' vtx:\n%s\n" % str(self._vtx['bot']))
+        self._faces = {}
+        self._faces['top'] = self._make_face(self._vtx['top'])
+        self._faces['bot'] = self._make_face(self._vtx['bot'][::-1, :])
+        #gr_norm_top = self._calc_normal(self.get_vertices('top'))
+        #gr_norm_bot = self._calc_normal(self.get_vertices('bot')[::-1, :])
+        #sys.stderr.write("gr_norm_top: %s\n" % str(gr_norm_top))
+        #sys.stderr.write("gr_norm_bot: %s\n" % str(gr_norm_bot))
         return
 
     def _bottom_vertices(self):

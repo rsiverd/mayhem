@@ -259,11 +259,6 @@ prpoly.zrotate(np.radians(prism_turn_deg))
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
-## Grating geometry class:
-class GratingPolygon(object):
-    def __init__(self):
-        self.data = {}
-        return
 
 ## Grating:
 gr_length_mm = 320.0

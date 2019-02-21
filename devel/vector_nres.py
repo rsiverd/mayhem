@@ -267,24 +267,6 @@ gr_height_mm =  50.5
 grating_turn_deg = 44.827
 grating_tilt_deg = 13.786
 
-#vtx1_bot = np.array([        0.0,          0.0,  0.0])
-#vtx2_bot = np.array([gr_width_mm,          0.0,  0.0])
-#vtx3_bot = np.array([gr_width_mm, gr_length_mm,  0.0])
-#vtx4_bot = np.array([        0.0, gr_length_mm,  0.0])
-g_normal = np.array([        0.0,          0.0, -1.0])  # grating normal
-#grating_vtx_bot = np.array([vtx1_bot, vtx2_bot, vtx3_bot, vtx4_bot])
-#grating_vtx = np.vstack((grating_vtx_bot, 
-#                         grating_vtx_bot + np.array([0.0, 0.0, gr_height_mm])))
-#grating_vtx -= np.average(grating_vtx, axis=0)
-
-#grating_vtx = grating_vtx.T     # transpose for rotations
-#grating_vtx = r3d.xrotate_xyz(np.radians(-grating_tilt_deg), grating_vtx)
-#grating_vtx = r3d.zrotate_xyz(np.radians(grating_turn_deg), grating_vtx)
-#grating_vtx = np.array(grating_vtx.T)
-g_normal = r3d.xrotate_xyz(np.radians(-grating_tilt_deg), g_normal).A1
-g_normal = r3d.zrotate_xyz(np.radians(grating_turn_deg), g_normal).A1
-#grating_vtx += np.array([-165.0, 235.0, 0.0])
-
 grpoly = polygon_optics.PolygonGrating(gr_width_mm, gr_length_mm, gr_height_mm)
 grpoly.xrotate(np.radians(-grating_tilt_deg))
 grpoly.zrotate(np.radians(grating_turn_deg))

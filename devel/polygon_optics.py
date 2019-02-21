@@ -87,11 +87,21 @@ class OpticalPolygon(object):
     def __init__(self):
         return
 
+    # ------------------------------------
+    # Property getters:
+    def get_vertices(self, which='all'):
+        return self._vtx[which]
+
+    # ------------------------------------
+    # Polygon movements:
     def recenter_origin(self):
         centroid = np.average(self._vtx['all'], axis=0)
-        return self.shift_xyz(-centroid)
+        return self.shift_vec(-centroid)
 
-    def shift_xyz(self, displacement):
+    def shift_xyz(self, dx, dy, dz):
+        return self.shift_vec(np.array([dx, dy, dz]))
+
+    def shift_vec(self, displacement):
         for kk,vv in self._vtx.items():
             self._vtx[kk] = vv + displacement
         return
@@ -123,14 +133,13 @@ class PolygonPrism(OpticalPolygon):
         self._apex_rad   = np.radians(apex_angle_deg)
         self._height_mm  = height_mm
         self._ap_edge_mm = apex_edge_mm
-        self._is_edge_mm = 0.5 * self._ap_edge_mm / np.sin(self._apex_rad / 2.)
+        #self._o_edges_mm = 0.5 * self._ap_edge_mm / np.sin(self._apex_rad / 2.)
         self._symaxis_mm = 0.5 * self._ap_edge_mm / np.tan(self._apex_rad / 2.)
         self._vtx = {}
         self._vtx['bot'] = self._bottom_vertices()
         self._vtx['top'] = self._vtx['bot'] \
                             + np.array([0.0, 0.0, self._height_mm])
         self._vtx['all'] = np.vstack((self._vtx['bot'], self._vtx['top']))
-        #self.shift_xyz(-np.average(self._vtx['all'], axis=0))
         self.recenter_origin()
         return
 
@@ -140,8 +149,29 @@ class PolygonPrism(OpticalPolygon):
         vtx3 = np.array([-0.5 * self._ap_edge_mm,               0.0, 0.0])
         return np.array([vtx1, vtx2, vtx3])
 
-    def get_vertices(self, which='all'):
-        return self._vtx[which]
+
+class PolygonGrating(OpticalPolygon):
+
+    def __init__(self, width_mm, length_mm, height_mm, unit='mm'):
+        self._unit      = unit
+        self._width_mm  = width_mm
+        self._length_mm = length_mm
+        self._height_mm = height_mm
+        #g_normal = np.array([    0.0,   0.0, -1.0])  # grating normal
+        self._vtx = {}
+        self._vtx['bot'] = self._bottom_vertices()
+        self._vtx['top'] = self._vtx['bot'] \
+                            + np.array([0.0, 0.0, self._height_mm])
+        self._vtx['all'] = np.vstack((self._vtx['bot'], self._vtx['top']))
+        self.recenter_origin()
+        return
+
+    def _bottom_vertices(self):
+        vtx1 = np.array([           0.0,             0.0,  0.0])
+        vtx2 = np.array([self._width_mm,             0.0,  0.0])
+        vtx3 = np.array([self._width_mm, self._length_mm,  0.0])
+        vtx4 = np.array([           0.0, self._length_mm,  0.0])
+        return np.array([vtx1, vtx2, vtx3, vtx4])
 
 
 ######################################################################

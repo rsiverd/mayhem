@@ -190,13 +190,8 @@ class PolygonPrism(OpticalPolygon):
         self._vtx['all'] = np.vstack((self._vtx['bot'], self._vtx['top']))
         #self.barycenter  = self.get_center()
         self.recenter_origin()
-        self._faces = {}
         self._faces['top'] = self._make_face(self._vtx['top'])
         self._faces['bot'] = self._make_face(self._vtx['bot'][::-1, :])
-        #pr_norm_top = self._calc_normal(self.get_vertices('top'))
-        #pr_norm_bot = self._calc_normal(self.get_vertices('bot')[::-1, :])
-        #sys.stderr.write("pr_norm_top: %s\n" % str(pr_norm_top))
-        #sys.stderr.write("pr_norm_bot: %s\n" % str(pr_norm_bot))
         return
 
     def _bottom_vertices(self):
@@ -214,21 +209,13 @@ class PolygonGrating(OpticalPolygon):
         self._width_mm  = width_mm
         self._length_mm = length_mm
         self._height_mm = height_mm
-        #g_normal = np.array([    0.0,   0.0, -1.0])  # grating normal
-        self._vtx = {}
         self._vtx['bot'] = self._bottom_vertices()
         self._vtx['top'] = self._vtx['bot'] \
                             + np.array([0.0, 0.0, self._height_mm])
         self._vtx['all'] = np.vstack((self._vtx['bot'], self._vtx['top']))
         self.recenter_origin()
-        #sys.stderr.write("Initial 'bot' vtx:\n%s\n" % str(self._vtx['bot']))
-        self._faces = {}
         self._faces['top'] = self._make_face(self._vtx['top'])
         self._faces['bot'] = self._make_face(self._vtx['bot'][::-1, :])
-        #gr_norm_top = self._calc_normal(self.get_vertices('top'))
-        #gr_norm_bot = self._calc_normal(self.get_vertices('bot')[::-1, :])
-        #sys.stderr.write("gr_norm_top: %s\n" % str(gr_norm_top))
-        #sys.stderr.write("gr_norm_bot: %s\n" % str(gr_norm_bot))
         return
 
     def _bottom_vertices(self):

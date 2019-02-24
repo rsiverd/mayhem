@@ -91,6 +91,9 @@ class OpticalPolygon(object):
     def get_vertices(self, which='all'):
         return self._vtx[which]
 
+    def get_face(self, fname):
+        return self._faces.get(fname, None)
+
     # ------------------------------------
     # Polygon face initializer:
     def _calc_normal(self, face_vtx_list, reverse=False):
@@ -101,8 +104,7 @@ class OpticalPolygon(object):
         return normvec / self._vec_length(normvec)
 
     def _face_center(self, face_vtx_list):
-        midpoint = np.average(face_vtx_list, axis=0)
-        return midpoint
+        return np.average(face_vtx_list, axis=0)
 
     def _make_face(self, face_vtx_list):
         face = {}
@@ -184,8 +186,12 @@ class PolygonPrism(OpticalPolygon):
         self._vtx['all'] = np.vstack((self._vtx['bot'], self._vtx['top']))
         #self.barycenter  = self.get_center()
         self.recenter_origin()
+
         self._faces['top'] = self._make_face(self._vtx['top'])
         self._faces['bot'] = self._make_face(self._vtx['bot'][::-1, :])
+        self._faces['face1'] = self._prism_face((0, 1))
+        self._faces['face2'] = self._prism_face((1, 2))
+        self._faces['face3'] = self._prism_face((2, 0))
         return
 
     def _bottom_vertices(self):
@@ -194,6 +200,10 @@ class PolygonPrism(OpticalPolygon):
         vtx3 = np.array([-0.5 * self._ap_edge_mm,               0.0, 0.0])
         return np.array([vtx1, vtx2, vtx3])
 
+    def _prism_face(self, bvlist):
+        tmpvtx = [self._vtx['bot'][x] for x in bvlist]      # bottom vertices
+        tmpvtx += [self._vtx['top'][x] for x in reversed(bvlist)]   # add tops
+        return self._make_face(np.array(tmpvtx))
 
 class PolygonGrating(OpticalPolygon):
 

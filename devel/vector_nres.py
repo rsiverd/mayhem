@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2019-02-19
-# Last modified: 2019-02-19
+# Last modified: 2019-02-24
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.0.1"
+__version__ = "0.1.0"
 
 ## Python version-agnostic module reloading:
 try:
@@ -271,6 +271,15 @@ grpoly = polygon_optics.PolygonGrating(gr_width_mm, gr_length_mm, gr_height_mm)
 grpoly.xrotate(np.radians(-grating_tilt_deg))
 grpoly.zrotate(np.radians(grating_turn_deg))
 grpoly.shift_xyz(-165.0, 235.0, 0.0)
+#grpoly.shift_xyz(-165.0, 235.0, 0.0)
+#grpoly.shift_vec(np.array([-165.0, 235.0, 0.0]))
+
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+## Center prism face1 on origin:
+nudge = -1.0 * np.copy(prpoly.get_face('face1')['center'])
+prpoly.shift_vec(nudge)
+grpoly.shift_vec(nudge)
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -319,11 +328,21 @@ ax1.grid(True)
 #for x,y,z in prism_vtx:
 for x,y,z in prpoly.get_vertices():
     ax1.scatter(x, y, lw=0, s=30, c='b')
+    pass
 
 # Prism edges:
 vx, vy, vz = zip(*prpoly.get_vertices())
 for p1,p2 in itt.combinations(range(3), 2):
     ax1.plot([vx[p1], vx[p2]], [vy[p1], vy[p2]], c='b')
+    pass
+
+# Draw prism face normals:
+arr_len = 50.0
+for which in ['face1', 'face2']: #, 'face3']:
+    fdata = prpoly.get_face(which)
+    arrx1, arry1, _ = fdata['center']
+    ndx, ndy, ndz = arr_len * fdata['normal']
+    ax1.arrow(arrx1, arry1, ndx, ndy, head_width=5, head_length=5, color='b')
     pass
 
 # -----------------------------------------------------------------------
@@ -338,6 +357,10 @@ for pair in edges_from_vertices(grpoly.get_vertices()):
 
 ax1.set_xlim(-400, 200)
 ax1.set_ylim(-500, 500)
+
+
+
+
 #blurb = "some text"
 #ax1.text(0.5, 0.5, blurb, transform=ax1.transAxes)
 #ax1.text(0.5, 0.5, blurb, transform=ax1.transAxes,

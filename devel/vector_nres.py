@@ -371,10 +371,6 @@ def total_insep(point, face):
     edgetot = np.sum(np.abs(udiff)) + np.sum(np.abs(vdiff))
     return edgetot
 
-def calc_perim(vtx_list):
-    diffs = np.roll(vtx_list, -1, axis=0) - vtx_list
-    return np.sum(np.sqrt(np.sum(diffs**2, axis=1)))
-
 #herpderp = po.PolygonFace(prf2['vertices'])
 
 ##--------------------------------------------------------------------------##

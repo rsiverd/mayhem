@@ -316,7 +316,9 @@ path2 = v_refract.copy()
 ## Exit point from prism face2:
 f1_isect = np.zeros(3)
 prf2 = prpoly.get_face('face2')
-f2_isect = rt.line_plane_intersection(np.zeros(3), path2, prf2['center'], prf2['normal'])
+f2_isect = prf2.get_intersection(f1_isect, path2)
+#f2_isect = rt.line_plane_intersection(np.zeros(3), path2, 
+#                prf2['center'], prf2['normal'])
 
 ## Exit direction from prism face2:
 v_reflect, v_refract = rt.calc_surface_vectors(path2,
@@ -325,22 +327,6 @@ path3 = v_refract.copy()
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
-
-### Normalized prf2 vertices:
-#b1, b2 = prf2['basis']
-#use_origin = prf2['vertices'][0]
-##use_origin = prf2['center'][0]
-#rvtx_list = np.array([x-use_origin for x in prf2['vertices']])
-#for item in rvtx_list:
-#    sys.stderr.write("item: %s\n" % str(item))
-#    ucoord = np.dot(b1, item)
-#    vcoord = np.dot(b2, item - ucoord * b1)
-#    #sys.stderr.write("ucoord: %s\n" % str(ucoord))
-#    #sys.stderr.write("vcoord: %s\n" % str(vcoord))
-#    sys.stderr.write("u,v = %.3f, %.3f\n" % (ucoord, vcoord))
-#    rebuild = ucoord * b1 + vcoord * b2
-#    sys.stderr.write("rebuild: %s\n" % str(rebuild))
-#    #sys.stderr.write("u, v: %.3f\n" % (ucoord))
 
 def xyz2uv_m(xyz_list, basis_vecs):
     b1, b2 = basis_vecs

@@ -90,12 +90,19 @@ class PolygonFace(object):
         self._perim     = self._calc_perimeter(self._verts)
         self._center    = self._calc_center(self._verts)
         self._normal    = np.cross(*self._basis)
-        self._uv_origin = self._verts[0]     # origin of UV coordinate system
+        self._uv_origin = np.copy(self._verts[0]) # UV coordinate origin
 
         # Lookup-table for dictionary-like access:
         self._mapping  = {'vertices':self._verts, 'basis':self._basis,
                 'perim':self._perim, 'center':self._center,
                 'normal':self._normal, 'uv_origin':self._uv_origin}
+
+        # Displacement configuration:
+        self._shift_these = ['vertices', 'basis', 'center', 'uv_origin']
+
+        # Rotation configuration:
+        self._rotate_vecs = ['center', 'normal', 'uv_origin']
+        self._rotate_arrs = ['vertices', 'basis']
         return
 
     # -----------------------------------
@@ -123,6 +130,27 @@ class PolygonFace(object):
 
     def items(self):
         return self._mapping.items()
+
+    # -----------------------------------
+    # Polygon shifts and rotations:
+    # -----------------------------------
+
+    def _apply_shift(self, displacement):
+        for kk in self._shift_these:
+            self._mapping[kk] += displacement
+
+    def _apply_rotation(self, ang_rad, axname):
+        # NOTE: 2-D point sets need transposition but vectors do not
+        _rfunc = _rot_map[axname]
+
+        # Rotate vertices en masse:
+        for kk in self._rotate_arrs:
+            temp = _rfunc(ang_rad, self._mapping[kk].T)
+            self._mapping[kk] = np.array(temp.T)
+
+        # Rotate individual vectors separately:
+        for kk in self._rotate_vecs:
+            self._mapping[kk] = _rfunc(ang_rad, self._mapping[kk]).A1
 
     # -----------------------------------
     # Face parameter calculations:
@@ -208,13 +236,16 @@ class PolyhedralOptic(object):
 
     def shift_vec(self, displacement):
         # All vertices are displaced:
+        have_top = 'top' in self._vtx.keys()
         for kk,vv in self._vtx.items():
             self._vtx[kk] = vv + displacement
  
-        # For faces, shift center and vertices (normal unchanged):
-        for ff in self._faces.keys():
-            for kk in ('center', 'vertices',):
-                self._faces[ff][kk] += displacement
+        # Faces handle displacement internally:
+        for face in self._faces.values():
+            face._apply_shift(displacement)
+
+        # Sanity check:
+        self._brute_consistency_check()
         return
 
     def _rotate(self, ang_rad, axname):
@@ -227,14 +258,11 @@ class PolyhedralOptic(object):
             self._vtx[kk] = np.array(temp.T)
 
         # Rotate faces:
-        for ff in self._faces.keys():
-            for kk in ('center', 'normal'):
-                self._faces[ff][kk] = _rfunc(ang_rad, self._faces[ff][kk]).A1
-            #for kk in ('basis',):
-            #    temp = _rfunc(ang_rad, np.array(self._faces[ff][kk]).T
-            for kk in ('vertices', 'basis'):
-                temp = _rfunc(ang_rad, self._faces[ff][kk].T)
-                self._faces[ff][kk] = np.array(temp.T)
+        for face in self._faces.values():
+            face._apply_rotation(ang_rad, axname)
+
+        # Sanity check:
+        self._brute_consistency_check()
         return
 
     def xrotate(self, ang_rad):
@@ -245,6 +273,32 @@ class PolyhedralOptic(object):
 
     def zrotate(self, ang_rad):
         return self._rotate(ang_rad, 'z')
+
+    # A brute-force run-time sanity check on polyhedron-face consistency:
+    def _brute_consistency_check(self):
+        caller_name = sys._getframe(1).f_code.co_name
+        this_func = sys._getframe().f_code.co_name
+        sys.stderr.write("Executing consistency check (from %s) ... "
+                % caller_name)
+        common_keys = [x for x in self._vtx.keys() if x in self._faces.keys()]
+
+        # ignore bottom for now (order switched):
+        if 'bot' in common_keys:
+            common_keys.remove('bot') # FIXME: need consistent vertex ordering
+        #sys.stderr.write("common_keys: %s\n" % str(common_keys))
+        #sys.stderr.write("vtx keys: %s\n" % str(self._vtx.keys()))
+        #sys.stderr.write("facekeys: %s\n" % str(self._faces.keys()))
+        for kk in common_keys:
+            diffs = self._faces[kk]['vertices'] - self._vtx[kk]
+            success = np.all(diffs == 0.0)
+            if not success:
+                sys.stderr.write("FAILURE!!!\n\n")
+                sys.stderr.write("Inconsistency in %s vertices!!!!\n" % kk)
+                sys.stderr.write("%s diffs: %s\n" % (kk, str(diffs)))
+                sys.exit(1)
+                #raise
+        sys.stderr.write("passed!\n")
+        return
 
 ##--------------------------------------------------------------------------##
 ##------------------       Isosceles Triangular Prism       ----------------##
@@ -272,6 +326,7 @@ class IsosPrismPolyhedron(PolyhedralOptic):
         self.recenter_origin()
 
         self._faces['top'] = self._make_face(self._vtx['top'])
+        # FIXME:
         self._faces['bot'] = self._make_face(self._vtx['bot'][::-1, :])
         self._faces['face1'] = self._prism_face((0, 1))
         self._faces['face2'] = self._prism_face((1, 2))

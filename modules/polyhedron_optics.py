@@ -244,8 +244,12 @@ class GratingPolyhedron(PolyhedralOptic):
 
 
 ######################################################################
-# CHANGELOG (polygon_optics.py):
+# CHANGELOG (polyhedron_optics.py):
 #---------------------------------------------------------------------
+#
+#  2019-02-24:
+#     -- Increased __version__ to 0.2.0.
+#     -- Renamed module to polyhedron_optics.py (also renamed classes).
 #
 #  2019-02-20:
 #     -- Increased __version__ to 0.1.0.

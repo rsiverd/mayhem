@@ -73,13 +73,15 @@ class PolygonFace(object):
     intersection of lines and planes. If the polygon center is known, this
     class internally ensures that the normal vector points outward."""
 
-    def __init__(self, face_vtx_list):
+    def __init__(self, face_vtx_list, name='unnamed'):
+        self._name      = name
         self._verts     = np.atleast_2d(face_vtx_list).copy()
         self._basis     = self._calc_basis_vectors(self._verts)
         self._perim     = self._calc_perimeter(self._verts)
         self._center    = self._calc_center(self._verts)
         self._normal    = np.cross(*self._basis)
-        self._uv_origin = np.copy(self._verts[0]) # UV coordinate origin
+        self._uv_origin = np.copy(self._verts[0])       # UV coordinate origin
+        self._uv_verts  = self._xyz2uv_m(self._verts)   # UV vertex coords (fixed)
 
         # Lookup-table for dictionary-like access:
         self._mapping  = {'vertices':'_verts', 'basis':'_basis',
@@ -107,9 +109,10 @@ class PolygonFace(object):
         b1, b2 = self._basis
         b1size = self._vec_length(b1)
         b2size = self._vec_length(b2)
-        sys.stderr.write("Running %s called by %s ... " % (this_func, caller_name))
+        sys.stderr.write("Face %s: running %s called by %s ... "
+                % (self._name, this_func, caller_name))
         for nn,ll,vv in zip(('b1', 'b2'), (b1size, b2size), (b1, b2)):
-            if (ll != 1.0):
+            if (np.abs(ll - 1.0) > 1e-5):
                 sys.stderr.write("FAILURE!!\n\n")
                 sys.stderr.write("Bogus %s length: %10.5f\n" % (nn, ll))
                 sys.stderr.write("%s vector: %s\n\n" % (nn, str(vv)))
@@ -143,6 +146,14 @@ class PolygonFace(object):
 
     def items(self):
         return [(kk, getattr(self, vv)) for kk,vv in self._mapping.items()]
+
+    # -----------------------------------
+    # Post-initialization configuration:
+    # -----------------------------------
+
+    def set_name(self, face_name):
+        self._name = face_name
+        return
 
     # -----------------------------------
     # Polygon shifts and rotations:
@@ -210,7 +221,7 @@ class PolygonFace(object):
 
     # Convert a single XYZ point to 'natural' UV coordinates:
     def _xyz2uv_s(self, point):
-        return [np.dot(bb, point - self._uv_origin) for bb in self._basis]
+        return np.array([np.dot(bb, point - self._uv_origin) for bb in self._basis])
 
     # Convert an array of XYZ points to 'natural' UV coordinates:
     def _xyz2uv_m(self, xyz_list):
@@ -218,6 +229,18 @@ class PolygonFace(object):
         uu = np.array([np.dot(bu, pnt - self._uv_origin) for pnt in xyz_list])
         vv = np.array([np.dot(bv, pnt - self._uv_origin) for pnt in xyz_list])
         return np.array((uu, vv))
+
+    # -----------------------------------
+    # Intersections and containment:
+    # -----------------------------------
+
+    #def _interior_total_sep(self, point):
+    def _rect_contains(self, point, rtol=1e-6):
+        point_uv = self._xyz2uv_s(point)
+        diffs_uv = self._uv_verts - point_uv[:, None]
+        totalsep = np.sum(np.abs(diffs_uv))
+        fracdiff = np.abs(totalsep - self._perim) / self._perim
+        return (fracdiff < rtol)
 
 ##--------------------------------------------------------------------------##
 ##------------------      Polyhedral Optic Base Class       ----------------##
@@ -246,6 +269,12 @@ class PolyhedralOptic(object):
     def _make_face(self, face_vtx_list):
         face = PolygonFace(face_vtx_list)
         return face
+
+    # Post-initialization face naming:
+    def _update_face_names(self):
+        for kk,face in self._faces.items():
+            face.set_name(kk)
+        return
 
     # ------------------------------------
     # Polygon movements:
@@ -353,6 +382,7 @@ class IsosPrismPolyhedron(PolyhedralOptic):
         self._faces['face1'] = self._prism_face((0, 1))
         self._faces['face2'] = self._prism_face((1, 2))
         self._faces['face3'] = self._prism_face((2, 0))
+        self._update_face_names()
         return
 
     def _bottom_vertices(self):
@@ -388,6 +418,7 @@ class GratingPolyhedron(PolyhedralOptic):
         self.recenter_origin()
         self._faces['top'] = self._make_face(self._vtx['top'])
         self._faces['bot'] = self._make_face(self._vtx['bot'][::-1, :])
+        self._update_face_names()
         return
 
     def _bottom_vertices(self):

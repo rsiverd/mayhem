@@ -73,8 +73,9 @@ class PolygonFace(object):
     intersection of lines and planes. If the polygon center is known, this
     class internally ensures that the normal vector points outward."""
 
-    def __init__(self, face_vtx_list, name='unnamed'):
+    def __init__(self, face_vtx_list, name='unnamed', debug=False):
         self._name      = name
+        self._debug     = debug
         self._verts     = np.atleast_2d(face_vtx_list).copy()
         self._basis     = self._calc_basis_vectors(self._verts)
         self._perim     = self._calc_perimeter(self._verts)
@@ -89,14 +90,14 @@ class PolygonFace(object):
                 'normal':'_normal', 'uv_origin':'_uv_origin'}
 
         # Displacement configuration:
-        #self._shift_these = ['vertices', 'basis', 'center', 'uv_origin']
         self._shift_these = ['vertices', 'center', 'uv_origin']
 
         # Rotation configuration:
         self._rotate_vecs = ['center', 'normal', 'uv_origin']
         self._rotate_arrs = ['vertices', 'basis']
 
-        self._sanity_check()
+        if self._debug:
+            self._sanity_check()
         return
 
     # -----------------------------------
@@ -109,9 +110,13 @@ class PolygonFace(object):
         b1, b2 = self._basis
         b1size = self._vec_length(b1)
         b2size = self._vec_length(b2)
+        fn     = self._normal
+        fnsize = self._vec_length(fn)
         sys.stderr.write("Face %s: running %s called by %s ... "
                 % (self._name, this_func, caller_name))
-        for nn,ll,vv in zip(('b1', 'b2'), (b1size, b2size), (b1, b2)):
+        for nn,ll,vv in zip(('b1', 'b2', 'fn'),
+                            (b1size, b2size, fnsize), 
+                            (b1, b2, fn)):
             if (np.abs(ll - 1.0) > 1e-5):
                 sys.stderr.write("FAILURE!!\n\n")
                 sys.stderr.write("Bogus %s length: %10.5f\n" % (nn, ll))
@@ -155,6 +160,17 @@ class PolygonFace(object):
         self._name = face_name
         return
 
+    # Ensure outward-pointing normal using polyhedron center:
+    def _ensure_outward(self, ph_center):
+        #bc_dist = self.get_intersect_distance(ph_center, self._normal)
+        bc_dist = self._calc_isect_distance(ph_center, self._normal)
+        #sys.stderr.write("bc_dist: %10.5f, normal: %s\n" 
+        #        % (bc_dist, str(self._normal)))
+        if (bc_dist < 0.0):
+            sys.stderr.write("Inversion detected and corrected!\n")
+            self._normal *= -1.0
+        return
+
     # -----------------------------------
     # Polygon shifts and rotations:
     # -----------------------------------
@@ -163,7 +179,8 @@ class PolygonFace(object):
         for kk in self._shift_these:
             thing = getattr(self, self._mapping[kk])
             thing += displacement
-        self._sanity_check()
+        if self._debug:
+            self._sanity_check()
         return
 
     def _apply_rotation(self, ang_rad, axname):
@@ -179,10 +196,10 @@ class PolygonFace(object):
         # Rotate individual vectors separately:
         for kk in self._rotate_vecs:
             which = self._mapping[kk]
-            #thing = getattr(self, which)
             setattr(self, which, _rfunc(ang_rad, getattr(self, which)).A1)
 
-        self._sanity_check()
+        if self._debug:
+            self._sanity_check()
         return
 
     # -----------------------------------
@@ -207,11 +224,11 @@ class PolygonFace(object):
 
     # Calculate and store orthogonal unit vectors that span the face:
     def _calc_basis_vectors(self, face_vtx_list):
-        v1, v2, v3 = face_vtx_list[:3, :]
+        v1, v2, v3 = np.copy(face_vtx_list[:3, :])
         d21 = v2 - v1
         d31 = v3 - v1
         basis1 = d21 / self._vec_length(d21)
-        basis2 = d31 - basis1 * np.dot(basis1, d21) # non-unit vector
+        basis2 = d31 - basis1 * np.dot(basis1, d31) # non-unit vector
         basis2 /= self._vec_length(basis2)          # now unit vector!
         return np.vstack((basis1, basis2))
 
@@ -241,6 +258,43 @@ class PolygonFace(object):
         totalsep = np.sum(np.abs(diffs_uv))
         fracdiff = np.abs(totalsep - self._perim) / self._perim
         return (fracdiff < rtol)
+
+    def _line_intersection(self, lpoint, lvector):
+        ppoint, pnormal = self._center, self._normal
+        pl_sep = np.dot(ppoint - lpoint, pnormal)   # plane-line separation
+        angsep = np.dot(lvector, pnormal)           # angular separation
+        if (angsep == 0.0):
+            sys.stderr.write("WARNING: line and plane are PARALLEL!\n")
+            if (pl_sep == 0.0):
+                sys.stderr.write("Line lies within plane!\n")
+                return lpoint
+            else:
+                sys.stderr.write("Line and plane do not intersect!\n")
+                return np.array([np.nan, np.nan, np.nan])
+
+        # If not parallel, get distance and intersection:
+        distance = pl_sep / angsep
+        return lpoint + distance * lvector
+
+    # Distance to intersection point (no bounds checking):
+    def _calc_isect_distance(self, lpoint, lvector):
+        isect = self._line_intersection(lpoint, lvector)
+        return np.dot(isect - lpoint, lvector) / self._vec_length(lvector)
+
+    # Line intersection WITH face bounds check:
+    def get_intersection(self, lpoint, lvector):
+        isect = self._line_intersection(lpoint, lvector)
+        if self._rect_contains(isect):
+            return isect
+        else:
+            return None
+
+    # User-friendly distance-to-intersection calculator (handles bounds):
+    def get_intersect_distance(self, lpoint, lvector):
+        isect = self.get_intersection(lpoint, lvector)
+        if not isinstance(isect, np.ndarray):
+            return np.nan
+        return np.dot(isect - lpoint, lvector) / self._vec_length(lvector)
 
 ##--------------------------------------------------------------------------##
 ##------------------      Polyhedral Optic Base Class       ----------------##
@@ -276,6 +330,23 @@ class PolyhedralOptic(object):
             face.set_name(kk)
         return
 
+    # Post-initialization outward normals:
+    def _update_face_normals(self):
+        barycenter = self.get_center()
+        for face in self._faces.values():
+            face._ensure_outward(barycenter)
+        return
+
+    # Set names and update normals:
+    def _update_face_names_norms(self):
+        barycenter = self.get_center()
+        for kk,face in self._faces.items():
+            sys.stderr.write("Updating face %s ... \n" % kk)
+            face.set_name(kk)
+            face._ensure_outward(barycenter)
+            face._debug = self._debug
+        return
+
     # ------------------------------------
     # Polygon movements:
     def recenter_origin(self):
@@ -289,14 +360,16 @@ class PolyhedralOptic(object):
         # All vertices are displaced:
         have_top = 'top' in self._vtx.keys()
         for kk,vv in self._vtx.items():
-            self._vtx[kk] = vv + displacement
+            #self._vtx[kk] = vv + displacement
+            self._vtx[kk] += displacement
  
         # Faces handle displacement internally:
         for face in self._faces.values():
             face._apply_shift(displacement)
 
         # Sanity check:
-        self._brute_consistency_check()
+        if self._debug:
+            self._brute_consistency_check()
         return
 
     def _rotate(self, ang_rad, axname):
@@ -313,7 +386,8 @@ class PolyhedralOptic(object):
             face._apply_rotation(ang_rad, axname)
 
         # Sanity check:
-        self._brute_consistency_check()
+        if self._debug:
+            self._brute_consistency_check()
         return
 
     def xrotate(self, ang_rad):
@@ -359,9 +433,11 @@ class PolyhedralOptic(object):
 ## Isosceles triangular prism:
 class IsosPrismPolyhedron(PolyhedralOptic):
 
-    def __init__(self, apex_angle_deg, apex_edge_mm, height_mm, unit='mm'):
+    def __init__(self, apex_angle_deg, apex_edge_mm, height_mm,
+            unit='mm', debug=False):
         super(IsosPrismPolyhedron, self).__init__()
         self._unit       = unit
+        self._debug      = debug
         #self._apex_deg   = apex_angle_deg
         self._apex_rad   = np.radians(apex_angle_deg)
         self._height_mm  = height_mm
@@ -382,7 +458,9 @@ class IsosPrismPolyhedron(PolyhedralOptic):
         self._faces['face1'] = self._prism_face((0, 1))
         self._faces['face2'] = self._prism_face((1, 2))
         self._faces['face3'] = self._prism_face((2, 0))
-        self._update_face_names()
+        #self._update_face_names()
+        #self._update_face_normals()
+        self._update_face_names_norms()
         return
 
     def _bottom_vertices(self):
@@ -405,9 +483,10 @@ class IsosPrismPolyhedron(PolyhedralOptic):
 ## Grating represented by rectangular prism:
 class GratingPolyhedron(PolyhedralOptic):
 
-    def __init__(self, width_mm, length_mm, height_mm, unit='mm'):
+    def __init__(self, width_mm, length_mm, height_mm, unit='mm', debug=False):
         super(GratingPolyhedron, self).__init__()
         self._unit      = unit
+        self._debug      = debug
         self._width_mm  = width_mm
         self._length_mm = length_mm
         self._height_mm = height_mm
@@ -418,7 +497,9 @@ class GratingPolyhedron(PolyhedralOptic):
         self.recenter_origin()
         self._faces['top'] = self._make_face(self._vtx['top'])
         self._faces['bot'] = self._make_face(self._vtx['bot'][::-1, :])
-        self._update_face_names()
+        #self._update_face_names()
+        #self._update_face_normals()
+        self._update_face_names_norms()
         return
 
     def _bottom_vertices(self):

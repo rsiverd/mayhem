@@ -330,25 +330,6 @@ class derp(object):
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
-def veclen(vector):
-    return np.sqrt(np.sum(vector**2))
-
-## Find an orthonormal basis for a face:
-def get_basis(face_vtx_list):
-    v1, v2, v3 = face_vtx_list[:3, :]
-    d21 = v2 - v1
-    d31 = v3 - v1
-    sys.stderr.write("d21: %s\n" % str(d21))
-    sys.stderr.write("d31: %s\n" % str(d31))
-    basis1 = d21 / veclen(d21)
-    sys.stderr.write("basis1: %s\n" % str(basis1))
-    btemp2 = d31 - basis1 * np.dot(basis1, d31)
-    sys.stderr.write("btemp2: %s\n" % str(btemp2))
-    basis2 = btemp2 / veclen(btemp2)
-    return basis1, basis2
-
-b1, b2 = get_basis(prf2['vertices'])
-
 
 ## Normalized prf2 vertices:
 b1, b2 = prf2['basis']

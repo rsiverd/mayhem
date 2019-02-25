@@ -18,13 +18,13 @@
 #
 # Rob Siverd
 # Created:       2019-02-20
-# Last modified: 2019-02-24
+# Last modified: 2019-02-25
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.2.0"
+__version__ = "0.2.5"
 
 ## Python version-agnostic module reloading:
 try:
@@ -73,9 +73,101 @@ _rot_map = {
 
 
 ##--------------------------------------------------------------------------##
-##------------------        Basic Optical 3D Polygon        ----------------##
+##------------------       Polygon Face for Polyhedra       ----------------##
 ##--------------------------------------------------------------------------##
 
+class PolygonFace(object):
+
+    """The PolygonFace class represents a regular polygon face of a larger
+    polyhedron. The face is initialized using a list of vertices and internally
+    tracks numerous properties to simplify raytracing calculations such as the
+    intersection of lines and planes. If the polygon center is known, this
+    class internally ensures that the normal vector points outward."""
+
+    def __init__(self, face_vtx_list):
+        self._verts     = np.atleast_2d(face_vtx_list).copy()
+        self._basis     = self._calc_basis_vectors(self._verts)
+        self._perim     = self._calc_perimeter(self._verts)
+        self._center    = self._calc_center(self._verts)
+        self._normal    = np.cross(*self._basis)
+        self._uv_origin = self._verts[0]     # origin of UV coordinate system
+
+        # Lookup-table for dictionary-like access:
+        self._mapping  = {'vertices':self._verts, 'basis':self._basis,
+                'perim':self._perim, 'center':self._center,
+                'normal':self._normal, 'uv_origin':self._uv_origin}
+        return
+
+    # -----------------------------------
+    # Dictionary type emulation:
+    # -----------------------------------
+
+    def __contains__(self, key):
+        return (key in self._mapping.keys())
+
+    def __getitem__(self, key):
+        if not key in self._mapping.keys():
+            raise KeyError
+        return self._mapping[key]
+
+    def __setitem__(self, key, value):
+        if not key in self._mapping.keys():
+            raise KeyError
+        self._mapping[key] = value
+
+    def keys(self):
+        return self._mapping.keys()
+
+    def values(self):
+        return self._mapping.values()
+
+    def items(self):
+        return self._mapping.items()
+
+    # -----------------------------------
+    # Face parameter calculations:
+    # -----------------------------------
+
+    # Vector length calculation:
+    @staticmethod
+    def _vec_length(vector):
+        return np.sqrt(np.sum(vector**2))
+
+    # Calculate perimeter from array of vertices:
+    @staticmethod
+    def _calc_perimeter(face_vtx_list):
+        diffs = np.roll(face_vtx_list, -1, axis=0) - face_vtx_list
+        return np.sum(np.sqrt(np.sum(diffs**2, axis=1)))
+
+    # Calculate midpoint of face:
+    @staticmethod
+    def _calc_center(face_vtx_list):
+        return np.average(face_vtx_list, axis=0)
+
+    # Calculate and store orthogonal unit vectors that span the face:
+    def _calc_basis_vectors(self, face_vtx_list):
+        v1, v2, v3 = face_vtx_list[:3, :]
+        d21 = v2 - v1
+        d31 = v3 - v1
+        basis1 = d21 / self._vec_length(d21)
+        basis2 = d31 - basis1 * np.dot(basis1, d21) # non-unit vector
+        basis2 /= self._vec_length(basis2)          # now unit vector!
+        return np.vstack((basis1, basis2))
+
+    # -----------------------------------
+    # Natural face coordinates:
+    # -----------------------------------
+
+    # Convert a single XYZ point to 'natural' UV coordinates:
+    def _xyz2uv_s(self, point):
+        return [np.dot(bb, point) for bb in self._basis]
+
+    # Convert an array of XYZ points to 'natural' UV coordinates:
+    def _xyz2uv_m(self, xyz_list):
+        bu, bv = self._basis
+        uu = np.array([np.dot(bu, pnt) for pnt in xyz_list])
+        vv = np.array([np.dot(bv, pnt) for pnt in xyz_list])
+        return np.array((uu, vv))
 
 ##--------------------------------------------------------------------------##
 ##------------------      Polyhedral Optic Base Class       ----------------##
@@ -240,7 +332,8 @@ class IsosPrismPolyhedron(PolyhedralOptic):
     def _prism_face(self, bvlist):
         tmpvtx = [self._vtx['bot'][x] for x in bvlist]      # bottom vertices
         tmpvtx += [self._vtx['top'][x] for x in reversed(bvlist)]   # add tops
-        return self._make_face(np.array(tmpvtx))
+        return PolygonFace(tmpvtx)
+        #return self._make_face(np.array(tmpvtx))
 
 ##--------------------------------------------------------------------------##
 ##------------------      Diffraction Grating Polyhedron    ----------------##

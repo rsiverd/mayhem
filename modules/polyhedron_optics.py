@@ -452,7 +452,8 @@ class IsosPrismPolyhedron(PolyhedralOptic):
 
         self._faces['top'] = self._make_face(self._vtx['top'])
         # FIXME:
-        self._faces['bot'] = self._make_face(self._vtx['bot'][::-1, :])
+        #self._faces['bot'] = self._make_face(self._vtx['bot'][::-1, :])
+        self._faces['bot'] = self._make_face(self._vtx['bot'])
         self._faces['face1'] = self._prism_face((0, 1))
         self._faces['face2'] = self._prism_face((1, 2))
         self._faces['face3'] = self._prism_face((2, 0))
@@ -494,7 +495,8 @@ class GratingPolyhedron(PolyhedralOptic):
         self._vtx['all'] = np.vstack((self._vtx['bot'], self._vtx['top']))
         self.recenter_origin()
         self._faces['top'] = self._make_face(self._vtx['top'])
-        self._faces['bot'] = self._make_face(self._vtx['bot'][::-1, :])
+        #self._faces['bot'] = self._make_face(self._vtx['bot'][::-1, :])
+        self._faces['bot'] = self._make_face(self._vtx['bot'])
         #self._update_face_names()
         #self._update_face_normals()
         self._update_face_names_norms()

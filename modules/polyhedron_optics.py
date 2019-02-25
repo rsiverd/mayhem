@@ -83,6 +83,7 @@ class PolygonFace(object):
         self._normal    = np.cross(*self._basis)
         self._uv_origin = np.copy(self._verts[0])       # UV coordinate origin
         self._uv_verts  = self._xyz2uv_m(self._verts)   # UV vertex coords (fixed)
+        self._vtxcount  = self._verts.shape[0]          # number of vertices
 
         # Lookup-table for dictionary-like access:
         self._mapping  = {'vertices':'_verts', 'basis':'_basis',
@@ -98,6 +99,12 @@ class PolygonFace(object):
 
         if self._debug:
             self._sanity_check()
+
+        # Point-in-polygon configuration:
+        if self._vtxcount == 4:
+            self._contains_point = self._rect_contains
+        else:
+            self._contains_point = self._wind_contains
         return
 
     # -----------------------------------
@@ -248,15 +255,47 @@ class PolygonFace(object):
         return np.array((uu, vv))
 
     # -----------------------------------
-    # Intersections and containment:
+    # Point-in-polygon face bounds tests:
     # -----------------------------------
 
+    # Efficient test for rectangular faces:
     def _rect_contains(self, point, rtol=1e-6):
         point_uv = self._xyz2uv_s(point)
         diffs_uv = self._uv_verts - point_uv[:, None]
         totalsep = np.sum(np.abs(diffs_uv))
         fracdiff = np.abs(totalsep - self._perim) / self._perim
         return (fracdiff < rtol)
+
+    # Orientation difference calculator for vectors. This finds
+    # the angle subtended by the line segment connecting the "ends"
+    # of two input vectors. Use for winding number calculation.
+    @staticmethod
+    def _calc_rel_angle(delta_1, delta_2):
+        twopi = 2.0 * np.pi
+        dx1, dy1 = delta_1
+        dx2, dy2 = delta_2
+        theta1 = np.arctan2(dy1, dx1)
+        theta2 = np.arctan2(dy2, dx2)
+        dtheta = (theta2 - theta1) % twopi
+        dtheta[(dtheta > np.pi)] -= twopi
+        return dtheta
+
+    # Calculate winding number of vertices relative to test point:
+    def _count_windings(self, point):
+        twopi   = 2.0 * np.pi
+        uvpoint = self._xyz2uv_s(point)
+        diffs_1 = self._uv_verts - uvpoint[:, None]
+        diffs_2 = np.roll(diffs_1, 1, axis=1)
+        n_winds = np.sum(self._calc_rel_angle(diffs_1, diffs_2)) / twopi
+        return np.round(np.abs(n_winds), 5)
+
+    # General winding-number 'insideness' check:
+    def _wind_contains(self, point):
+        return (self._count_windings(point) == 1.0)
+
+    # -----------------------------------
+    # Intersections of lines and planes:
+    # -----------------------------------
 
     def _line_intersection(self, lpoint, lvector):
         ppoint, pnormal = self._center, self._normal
@@ -283,7 +322,7 @@ class PolygonFace(object):
     # Line intersection WITH face bounds check:
     def get_intersection(self, lpoint, lvector):
         isect = self._line_intersection(lpoint, lvector)
-        if self._rect_contains(isect):
+        if self._contains_point(isect):
             return isect
         else:
             return None
@@ -294,6 +333,7 @@ class PolygonFace(object):
         if not isinstance(isect, np.ndarray):
             return np.nan
         return np.dot(isect - lpoint, lvector) / self._vec_length(lvector)
+
 
 ##--------------------------------------------------------------------------##
 ##------------------      Polyhedral Optic Base Class       ----------------##

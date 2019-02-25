@@ -311,25 +311,6 @@ path3 = v_refract.copy()
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
-class derp(object):
-
-    def __init__(self):
-        self._map = {}
-
-    def __getitem__(self, key):
-        if not key in self._map.keys():
-            raise KeyError
-            #raise IndexError
-        return self._map[key]
-
-    def __setitem__(self, key, value):
-        self._map[key] = value
-
-    def __contains__(self, key):
-        return (key in self._map.keys())
-
-##--------------------------------------------------------------------------##
-##--------------------------------------------------------------------------##
 
 ## Normalized prf2 vertices:
 b1, b2 = prf2['basis']

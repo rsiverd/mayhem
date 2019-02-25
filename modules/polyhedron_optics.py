@@ -408,8 +408,8 @@ class PolyhedralOptic(object):
         common_keys = [x for x in self._vtx.keys() if x in self._faces.keys()]
 
         # ignore bottom for now (order switched):
-        if 'bot' in common_keys:
-            common_keys.remove('bot') # FIXME: need consistent vertex ordering
+        #if 'bot' in common_keys:
+        #    common_keys.remove('bot') # FIXME: need consistent vertex ordering
         #sys.stderr.write("common_keys: %s\n" % str(common_keys))
         #sys.stderr.write("vtx keys: %s\n" % str(self._vtx.keys()))
         #sys.stderr.write("facekeys: %s\n" % str(self._faces.keys()))

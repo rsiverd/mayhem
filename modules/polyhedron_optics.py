@@ -41,21 +41,10 @@ import sys
 import time
 import numpy as np
 #from numpy.lib.recfunctions import append_fields
-#import datetime as dt
-#from dateutil import parser as dtp
 #from functools import partial
 #from collections import OrderedDict
 #import multiprocessing as mp
 #np.set_printoptions(suppress=True, linewidth=160)
-#import pandas as pd
-#import statsmodels.api as sm
-#import statsmodels.formula.api as smf
-#from statsmodels.regression.quantile_regression import QuantReg
-#import PIL.Image as pli
-#import seaborn as sns
-#import cmocean
-#import theil_sen as ts
-#import window_filter as wf
 #import itertools as itt
 
 ## Rotations in 3D:
@@ -93,24 +82,40 @@ class PolygonFace(object):
         self._uv_origin = np.copy(self._verts[0]) # UV coordinate origin
 
         # Lookup-table for dictionary-like access:
-        #self._mapping  = {'vertices':self._verts, 'basis':self._basis,
-        #        'perim':self._perim, 'center':self._center,
-        #        'normal':self._normal, 'uv_origin':self._uv_origin}
         self._mapping  = {'vertices':'_verts', 'basis':'_basis',
                 'perim':'_perim', 'center':'_center',
                 'normal':'_normal', 'uv_origin':'_uv_origin'}
 
         # Displacement configuration:
-        self._shift_these = ['vertices', 'basis', 'center', 'uv_origin']
+        #self._shift_these = ['vertices', 'basis', 'center', 'uv_origin']
+        self._shift_these = ['vertices', 'center', 'uv_origin']
 
         # Rotation configuration:
         self._rotate_vecs = ['center', 'normal', 'uv_origin']
         self._rotate_arrs = ['vertices', 'basis']
+
+        self._sanity_check()
         return
 
     # -----------------------------------
     # Internal consistency checker:
     # -----------------------------------
+
+    def _sanity_check(self):
+        caller_name = sys._getframe(1).f_code.co_name
+        this_func = sys._getframe().f_code.co_name
+        b1, b2 = self._basis
+        b1size = self._vec_length(b1)
+        b2size = self._vec_length(b2)
+        sys.stderr.write("Running %s called by %s ... " % (this_func, caller_name))
+        for nn,ll,vv in zip(('b1', 'b2'), (b1size, b2size), (b1, b2)):
+            if (ll != 1.0):
+                sys.stderr.write("FAILURE!!\n\n")
+                sys.stderr.write("Bogus %s length: %10.5f\n" % (nn, ll))
+                sys.stderr.write("%s vector: %s\n\n" % (nn, str(vv)))
+                raise ValueError
+        sys.stderr.write("passed!\n")
+        return
 
     # -----------------------------------
     # Dictionary type emulation:
@@ -128,6 +133,7 @@ class PolygonFace(object):
         if not key in self._mapping.keys():
             raise KeyError
         setattr(self, self._mapping[key], value)
+        return
 
     def keys(self):
         return self._mapping.keys()
@@ -146,6 +152,7 @@ class PolygonFace(object):
         for kk in self._shift_these:
             thing = getattr(self, self._mapping[kk])
             thing += displacement
+        self._sanity_check()
         return
 
     def _apply_rotation(self, ang_rad, axname):
@@ -164,6 +171,7 @@ class PolygonFace(object):
             #thing = getattr(self, which)
             setattr(self, which, _rfunc(ang_rad, getattr(self, which)).A1)
 
+        self._sanity_check()
         return
 
     # -----------------------------------
@@ -202,13 +210,13 @@ class PolygonFace(object):
 
     # Convert a single XYZ point to 'natural' UV coordinates:
     def _xyz2uv_s(self, point):
-        return [np.dot(bb, point) for bb in self._basis]
+        return [np.dot(bb, point - self._uv_origin) for bb in self._basis]
 
     # Convert an array of XYZ points to 'natural' UV coordinates:
     def _xyz2uv_m(self, xyz_list):
         bu, bv = self._basis
-        uu = np.array([np.dot(bu, pnt) for pnt in xyz_list])
-        vv = np.array([np.dot(bv, pnt) for pnt in xyz_list])
+        uu = np.array([np.dot(bu, pnt - self._uv_origin) for pnt in xyz_list])
+        vv = np.array([np.dot(bv, pnt - self._uv_origin) for pnt in xyz_list])
         return np.array((uu, vv))
 
 ##--------------------------------------------------------------------------##
@@ -393,6 +401,10 @@ class GratingPolyhedron(PolyhedralOptic):
 ######################################################################
 # CHANGELOG (polyhedron_optics.py):
 #---------------------------------------------------------------------
+#
+#  2019-02-25:
+#     -- Increased __version__ to 0.2.5.
+#     -- Added new PolygonFace() class to abstract away lots of useful stuff.
 #
 #  2019-02-24:
 #     -- Increased __version__ to 0.2.0.

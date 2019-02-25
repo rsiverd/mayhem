@@ -68,8 +68,8 @@ def calc_surface_vectors(v_incident, surf_norm, n1_n2_ratio):
 
 ##--------------------------------------------------------------------------##
 ## Intersection of a line and plane. In this model, both lines and planes are
-## described by (point, unit_vector pairs). In the case of a line, the unit
-## vector points "along" the line. For the plane, the vector is surface normal. 
+## described by (point, vector pairs). In the case of a line, the vector points
+## "along" the line. For the plane, the vector is surface normal. 
 #def line_plane_intersection(line, plane):
     #lpoint, lvector =  line['point'],  line['vector']
     #ppoint, pvector = plane['point'], plane['vector']
@@ -85,7 +85,6 @@ def line_plane_intersection(lpoint, lvector, ppoint, pnormal):
     pnormal -  any vector (dx, dy, dz) normal to plane surface
 
     Returns:
-    distance      -  scalar distance along line from line-point to intersection
     intersection  -  (x, y, z) point of intersection
     """
 

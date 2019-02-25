@@ -194,13 +194,6 @@ class PolyhedralOptic(object):
     # ------------------------------------
     # Polygon face initializer:
     def _make_face(self, face_vtx_list):
-        #face = {}
-        #face['vertices'] = np.copy(face_vtx_list)
-        #face[   'perim'] = self._face_perimeter(face_vtx_list)
-        #face[  'center'] = self._face_center(face_vtx_list)
-        #face[   'basis'] = self._calc_basis_vectors(face_vtx_list)
-        #face[  'normal'] = np.cross(*face['basis'])
-        #face[  'normal'] = self._calc_normal(face_vtx_list)
         face = PolygonFace(face_vtx_list)
         return face
 

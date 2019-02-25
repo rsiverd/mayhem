@@ -193,46 +193,47 @@ class PolyhedralOptic(object):
 
     # ------------------------------------
     # Polygon face initializer:
-    def _calc_basis_vectors(self, face_vtx_list):
-        v1, v2, v3 = face_vtx_list[:3, :]
-        d21 = v2 - v1
-        d31 = v3 - v1
-        basis1 = d21 / self._vec_length(d21)
-        #sys.stderr.write("\n")
-        basis2 = d31 - basis1 * np.dot(basis1, d21) # non-unit vector
-        basis2 /= self._vec_length(basis2)          # now unit vector!
-        #normal = np.cross(basis1, basis2)
-        return np.vstack((basis1, basis2))
-        #return basis1, basis2
-        #return (basis1, basis2, normal)
-
-    #def _calc_normal(self, face_vtx_list, reverse=False):
+    #def _calc_basis_vectors(self, face_vtx_list):
     #    v1, v2, v3 = face_vtx_list[:3, :]
     #    d21 = v2 - v1
     #    d31 = v3 - v1
-    #    normvec = np.cross(d21, d31)
-    #    return normvec / self._vec_length(normvec)
+    #    basis1 = d21 / self._vec_length(d21)
+    #    #sys.stderr.write("\n")
+    #    basis2 = d31 - basis1 * np.dot(basis1, d21) # non-unit vector
+    #    basis2 /= self._vec_length(basis2)          # now unit vector!
+    #    #normal = np.cross(basis1, basis2)
+    #    return np.vstack((basis1, basis2))
+    #    #return basis1, basis2
+    #    #return (basis1, basis2, normal)
 
-    def _face_perimeter(self, face_vtx_list):
-        diffs = np.roll(face_vtx_list, -1, axis=0) - face_vtx_list
-        return np.sum(np.sqrt(np.sum(diffs**2, axis=1)))
+    ##def _calc_normal(self, face_vtx_list, reverse=False):
+    ##    v1, v2, v3 = face_vtx_list[:3, :]
+    ##    d21 = v2 - v1
+    ##    d31 = v3 - v1
+    ##    normvec = np.cross(d21, d31)
+    ##    return normvec / self._vec_length(normvec)
 
-    def _face_center(self, face_vtx_list):
-        return np.average(face_vtx_list, axis=0)
+    #def _face_perimeter(self, face_vtx_list):
+    #    diffs = np.roll(face_vtx_list, -1, axis=0) - face_vtx_list
+    #    return np.sum(np.sqrt(np.sum(diffs**2, axis=1)))
+
+    #def _face_center(self, face_vtx_list):
+    #    return np.average(face_vtx_list, axis=0)
 
     def _make_face(self, face_vtx_list):
-        face = {}
-        face['vertices'] = np.copy(face_vtx_list)
-        face[   'perim'] = self._face_perimeter(face_vtx_list)
-        face[  'center'] = self._face_center(face_vtx_list)
-        face[   'basis'] = self._calc_basis_vectors(face_vtx_list)
-        face[  'normal'] = np.cross(*face['basis'])
+        #face = {}
+        #face['vertices'] = np.copy(face_vtx_list)
+        #face[   'perim'] = self._face_perimeter(face_vtx_list)
+        #face[  'center'] = self._face_center(face_vtx_list)
+        #face[   'basis'] = self._calc_basis_vectors(face_vtx_list)
+        #face[  'normal'] = np.cross(*face['basis'])
         #face[  'normal'] = self._calc_normal(face_vtx_list)
+        face = PolygonFace(face_vtx_list)
         return face
 
-    @staticmethod
-    def _vec_length(vector):
-        return np.sqrt(np.sum(vector**2))
+    #@staticmethod
+    #def _vec_length(vector):
+    #    return np.sqrt(np.sum(vector**2))
 
     #def xyz2uv(self, xyz_list): #, basis_vecs):
     #    b1, b2 = self.
@@ -332,8 +333,8 @@ class IsosPrismPolyhedron(PolyhedralOptic):
     def _prism_face(self, bvlist):
         tmpvtx = [self._vtx['bot'][x] for x in bvlist]      # bottom vertices
         tmpvtx += [self._vtx['top'][x] for x in reversed(bvlist)]   # add tops
-        return PolygonFace(tmpvtx)
-        #return self._make_face(np.array(tmpvtx))
+        return self._make_face(np.array(tmpvtx))
+        #return PolygonFace(tmpvtx)
 
 ##--------------------------------------------------------------------------##
 ##------------------      Diffraction Grating Polyhedron    ----------------##

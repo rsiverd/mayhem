@@ -251,7 +251,6 @@ class PolygonFace(object):
     # Intersections and containment:
     # -----------------------------------
 
-    #def _interior_total_sep(self, point):
     def _rect_contains(self, point, rtol=1e-6):
         point_uv = self._xyz2uv_s(point)
         diffs_uv = self._uv_verts - point_uv[:, None]
@@ -421,7 +420,6 @@ class PolyhedralOptic(object):
                 sys.stderr.write("Inconsistency in %s vertices!!!!\n" % kk)
                 sys.stderr.write("%s diffs: %s\n" % (kk, str(diffs)))
                 sys.exit(1)
-                #raise
         sys.stderr.write("passed!\n")
         return
 
@@ -472,7 +470,6 @@ class IsosPrismPolyhedron(PolyhedralOptic):
         tmpvtx = [self._vtx['bot'][x] for x in bvlist]      # bottom vertices
         tmpvtx += [self._vtx['top'][x] for x in reversed(bvlist)]   # add tops
         return self._make_face(np.array(tmpvtx))
-        #return PolygonFace(tmpvtx)
 
 ##--------------------------------------------------------------------------##
 ##------------------      Diffraction Grating Polyhedron    ----------------##

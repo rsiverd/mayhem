@@ -311,6 +311,25 @@ path3 = v_refract.copy()
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
+class derp(object):
+
+    def __init__(self):
+        self._map = {}
+
+    def __getitem__(self, key):
+        if not key in self._map.keys():
+            raise KeyError
+            #raise IndexError
+        return self._map[key]
+
+    def __setitem__(self, key, value):
+        self._map[key] = value
+
+    def __contains__(self, key):
+        return (key in self._map.keys())
+
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
 def veclen(vector):
     return np.sqrt(np.sum(vector**2))
 
@@ -330,20 +349,6 @@ def get_basis(face_vtx_list):
 
 b1, b2 = get_basis(prf2['vertices'])
 
-
-xx, yy = np.mgrid[0:10, 0:10]
-oldshape = xx.shape
-vtx_list = np.vstack((np.array([0., 0.]), np.array([9., 0.]),
-                      np.array([9., 9.]), np.array([0., 9.])))
-
-#xx, yy = xx.flatten().astype('float'), yy.flatten().astype('float')
-#xypairs = zip(xx.flatten(), yy.flatten())
-total_sep = np.zeros_like(xx).astype('float32')
-for corner in vtx_list:
-    sys.stderr.write("corner: %s\n" % str(corner))
-    dx = xx - corner[0]
-    dy = yy - corner[1]
-    total_sep += np.hypot(dx, dy)
 
 ## Normalized prf2 vertices:
 b1, b2 = prf2['basis']
@@ -388,6 +393,8 @@ def total_insep(point, face):
 def calc_perim(vtx_list):
     diffs = np.roll(vtx_list, -1, axis=0) - vtx_list
     return np.sum(np.sqrt(np.sum(diffs**2, axis=1)))
+
+#herpderp = po.PolygonFace(prf2['vertices'])
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##

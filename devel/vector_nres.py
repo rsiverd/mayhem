@@ -243,6 +243,10 @@ fulldiv = '-' * 80
 ## Z-axis "up" towards viewer
 
 ##--------------------------------------------------------------------------##
+def veclen(vector):
+    return np.sqrt(np.sum(vector**2))
+
+##--------------------------------------------------------------------------##
 ## Prism:
 #apex_angle_deg =  55.0
 apex_angle_deg = nres_prism_apex_deg
@@ -259,6 +263,15 @@ height_mm     = 130.0
 prpoly = po.IsosPrismPolyhedron(apex_angle_deg, short_edge_mm, height_mm)
 prpoly.zrotate(np.radians(-90.0))
 prpoly.zrotate(np.radians(prism_turn_deg))
+ft = prpoly.get_face('top')
+
+# for experimentation:
+f1 = prpoly.get_face('face1')
+
+#offset_vtx = np.array([x-f1._uv_origin for x in f1._verts])
+#b1, b2 = f1._basis
+testpnt = f1['center']
+derp = f1._rect_contains(testpnt)
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -289,6 +302,7 @@ grpoly.shift_vec(nudge)
 ## An initial input beam:
 wl_initial = 0.8                        # ray wavelength (microns)
 v_initial = np.array([0.0, 1.0, 0.0])   # headed in Y-direction
+fiber_exit = np.array([0.0, -400.0, 0.0])
 n_spec_air = 1.0                        # spectrograph air index of refraction
 n_pris_glass = sog.refraction_index(wl_initial) # prism index of refraction
 n1_n2_ratio = n_spec_air / n_pris_glass
@@ -312,21 +326,21 @@ path3 = v_refract.copy()
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 
-## Normalized prf2 vertices:
-b1, b2 = prf2['basis']
-use_origin = prf2['vertices'][0]
-#use_origin = prf2['center'][0]
-rvtx_list = np.array([x-use_origin for x in prf2['vertices']])
-for item in rvtx_list:
-    sys.stderr.write("item: %s\n" % str(item))
-    ucoord = np.dot(b1, item)
-    vcoord = np.dot(b2, item - ucoord * b1)
-    #sys.stderr.write("ucoord: %s\n" % str(ucoord))
-    #sys.stderr.write("vcoord: %s\n" % str(vcoord))
-    sys.stderr.write("u,v = %.3f, %.3f\n" % (ucoord, vcoord))
-    rebuild = ucoord * b1 + vcoord * b2
-    sys.stderr.write("rebuild: %s\n" % str(rebuild))
-    #sys.stderr.write("u, v: %.3f\n" % (ucoord))
+### Normalized prf2 vertices:
+#b1, b2 = prf2['basis']
+#use_origin = prf2['vertices'][0]
+##use_origin = prf2['center'][0]
+#rvtx_list = np.array([x-use_origin for x in prf2['vertices']])
+#for item in rvtx_list:
+#    sys.stderr.write("item: %s\n" % str(item))
+#    ucoord = np.dot(b1, item)
+#    vcoord = np.dot(b2, item - ucoord * b1)
+#    #sys.stderr.write("ucoord: %s\n" % str(ucoord))
+#    #sys.stderr.write("vcoord: %s\n" % str(vcoord))
+#    sys.stderr.write("u,v = %.3f, %.3f\n" % (ucoord, vcoord))
+#    rebuild = ucoord * b1 + vcoord * b2
+#    sys.stderr.write("rebuild: %s\n" % str(rebuild))
+#    #sys.stderr.write("u, v: %.3f\n" % (ucoord))
 
 def xyz2uv_m(xyz_list, basis_vecs):
     b1, b2 = basis_vecs
@@ -431,8 +445,10 @@ for pair in edges_from_vertices(grpoly.get_vertices()):
     vx, vy = pair.T
     ax1.plot(vx, vy, c=gcolor)
 
-ax1.set_xlim(-400, 200)
+ax1.set_xlim(-500, 300)
 ax1.set_ylim(-500, 500)
+ax1.set_xlabel("X axis (mm)")
+ax1.set_ylabel("Y axis (mm)")
 
 # -----------------------------------------------------------------------
 # Routine to connect two xyz points:

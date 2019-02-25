@@ -170,14 +170,15 @@ class PolyhedralOptic(object):
         return self._rotate(ang_rad, 'z')
 
 ##--------------------------------------------------------------------------##
-##------------------       Specific Optical Components      ----------------##
+##------------------       Isosceles Triangular Prism       ----------------##
 ##--------------------------------------------------------------------------##
+
 
 ## Isosceles triangular prism:
 class IsosPrismPolyhedron(PolyhedralOptic):
 
     def __init__(self, apex_angle_deg, apex_edge_mm, height_mm, unit='mm'):
-        super(PolygonIsoPrism, self).__init__()
+        super(IsosPrismPolyhedron, self).__init__()
         self._unit       = unit
         #self._apex_deg   = apex_angle_deg
         self._apex_rad   = np.radians(apex_angle_deg)
@@ -211,11 +212,16 @@ class IsosPrismPolyhedron(PolyhedralOptic):
         tmpvtx += [self._vtx['top'][x] for x in reversed(bvlist)]   # add tops
         return self._make_face(np.array(tmpvtx))
 
+##--------------------------------------------------------------------------##
+##------------------      Diffraction Grating Polyhedron    ----------------##
+##--------------------------------------------------------------------------##
+
+
 ## Grating represented by rectangular prism:
-class PolygonGrating(PolyhedralOptic):
+class GratingPolyhedron(PolyhedralOptic):
 
     def __init__(self, width_mm, length_mm, height_mm, unit='mm'):
-        super(PolygonGrating, self).__init__()
+        super(GratingPolyhedron, self).__init__()
         self._unit      = unit
         self._width_mm  = width_mm
         self._length_mm = length_mm

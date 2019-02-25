@@ -275,6 +275,36 @@ derp = f1._rect_contains(testpnt)
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
+## More versatile point-in-polygon routine:
+ftop = prpoly.get_face('top')
+tmid = ftop['center']
+def calc_rel_angle(delta_1, delta_2):
+    twopi = 2.0 * np.pi
+    dx1, dy1 = delta_1
+    dx2, dy2 = delta_2
+    theta1 = np.arctan2(dy1, dx1)
+    theta2 = np.arctan2(dy2, dx2)
+    dtheta = (theta2 - theta1) % twopi
+    dtheta[(dtheta > np.pi)] -= twopi
+    return dtheta
+
+def count_windings(uv_point, uv_vertices):
+    twopi = 2.0 * np.pi
+    diffs_1 = uv_vertices - uv_point[:, None]
+    diffs_2 = np.roll(diffs_1, 1, axis=1)
+    windings = np.sum(calc_rel_angle(diffs_1, diffs_2)) / twopi
+    return np.round(np.abs(windings), 5)
+
+def check_face(fobj):
+    uv_vtx = fobj._uv_verts
+    uv_pnt = fobj._xyz2uv_s(fobj['center'])
+    uv_pnt -= np.array([1000., 1000.,])
+    wind = count_windings(uv_pnt, uv_vtx)
+    return wind
+
+
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
 
 ## Grating:
 gr_length_mm = 320.0

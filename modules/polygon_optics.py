@@ -73,10 +73,15 @@ _rot_map = {
 
 
 ##--------------------------------------------------------------------------##
-##------------------         Basic Optical Polygon          ----------------##
+##------------------        Basic Optical 3D Polygon        ----------------##
 ##--------------------------------------------------------------------------##
 
-class OpticalPolygon(object):
+
+##--------------------------------------------------------------------------##
+##------------------      Polyhedral Optic Base Class       ----------------##
+##--------------------------------------------------------------------------##
+
+class PolyhedralOptic(object):
 
     def __init__(self):
         self._vtx   = {}
@@ -168,10 +173,11 @@ class OpticalPolygon(object):
 ##------------------       Specific Optical Components      ----------------##
 ##--------------------------------------------------------------------------##
 
-class PolygonPrism(OpticalPolygon):
+## Isosceles triangular prism:
+class PolygonIsoPrism(PolyhedralOptic):
 
     def __init__(self, apex_angle_deg, apex_edge_mm, height_mm, unit='mm'):
-        super(PolygonPrism, self).__init__()
+        super(PolygonIsoPrism, self).__init__()
         self._unit       = unit
         #self._apex_deg   = apex_angle_deg
         self._apex_rad   = np.radians(apex_angle_deg)
@@ -205,7 +211,8 @@ class PolygonPrism(OpticalPolygon):
         tmpvtx += [self._vtx['top'][x] for x in reversed(bvlist)]   # add tops
         return self._make_face(np.array(tmpvtx))
 
-class PolygonGrating(OpticalPolygon):
+## Grating represented by rectangular prism:
+class PolygonGrating(PolyhedralOptic):
 
     def __init__(self, width_mm, length_mm, height_mm, unit='mm'):
         super(PolygonGrating, self).__init__()

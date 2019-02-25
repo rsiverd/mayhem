@@ -93,9 +93,12 @@ class PolygonFace(object):
         self._uv_origin = np.copy(self._verts[0]) # UV coordinate origin
 
         # Lookup-table for dictionary-like access:
-        self._mapping  = {'vertices':self._verts, 'basis':self._basis,
-                'perim':self._perim, 'center':self._center,
-                'normal':self._normal, 'uv_origin':self._uv_origin}
+        #self._mapping  = {'vertices':self._verts, 'basis':self._basis,
+        #        'perim':self._perim, 'center':self._center,
+        #        'normal':self._normal, 'uv_origin':self._uv_origin}
+        self._mapping  = {'vertices':'_verts', 'basis':'_basis',
+                'perim':'_perim', 'center':'_center',
+                'normal':'_normal', 'uv_origin':'_uv_origin'}
 
         # Displacement configuration:
         self._shift_these = ['vertices', 'basis', 'center', 'uv_origin']
@@ -104,6 +107,10 @@ class PolygonFace(object):
         self._rotate_vecs = ['center', 'normal', 'uv_origin']
         self._rotate_arrs = ['vertices', 'basis']
         return
+
+    # -----------------------------------
+    # Internal consistency checker:
+    # -----------------------------------
 
     # -----------------------------------
     # Dictionary type emulation:
@@ -115,21 +122,21 @@ class PolygonFace(object):
     def __getitem__(self, key):
         if not key in self._mapping.keys():
             raise KeyError
-        return self._mapping[key]
+        return getattr(self, self._mapping[key])
 
     def __setitem__(self, key, value):
         if not key in self._mapping.keys():
             raise KeyError
-        self._mapping[key] = value
+        setattr(self, self._mapping[key], value)
 
     def keys(self):
         return self._mapping.keys()
 
     def values(self):
-        return self._mapping.values()
+        return [getattr(self, x) for x in self._mapping.values()]
 
     def items(self):
-        return self._mapping.items()
+        return [(kk, getattr(self, vv)) for kk,vv in self._mapping.items()]
 
     # -----------------------------------
     # Polygon shifts and rotations:
@@ -137,7 +144,10 @@ class PolygonFace(object):
 
     def _apply_shift(self, displacement):
         for kk in self._shift_these:
-            self._mapping[kk] += displacement
+            thing = getattr(self, self._mapping[kk])
+            #self._mapping[kk] += displacement
+            thing += displacement
+        return
 
     def _apply_rotation(self, ang_rad, axname):
         # NOTE: 2-D point sets need transposition but vectors do not
@@ -145,12 +155,21 @@ class PolygonFace(object):
 
         # Rotate vertices en masse:
         for kk in self._rotate_arrs:
-            temp = _rfunc(ang_rad, self._mapping[kk].T)
-            self._mapping[kk] = np.array(temp.T)
+            which = self._mapping[kk]
+            #thing = getattr(self, which)
+            temp = _rfunc(ang_rad, getattr(self, which).T)
+            #temp = _rfunc(ang_rad, thing.T)
+            #self._mapping[kk] = np.array(temp.T)
+            setattr(self, which, np.array(temp.T))
 
         # Rotate individual vectors separately:
         for kk in self._rotate_vecs:
-            self._mapping[kk] = _rfunc(ang_rad, self._mapping[kk]).A1
+            which = self._mapping[kk]
+            thing = getattr(self, which)
+            #self._mapping[kk] = _rfunc(ang_rad, self._mapping[kk]).A1
+            setattr(self, which, _rfunc(ang_rad, thing).A1)
+
+        return
 
     # -----------------------------------
     # Face parameter calculations:

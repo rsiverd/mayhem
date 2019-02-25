@@ -18,7 +18,7 @@
 #
 # Rob Siverd
 # Created:       2019-02-20
-# Last modified: 2019-02-21
+# Last modified: 2019-02-24
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
@@ -174,7 +174,7 @@ class PolyhedralOptic(object):
 ##--------------------------------------------------------------------------##
 
 ## Isosceles triangular prism:
-class PolygonIsoPrism(PolyhedralOptic):
+class IsosPrismPolyhedron(PolyhedralOptic):
 
     def __init__(self, apex_angle_deg, apex_edge_mm, height_mm, unit='mm'):
         super(PolygonIsoPrism, self).__init__()

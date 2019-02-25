@@ -145,7 +145,6 @@ class PolygonFace(object):
     def _apply_shift(self, displacement):
         for kk in self._shift_these:
             thing = getattr(self, self._mapping[kk])
-            #self._mapping[kk] += displacement
             thing += displacement
         return
 
@@ -156,18 +155,14 @@ class PolygonFace(object):
         # Rotate vertices en masse:
         for kk in self._rotate_arrs:
             which = self._mapping[kk]
-            #thing = getattr(self, which)
             temp = _rfunc(ang_rad, getattr(self, which).T)
-            #temp = _rfunc(ang_rad, thing.T)
-            #self._mapping[kk] = np.array(temp.T)
             setattr(self, which, np.array(temp.T))
 
         # Rotate individual vectors separately:
         for kk in self._rotate_vecs:
             which = self._mapping[kk]
-            thing = getattr(self, which)
-            #self._mapping[kk] = _rfunc(ang_rad, self._mapping[kk]).A1
-            setattr(self, which, _rfunc(ang_rad, thing).A1)
+            #thing = getattr(self, which)
+            setattr(self, which, _rfunc(ang_rad, getattr(self, which)).A1)
 
         return
 

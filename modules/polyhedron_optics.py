@@ -174,8 +174,11 @@ class PolygonFace(object):
         #sys.stderr.write("bc_dist: %10.5f, normal: %s\n" 
         #        % (bc_dist, str(self._normal)))
         if (bc_dist < 0.0):
-            sys.stderr.write("Inversion detected and corrected!\n")
-            self._normal *= -1.0
+            sys.stderr.write("Inward-facing normal detected! FAIL!\n")
+            sys.exit(1)
+            #sys.stderr.write("Inversion detected and corrected!\n")
+            #self._basis[1, :] *= -1.0   # reverse 2nd basis vector
+            #self._normal      *= -1.0   # reverse normal vector
         return
 
     # -----------------------------------
@@ -380,7 +383,7 @@ class PolyhedralOptic(object):
     def _update_face_names_norms(self):
         barycenter = self.get_center()
         for kk,face in self._faces.items():
-            sys.stderr.write("Updating face %s ... \n" % kk)
+            #sys.stderr.write("Updating face %s ... \n" % kk)
             face.set_name(kk)
             face._ensure_outward(barycenter)
             face._debug = self._debug
@@ -490,8 +493,8 @@ class IsosPrismPolyhedron(PolyhedralOptic):
 
         self._faces['top'] = self._make_face(self._vtx['top'])
         # FIXME:
-        #self._faces['bot'] = self._make_face(self._vtx['bot'][::-1, :])
-        self._faces['bot'] = self._make_face(self._vtx['bot'])
+        self._faces['bot'] = self._make_face(self._vtx['bot'][::-1, :])
+        #self._faces['bot'] = self._make_face(self._vtx['bot'])
         self._faces['face1'] = self._prism_face((0, 1))
         self._faces['face2'] = self._prism_face((1, 2))
         self._faces['face3'] = self._prism_face((2, 0))
@@ -532,8 +535,8 @@ class GratingPolyhedron(PolyhedralOptic):
         self._vtx['all'] = np.vstack((self._vtx['bot'], self._vtx['top']))
         self.recenter_origin()
         self._faces['top'] = self._make_face(self._vtx['top'])
-        #self._faces['bot'] = self._make_face(self._vtx['bot'][::-1, :])
-        self._faces['bot'] = self._make_face(self._vtx['bot'])
+        self._faces['bot'] = self._make_face(self._vtx['bot'][::-1, :])
+        #self._faces['bot'] = self._make_face(self._vtx['bot'])
         #self._update_face_names()
         #self._update_face_normals()
         self._update_face_names_norms()

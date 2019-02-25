@@ -71,9 +71,9 @@ reload(fov_rotation)
 r3d = fov_rotation.Rotate3D()
 
 ## Polygon kit:
-import polygon_optics
-reload(polygon_optics)
-po = polygon_optics
+import polyhedron_optics
+reload(polyhedron_optics)
+po = polyhedron_optics
 
 ## Raytracing stuff:
 import raytrace_tools
@@ -256,7 +256,7 @@ short_edge_mm = 190.0
 #symmetryax_mm = 0.5 * short_edge_mm / np.tan(0.5 * apex_angle_rad)
 height_mm     = 130.0
 
-prpoly = po.PolygonIsoPrism(apex_angle_deg, short_edge_mm, height_mm)
+prpoly = po.IsosPrismPolyhedron(apex_angle_deg, short_edge_mm, height_mm)
 prpoly.zrotate(np.radians(-90.0))
 prpoly.zrotate(np.radians(prism_turn_deg))
 
@@ -270,7 +270,7 @@ gr_height_mm =  50.5
 grating_turn_deg = 44.827
 grating_tilt_deg = 13.786
 
-grpoly = po.PolygonGrating(gr_width_mm, gr_length_mm, gr_height_mm)
+grpoly = po.GratingPolyhedron(gr_width_mm, gr_length_mm, gr_height_mm)
 grpoly.xrotate(np.radians(-grating_tilt_deg))
 grpoly.zrotate(np.radians(grating_turn_deg))
 grpoly.shift_xyz(-165.0, 235.0, 0.0)

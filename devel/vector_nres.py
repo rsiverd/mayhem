@@ -28,10 +28,10 @@ except NameError:
 #import linecache
 #import getopt
 #import shutil
-import resource
-import signal
+#import resource
+#import signal
 #import glob
-import gc
+#import gc
 import os
 import sys
 import time
@@ -42,12 +42,6 @@ import numpy as np
 #from numpy.lib.recfunctions import append_fields
 #import datetime as dt
 #from dateutil import parser as dtp
-#import scipy.linalg as sla
-#import scipy.signal as ssig
-#import scipy.ndimage as ndi
-#import scipy.optimize as opti
-#import scipy.interpolate as stp
-#import scipy.spatial.distance as ssd
 import matplotlib.pyplot as plt
 #import matplotlib.cm as cm
 #import matplotlib.ticker as mt
@@ -79,6 +73,24 @@ r3d = fov_rotation.Rotate3D()
 ## Polygon kit:
 import polygon_optics
 reload(polygon_optics)
+po = polygon_optics
+
+## Raytracing stuff:
+import raytrace_tools
+reload(raytrace_tools)
+rt = raytrace_tools
+
+## Some NRES hardware specs:
+nres_prism_glass = "PBM2"       # glass type used in cross-dispersing prism
+nres_prism_apex_deg = 55.0
+
+## More optics goodies:
+import spectrograph_optics
+reload(spectrograph_optics)
+sog = spectrograph_optics.Glass(nres_prism_glass)
+#nrp = spectrograph_optics.Prism(nres_prism_glass, nres_prism_apex_deg)
+dppgp = spectrograph_optics.DoublePassPrismGratingPrism()
+
 
 ##--------------------------------------------------------------------------##
 
@@ -128,16 +140,6 @@ degree_sign = u'\N{DEGREE SIGN}'
 ## Dividers:
 halfdiv = '-' * 40
 fulldiv = '-' * 80
-
-##--------------------------------------------------------------------------##
-def ldmap(things):
-    return dict(zip(things, range(len(things))))
-
-def argnear(vec, val):
-    return (np.abs(vec - val)).argmin()
-
-
-
 
 ##--------------------------------------------------------------------------##
 ##------------------         Parse Command Line             ----------------##
@@ -242,7 +244,8 @@ def argnear(vec, val):
 
 ##--------------------------------------------------------------------------##
 ## Prism:
-apex_angle_deg =  55.0
+#apex_angle_deg =  55.0
+apex_angle_deg = nres_prism_apex_deg
 apex_angle_rad = np.radians(apex_angle_deg)
 #apex_length_mm = 174.0
 #long_length_mm = 205.7
@@ -253,7 +256,7 @@ short_edge_mm = 190.0
 #symmetryax_mm = 0.5 * short_edge_mm / np.tan(0.5 * apex_angle_rad)
 height_mm     = 130.0
 
-prpoly = polygon_optics.PolygonPrism(apex_angle_deg, short_edge_mm, height_mm)
+prpoly = po.PolygonIsoPrism(apex_angle_deg, short_edge_mm, height_mm)
 prpoly.zrotate(np.radians(-90.0))
 prpoly.zrotate(np.radians(prism_turn_deg))
 
@@ -267,7 +270,7 @@ gr_height_mm =  50.5
 grating_turn_deg = 44.827
 grating_tilt_deg = 13.786
 
-grpoly = polygon_optics.PolygonGrating(gr_width_mm, gr_length_mm, gr_height_mm)
+grpoly = po.PolygonGrating(gr_width_mm, gr_length_mm, gr_height_mm)
 grpoly.xrotate(np.radians(-grating_tilt_deg))
 grpoly.zrotate(np.radians(grating_turn_deg))
 grpoly.shift_xyz(-165.0, 235.0, 0.0)
@@ -276,10 +279,35 @@ grpoly.shift_xyz(-165.0, 235.0, 0.0)
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
-## Center prism face1 on origin:
+## Center prism face1 on origin (move grating and prism in tandem):
 nudge = -1.0 * np.copy(prpoly.get_face('face1')['center'])
 prpoly.shift_vec(nudge)
 grpoly.shift_vec(nudge)
+
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+## An initial input beam:
+wl_initial = 0.8                        # ray wavelength (microns)
+v_initial = np.array([0.0, 1.0, 0.0])   # headed in Y-direction
+n_spec_air = 1.0                        # spectrograph air index of refraction
+n_pris_glass = sog.refraction_index(wl_initial) # prism index of refraction
+n1_n2_ratio = n_spec_air / n_pris_glass
+v_reflect, v_refract = rt.calc_surface_vectors(v_initial,
+                        prpoly.get_face('face1')['normal'], n1_n2_ratio)
+
+## Record directions for plotting:
+path1 = v_initial.copy()
+path2 = v_refract.copy()
+
+## Exit point from prism face2:
+f1_isect = np.zeros(3)
+prf2 = prpoly.get_face('face2')
+f2_isect = rt.line_plane_intersection(np.zeros(3), path2, prf2['center'], prf2['normal'])
+
+## Exit direction from prism face2:
+v_reflect, v_refract = rt.calc_surface_vectors(path2,
+                        -prf2['normal'], n_pris_glass / n_spec_air)
+path3 = v_refract.copy()
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -305,6 +333,8 @@ def edges_from_vertices(vtx_array):
 
 
 ##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+## Plot layout and annotations as sanity check:
 fig_dims = (12, 10)
 fig = plt.figure(1, figsize=fig_dims)
 plt.gcf().clf()
@@ -347,18 +377,35 @@ for which in ['face1', 'face2']: #, 'face3']:
 
 # -----------------------------------------------------------------------
 # Grating vertices:
+gcolor = 'k'
 for x,y,z in grpoly.get_vertices():
-    ax1.scatter(x, y, lw=0, s=30, c='g')
+    ax1.scatter(x, y, lw=0, s=30, c=gcolor)
 
 # Grating edges:
 for pair in edges_from_vertices(grpoly.get_vertices()):
     vx, vy = pair.T
-    ax1.plot(vx, vy, c='g')
+    ax1.plot(vx, vy, c=gcolor)
 
 ax1.set_xlim(-400, 200)
 ax1.set_ylim(-500, 500)
 
+# -----------------------------------------------------------------------
+# Routine to connect two xyz points:
+def qconnect(xyz1, xyz2, **kwargs):
+    x1, y1, z1 = xyz1
+    x2, y2, z2 = xyz2
+    ax1.plot([x1, x2], [y1, y2], **kwargs)
+    return
 
+# Light paths (green):
+grkw = {'ls':'--', 'c':'g'}
+beam_start = np.array([0.0, -400.0, 0.0])
+qconnect(beam_start, f1_isect, **grkw)
+qconnect(f1_isect, f2_isect, **grkw)
+
+path3_len = 300.0
+path3_end = f2_isect + path3_len * path3
+qconnect(f2_isect, path3_end, **grkw)
 
 
 #blurb = "some text"

@@ -438,11 +438,9 @@ class IsosPrismPolyhedron(PolyhedralOptic):
         super(IsosPrismPolyhedron, self).__init__()
         self._unit       = unit
         self._debug      = debug
-        #self._apex_deg   = apex_angle_deg
         self._apex_rad   = np.radians(apex_angle_deg)
         self._height_mm  = height_mm
         self._ap_edge_mm = apex_edge_mm
-        #self._o_edges_mm = 0.5 * self._ap_edge_mm / np.sin(self._apex_rad / 2.)
         self._symaxis_mm = 0.5 * self._ap_edge_mm / np.tan(self._apex_rad / 2.)
         self._vtx = {}
         self._vtx['bot'] = self._bottom_vertices()

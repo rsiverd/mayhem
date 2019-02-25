@@ -311,6 +311,86 @@ path3 = v_refract.copy()
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
+def veclen(vector):
+    return np.sqrt(np.sum(vector**2))
+
+## Find an orthonormal basis for a face:
+def get_basis(face_vtx_list):
+    v1, v2, v3 = face_vtx_list[:3, :]
+    d21 = v2 - v1
+    d31 = v3 - v1
+    sys.stderr.write("d21: %s\n" % str(d21))
+    sys.stderr.write("d31: %s\n" % str(d31))
+    basis1 = d21 / veclen(d21)
+    sys.stderr.write("basis1: %s\n" % str(basis1))
+    btemp2 = d31 - basis1 * np.dot(basis1, d31)
+    sys.stderr.write("btemp2: %s\n" % str(btemp2))
+    basis2 = btemp2 / veclen(btemp2)
+    return basis1, basis2
+
+b1, b2 = get_basis(prf2['vertices'])
+
+
+xx, yy = np.mgrid[0:10, 0:10]
+oldshape = xx.shape
+vtx_list = np.vstack((np.array([0., 0.]), np.array([9., 0.]),
+                      np.array([9., 9.]), np.array([0., 9.])))
+
+#xx, yy = xx.flatten().astype('float'), yy.flatten().astype('float')
+#xypairs = zip(xx.flatten(), yy.flatten())
+total_sep = np.zeros_like(xx).astype('float32')
+for corner in vtx_list:
+    sys.stderr.write("corner: %s\n" % str(corner))
+    dx = xx - corner[0]
+    dy = yy - corner[1]
+    total_sep += np.hypot(dx, dy)
+
+## Normalized prf2 vertices:
+b1, b2 = prf2['basis']
+use_origin = prf2['vertices'][0]
+#use_origin = prf2['center'][0]
+rvtx_list = np.array([x-use_origin for x in prf2['vertices']])
+for item in rvtx_list:
+    sys.stderr.write("item: %s\n" % str(item))
+    ucoord = np.dot(b1, item)
+    vcoord = np.dot(b2, item - ucoord * b1)
+    #sys.stderr.write("ucoord: %s\n" % str(ucoord))
+    #sys.stderr.write("vcoord: %s\n" % str(vcoord))
+    sys.stderr.write("u,v = %.3f, %.3f\n" % (ucoord, vcoord))
+    rebuild = ucoord * b1 + vcoord * b2
+    sys.stderr.write("rebuild: %s\n" % str(rebuild))
+    #sys.stderr.write("u, v: %.3f\n" % (ucoord))
+
+def xyz2uv_m(xyz_list, basis_vecs):
+    b1, b2 = basis_vecs
+    uu = np.array([np.dot(b1, pnt) for pnt in xyz_list])
+    vv = np.array([np.dot(b2, pnt) for pnt in xyz_list])
+    #sys.stderr.write("uu: %s\n" % str(uu))
+    #sys.stderr.write("vv: %s\n" % str(vv))
+    return np.array((uu, vv))
+
+def xyz2uv_s(xyz_point, basis_vecs):
+    return [np.dot(bb, xyz_point) for bb in basis_vecs]
+
+def total_insep(point, face):
+    origin  = face['vertices'][0, :]
+    use_vtx = np.array([x-origin for x in face['vertices']])
+    use_pnt = point - origin
+    #sys.stderr.write("use_vtx: %s\n" % str(use_vtx))
+    #sys.stderr.write("use_pnt: %s\n" % str(use_pnt))
+    pntu, pntv = xyz2uv_s(use_pnt, face['basis'])
+    vtxu, vtxv = xyz2uv_m(use_vtx, face['basis'])
+    udiff = vtxu - pntu
+    vdiff = vtxv - pntv
+    edgetot = np.sum(np.abs(udiff)) + np.sum(np.abs(vdiff))
+    return edgetot
+
+def calc_perim(vtx_list):
+    diffs = np.roll(vtx_list, -1, axis=0) - vtx_list
+    return np.sum(np.sqrt(np.sum(diffs**2, axis=1)))
+
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
 ## Edges from vertices:
 def edges_from_vertices(vtx_array):
     nhalf = vtx_array.shape[0] / 2

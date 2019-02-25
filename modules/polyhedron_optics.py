@@ -326,13 +326,13 @@ class PolygonFace(object):
     def get_intersection(self, lpoint, lvector):
         isect = self._line_intersection(lpoint, lvector)
         if self._contains_point(isect):
-            return isect
+            return True, isect
         else:
-            return None
+            return False, None
 
     # User-friendly distance-to-intersection calculator (handles bounds):
     def get_intersect_distance(self, lpoint, lvector):
-        isect = self.get_intersection(lpoint, lvector)
+        hit, isect = self.get_intersection(lpoint, lvector)
         if not isinstance(isect, np.ndarray):
             return np.nan
         return np.dot(isect - lpoint, lvector) / self._vec_length(lvector)

@@ -10,13 +10,13 @@
 #
 # Rob Siverd
 # Created:       2019-02-18
-# Last modified: 2019-02-18
+# Last modified: 2019-02-24
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 ## Python version-agnostic module reloading:
 try:
@@ -109,6 +109,12 @@ def line_plane_intersection(lpoint, lvector, ppoint, pnormal):
     #sys.stderr.write("truedist: %10.5f\n" % truedist)
     #return distance, isect
 
+##--------------------------------------------------------------------------##
+## Point-in-polygon test routine. This will be useful to check whether a
+## calculated line-plane intersection point resides within the boundaries of
+## a face as defined by its vertices.
+def point_in_polygon(point, vtx_list):
+    return
 
 
 ######################################################################

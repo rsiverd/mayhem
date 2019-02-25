@@ -290,6 +290,11 @@ grpoly.shift_xyz(-165.0, 235.0, 0.0)
 #grpoly.shift_xyz(-165.0, 235.0, 0.0)
 #grpoly.shift_vec(np.array([-165.0, 235.0, 0.0]))
 
+## Adjust grating so center of bottom face lies on z=0:
+gr_bot_ctr = np.copy(grpoly.get_face('bot')['center'])
+sys.stderr.write("grating bottom-center: %s\n" % str(gr_bot_ctr))
+grpoly.shift_vec(gr_bot_ctr * np.array([0.0, 0.0, -1.0]))
+
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 ## Center prism face1 on origin (move grating and prism in tandem):
@@ -322,6 +327,10 @@ f2_isect = prf2.get_intersection(f1_isect, path2)
 v_reflect, v_refract = rt.calc_surface_vectors(path2,
                         -prf2['normal'], n_pris_glass / n_spec_air)
 path3 = v_refract.copy()
+
+## Find intersection with grating:
+#grbot = grpoly.get_face('bot')
+gr_isect = grpoly.get_face('bot').get_intersection(f2_isect, path3)
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -422,9 +431,9 @@ beam_start = np.array([0.0, -400.0, 0.0])
 qconnect(beam_start, f1_isect, **grkw)
 qconnect(f1_isect, f2_isect, **grkw)
 
-path3_len = 300.0
-path3_end = f2_isect + path3_len * path3
-qconnect(f2_isect, path3_end, **grkw)
+#path3_len = 300.0
+#path3_end = f2_isect + path3_len * path3
+qconnect(f2_isect, gr_isect, **grkw)
 
 
 #blurb = "some text"

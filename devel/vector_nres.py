@@ -317,8 +317,6 @@ path2 = v_refract.copy()
 f1_isect = np.zeros(3)
 prf2 = prpoly.get_face('face2')
 f2_isect = prf2.get_intersection(f1_isect, path2)
-#f2_isect = rt.line_plane_intersection(np.zeros(3), path2, 
-#                prf2['center'], prf2['normal'])
 
 ## Exit direction from prism face2:
 v_reflect, v_refract = rt.calc_surface_vectors(path2,
@@ -327,32 +325,6 @@ path3 = v_refract.copy()
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
-
-def xyz2uv_m(xyz_list, basis_vecs):
-    b1, b2 = basis_vecs
-    uu = np.array([np.dot(b1, pnt) for pnt in xyz_list])
-    vv = np.array([np.dot(b2, pnt) for pnt in xyz_list])
-    #sys.stderr.write("uu: %s\n" % str(uu))
-    #sys.stderr.write("vv: %s\n" % str(vv))
-    return np.array((uu, vv))
-
-def xyz2uv_s(xyz_point, basis_vecs):
-    return [np.dot(bb, xyz_point) for bb in basis_vecs]
-
-def total_insep(point, face):
-    origin  = face['vertices'][0, :]
-    use_vtx = np.array([x-origin for x in face['vertices']])
-    use_pnt = point - origin
-    #sys.stderr.write("use_vtx: %s\n" % str(use_vtx))
-    #sys.stderr.write("use_pnt: %s\n" % str(use_pnt))
-    pntu, pntv = xyz2uv_s(use_pnt, face['basis'])
-    vtxu, vtxv = xyz2uv_m(use_vtx, face['basis'])
-    udiff = vtxu - pntu
-    vdiff = vtxv - pntv
-    edgetot = np.sum(np.abs(udiff)) + np.sum(np.abs(vdiff))
-    return edgetot
-
-#herpderp = po.PolygonFace(prf2['vertices'])
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##

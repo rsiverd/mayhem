@@ -90,11 +90,24 @@ reload(spectrograph_optics)
 sog = spectrograph_optics.Glass(nres_prism_glass)
 dppgp = spectrograph_optics.DoublePassPrismGratingPrism()
 
-useful_orders = 51.0 + np.arange(69.0)
-center_wlen_um = dppgp.calc_central_wlen_um(useful_orders)
-spec_order_FSR = center_wlen_um / useful_orders
+##--------------------------------------------------------------------------##
+## Spectroscopic orders and a lookup routine:
+useful_orders = 51 + np.arange(69)
+center_wlen_um = dppgp.calc_central_wlen_um(useful_orders.astype('float'))
+spec_order_FSR = center_wlen_um / useful_orders.astype('float')
 spec_order_wlmin = center_wlen_um - spec_order_FSR
 spec_order_wlmax = center_wlen_um + spec_order_FSR
+
+def argnear(vec, val):
+    return (np.abs(vec - val)).argmin()
+
+def wlen2orders(wlen_um):
+    which = (spec_order_wlmin <= wlen_um) & (wlen_um <= spec_order_wlmax)
+    return useful_orders[which]
+
+def wlen2order(wlen_um):
+    return useful_orders[argnear(center_wlen_um, wlen_um)]
+
 
 ##--------------------------------------------------------------------------##
 
@@ -267,6 +280,7 @@ height_mm     = 130.0
 prpoly = po.IsosPrismPolyhedron(apex_angle_deg, short_edge_mm, height_mm)
 prpoly.zrotate(np.radians(-90.0))
 prpoly.zrotate(np.radians(prism_turn_deg))
+
 ft = prpoly.get_face('top')
 
 # for experimentation:
@@ -311,8 +325,12 @@ grpoly.shift_vec(nudge)
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
+## Keep a list of traced vertexes for plotting:
+light_path = []
+
 ## Input beam direction:
-input_turn_deg = 5.0
+#input_turn_deg = 5.0
+input_turn_deg = 2.0
 input_uptilt_deg = 0.0
 input_phi = np.radians(90.0 + input_turn_deg)
 input_theta = np.radians(90.0 - input_uptilt_deg)
@@ -324,25 +342,48 @@ v_initial = np.array([np.sin(input_theta) * np.cos(input_phi),
 wl_initial = 0.8                        # ray wavelength (microns)
 #v_initial = np.array([0.0, 1.0, 0.0])   # headed in Y-direction
 fiber_exit = np.array([0.0, -400.0, 0.0])
+light_path.append(fiber_exit)
+
+## CCD position (finish line):
+pix_size_um = 15.0
+ccd_edge_mm = 4096.0 * pix_size_um / 1e3
+
+ccd_ypos   = -450.0
+ccd_point  = np.array([0.0, ccd_ypos, 0.0])
+ccd_normal = np.array([0.0,      1.0, 0.0])
+
+ccd_xseg = np.array([0.0, ccd_edge_mm]) - 40.0
+ccd_yseg = np.ones_like(ccd_xseg) * ccd_ypos
+
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+## Cross prism forward (face1 --> face2):
+prf1, prf2 = prpoly.get_face('face1'), prpoly.get_face('face2') # useful faces
+
+## Index of refraction for air and glass:
 n_spec_air = 1.0                        # spectrograph air index of refraction
 n_pris_glass = sog.refraction_index(wl_initial) # prism index of refraction
 n1_n2_ratio = n_spec_air / n_pris_glass
-v_reflect, v_refract = rt.calc_surface_vectors(v_initial,
-                        prpoly.get_face('face1')['normal'], n1_n2_ratio)
 
-## Record directions for plotting:
-path1 = v_initial.copy()
-path2 = v_refract.copy()
+## Find intersection with face1:
+valid, f1_isect = prf1.get_intersection(fiber_exit, v_initial)
+if not valid:
+    sys.stderr.write("\nInput beam missed prism, something is wrong!\n")
+    sys.exit(1)
+light_path.append(np.copy(f1_isect))
+
+## Direction change at face1:
+tmp_path = rt.calc_surface_vectors(v_initial, prf1['normal'], n1_n2_ratio)[1]
 
 ## Exit point from prism face2:
-f1_isect = np.zeros(3)
-prf2 = prpoly.get_face('face2')
-hit, f2_isect = prf2.get_intersection(f1_isect, path2)
+valid, f2_isect = prf2.get_intersection(f1_isect, tmp_path)
+if not valid:
+    sys.stderr.write("\nPROBLEM: input beam failed to exit prism!\n") 
+    sys.exit(1)
+light_path.append(np.copy(f2_isect))
 
 ## Exit direction from prism face2:
-v_reflect, v_refract = rt.calc_surface_vectors(path2,
-                        -prf2['normal'], n_pris_glass / n_spec_air)
-path3 = v_refract.copy()
+path3 = rt.calc_surface_vectors(tmp_path, -prf2['normal'], 1. / n1_n2_ratio)[1]
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -350,46 +391,52 @@ path3 = v_refract.copy()
 ## Find intersection with grating:
 grbot = grpoly.get_face('bot')
 valid, gr_isect = grbot.get_intersection(f2_isect, path3)
+if not valid:
+    sys.stderr.write("PROBLEM: light ray misses grating!\n") 
+    sys.exit(1)
+light_path.append(np.copy(gr_isect))
 
 ## NOTE: grating bottom face basis vectors correspond thusly:
 ## * b1 ~ parallel to grooves
 ## * b2 ~ perpendicular to grooves
 
 ## Along the groove direction, reflection is specular:
-order_number = 85
-useful_orders = 51.0 + np.arange(69.0)
-b_para, b_perp = grbot['basis']
-g_norm = grbot['normal']
-diffr_vecs = {}
-next_verts = {}
-wlen_um = wl_initial
-prf2 = prpoly.get_face('face2')
-for nord in useful_orders:
-    sys.stderr.write("Order: %d ... " % nord)
-    v_para = np.dot(path3, b_para)
-    v_perp = np.dot(path3, b_perp) + (nord * wlen_um / gr_spacing_um)
-    normsq = 1.0 - v_para**2 - v_perp**2
-
-    # Give up in case of imaginary wavevector:
-    if (normsq < 0.0):
-        sys.stderr.write("imaginary normal component (evanescent order)!\n")
-        diffr_vecs[nord] = np.nan
-        sys.stderr.write("\n")
-        break       # all subsequent orders imaginary
-
-    # Compute direction and check for prism intersection:
-    v_norm = np.sqrt(normsq)
-    path4 = v_para * b_para + v_perp * b_perp + v_norm * g_norm
-    hits_prism, isect = prf2.get_intersection(gr_isect, path4)
-    if not hits_prism:
-        sys.stderr.write("path exists but misses prism!\n")
-        diffr_vecs[nord] = np.nan
-        continue
-
-    sys.stderr.write("isect: %s\n" % str(isect))
-    diffr_vecs[nord] = path4
-    next_verts[nord] = isect
-    sys.stderr.write("\n")
+#b_para, b_perp = grbot['basis']
+#g_norm = grbot['normal']
+#diffr_vecs = {}
+#next_verts = {}
+#wlen_um = wl_initial
+#prf2 = prpoly.get_face('face2')
+#for nord in useful_orders:
+#    sys.stderr.write("Order: %d ... " % nord)
+#    v_para = np.dot(path3, b_para)
+#    v_perp = np.dot(path3, b_perp) + (float(nord) * wlen_um / gr_spacing_um)
+#    normsq = 1.0 - v_para**2 - v_perp**2
+#    sys.stderr.write("\nOLD v_para, v_perp, normsq: %10.5f, %10.5f, %10.5f\n"
+#            % (v_para, v_perp, normsq))
+#
+#    # Give up in case of imaginary wavevector:
+#    if (normsq < 0.0):
+#        sys.stderr.write("imaginary normal component (evanescent order)!\n")
+#        diffr_vecs[nord] = np.nan
+#        sys.stderr.write("\n")
+#        break       # all subsequent orders imaginary
+#
+#    # Compute direction and check for prism intersection:
+#    v_norm = np.sqrt(normsq)
+#    sys.stderr.write("OLD v_para, v_perp, v_norm: %10.5f, %10.5f, %10.5f\n"
+#            % (v_para, v_perp, v_norm))
+#    path4 = v_para * b_para + v_perp * b_perp + v_norm * g_norm
+#    hits_prism, isect = prf2.get_intersection(gr_isect, path4)
+#    if not hits_prism:
+#        sys.stderr.write("path exists but misses prism!\n")
+#        diffr_vecs[nord] = np.nan
+#        continue
+#
+#    sys.stderr.write("isect: %s\n" % str(isect))
+#    diffr_vecs[nord] = path4
+#    next_verts[nord] = isect
+#    sys.stderr.write("\n")
 
 def diffracted_ray(u_incident, wlen_um, spec_ord):
     """
@@ -409,13 +456,51 @@ def diffracted_ray(u_incident, wlen_um, spec_ord):
     b_para, b_perp = grpoly.get_face('bot')['basis']
     g_norm = grpoly.get_face('bot')['normal']
     v_para = np.dot(path3, b_para)
-    v_perp = np.dot(path3, b_perp) + (nord * wlen_um / gr_spacing_um)
+    v_perp = np.dot(path3, b_perp) + (spec_ord * wlen_um / gr_spacing_um)
     normsq = 1.0 - v_para**2 - v_perp**2
+    sys.stderr.write("NEW v_para, v_perp, normsq: %10.5f, %10.5f, %10.5f\n"
+            % (v_para, v_perp, normsq))
     if (normsq < 0.0):
+        sys.stderr.write("Imaginary diffracted ray!\n")
+        sys.stderr.write("normsq: %s\n" % str(normsq)) 
         return False, np.array([np.nan, np.nan, np.nan])
     v_norm = np.sqrt(normsq)
+    sys.stderr.write("NEW v_para, v_perp, v_norm: %10.5f, %10.5f, %10.5f\n"
+            % (v_para, v_perp, v_norm))
     diffr_vec = v_para * b_para + v_perp * b_perp + v_norm * g_norm
     return True, diffr_vec
+
+valid, diffr_vec = diffracted_ray(path3, wl_initial, 58)
+#sys.stderr.write("%s\n" % halfdiv)
+#sys.stderr.write("test_result: %s\n" % str(diffr_vec))
+
+#sys.stderr.write("original 58: %s\n" % str(diffr_vecs[58]))
+
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+## Make sure that vector goes back to prism:
+hits_prism, f2_isect = prf2.get_intersection(gr_isect, diffr_vec)
+if not hits_prism:
+    sys.stderr.write("No valid return path!!\n")
+    sys.exit(1)
+light_path.append(np.copy(f2_isect))
+
+## Direction change at face2:
+tmp_path = rt.calc_surface_vectors(diffr_vec, prf2['normal'], n1_n2_ratio)[1]
+
+## Exit point from prism face1:
+valid, f1_isect = prf1.get_intersection(f2_isect, tmp_path)
+if not valid:
+    sys.stderr.write("\nPROBLEM: input beam failed to exit prism!\n") 
+    sys.exit(1)
+light_path.append(np.copy(f1_isect))
+
+## Exit direction from prism face1:
+to_ccd = rt.calc_surface_vectors(tmp_path, -prf1['normal'], 1. / n1_n2_ratio)[1]
+
+## Find intersection with CCD plane:
+ccd_isect = rt.line_plane_intersection(f1_isect, to_ccd, ccd_point, ccd_normal)
+light_path.append(np.copy(ccd_isect))
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -460,6 +545,11 @@ ax1.grid(True)
 ## Disable axis offsets:
 #ax1.xaxis.get_major_formatter().set_useOffset(False)
 #ax1.yaxis.get_major_formatter().set_useOffset(False)
+
+# -----------------------------------------------------------------------
+# Mark CCD position:
+ax1.scatter(ccd_xseg, ccd_yseg, lw=0, s=30, c='m')
+ax1.plot(ccd_xseg, ccd_yseg, c='m')
 
 # -----------------------------------------------------------------------
 # Prism vertices:
@@ -509,16 +599,19 @@ def qconnect(xyz1, xyz2, **kwargs):
 
 # Light paths (green):
 grkw = {'ls':'--', 'c':'g'}
-beam_start = np.array([0.0, -400.0, 0.0])
-qconnect(beam_start, f1_isect, **grkw)
-qconnect(f1_isect, f2_isect, **grkw)
+for pstart,pstop in zip(light_path[:-1], light_path[1:]):
+    qconnect(pstart, pstop, **grkw)
 
-#path3_len = 300.0
-#path3_end = f2_isect + path3_len * path3
-qconnect(f2_isect, gr_isect, **grkw)
-
-qconnect(gr_isect, next_verts[58.0], **grkw)
-#path4_len = 300.0
+#beam_start = np.array([0.0, -400.0, 0.0])
+#qconnect(beam_start, f1_isect, **grkw)
+#qconnect(f1_isect, f2_isect, **grkw)
+#
+##path3_len = 300.0
+##path3_end = f2_isect + path3_len * path3
+#qconnect(f2_isect, gr_isect, **grkw)
+#
+#qconnect(gr_isect, next_verts[58.0], **grkw)
+##path4_len = 300.0
 
 
 #blurb = "some text"

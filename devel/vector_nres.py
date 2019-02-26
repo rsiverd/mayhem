@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2019-02-19
-# Last modified: 2019-02-24
+# Last modified: 2019-02-25
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 ## Python version-agnostic module reloading:
 try:
@@ -88,9 +88,13 @@ nres_prism_apex_deg = 55.0
 import spectrograph_optics
 reload(spectrograph_optics)
 sog = spectrograph_optics.Glass(nres_prism_glass)
-#nrp = spectrograph_optics.Prism(nres_prism_glass, nres_prism_apex_deg)
 dppgp = spectrograph_optics.DoublePassPrismGratingPrism()
 
+useful_orders = 51.0 + np.arange(69.0)
+center_wlen_um = dppgp.calc_central_wlen_um(useful_orders)
+spec_order_FSR = center_wlen_um / useful_orders
+spec_order_wlmin = center_wlen_um - spec_order_FSR
+spec_order_wlmax = center_wlen_um + spec_order_FSR
 
 ##--------------------------------------------------------------------------##
 
@@ -268,11 +272,6 @@ ft = prpoly.get_face('top')
 # for experimentation:
 f1 = prpoly.get_face('face1')
 
-#offset_vtx = np.array([x-f1._uv_origin for x in f1._verts])
-#b1, b2 = f1._basis
-testpnt = f1['center']
-derp = f1._rect_contains(testpnt)
-
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -281,10 +280,16 @@ derp = f1._rect_contains(testpnt)
 gr_length_mm = 320.0
 gr_width_mm  = 165.0
 gr_height_mm =  50.5
+gr_ruling_lmm = 41.59                   # lines per mm
+gr_spacing_um = 1e3 / gr_ruling_lmm     # groove spacing in microns
 grating_turn_deg = 44.827
 grating_tilt_deg = 13.786
 
 grpoly = po.GratingPolyhedron(gr_width_mm, gr_length_mm, gr_height_mm)
+#grb1, grb2 = grpoly.get_face('bot')['basis']
+#sys.stderr.write("grb1: %s\n" % str(grb1))
+#sys.stderr.write("grb2: %s\n" % str(grb2))
+#sys.exit(0)
 grpoly.xrotate(np.radians(-grating_tilt_deg))
 grpoly.zrotate(np.radians(grating_turn_deg))
 grpoly.shift_xyz(-165.0, 235.0, 0.0)
@@ -292,8 +297,9 @@ grpoly.shift_xyz(-165.0, 235.0, 0.0)
 #grpoly.shift_vec(np.array([-165.0, 235.0, 0.0]))
 
 ## Adjust grating so center of bottom face lies on z=0:
+#gr_bot = grpoly.get_face('bot')
 gr_bot_ctr = np.copy(grpoly.get_face('bot')['center'])
-sys.stderr.write("grating bottom-center: %s\n" % str(gr_bot_ctr))
+#sys.stderr.write("grating bottom-center: %s\n" % str(gr_bot_ctr))
 grpoly.shift_vec(gr_bot_ctr * np.array([0.0, 0.0, -1.0]))
 
 ##--------------------------------------------------------------------------##
@@ -305,9 +311,18 @@ grpoly.shift_vec(nudge)
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
+## Input beam direction:
+input_turn_deg = 5.0
+input_uptilt_deg = 0.0
+input_phi = np.radians(90.0 + input_turn_deg)
+input_theta = np.radians(90.0 - input_uptilt_deg)
+v_initial = np.array([np.sin(input_theta) * np.cos(input_phi),
+                      np.sin(input_theta) * np.sin(input_phi),
+                      np.cos(input_theta)])
+
 ## An initial input beam:
 wl_initial = 0.8                        # ray wavelength (microns)
-v_initial = np.array([0.0, 1.0, 0.0])   # headed in Y-direction
+#v_initial = np.array([0.0, 1.0, 0.0])   # headed in Y-direction
 fiber_exit = np.array([0.0, -400.0, 0.0])
 n_spec_air = 1.0                        # spectrograph air index of refraction
 n_pris_glass = sog.refraction_index(wl_initial) # prism index of refraction
@@ -322,19 +337,85 @@ path2 = v_refract.copy()
 ## Exit point from prism face2:
 f1_isect = np.zeros(3)
 prf2 = prpoly.get_face('face2')
-f2_isect = prf2.get_intersection(f1_isect, path2)
+hit, f2_isect = prf2.get_intersection(f1_isect, path2)
 
 ## Exit direction from prism face2:
 v_reflect, v_refract = rt.calc_surface_vectors(path2,
                         -prf2['normal'], n_pris_glass / n_spec_air)
 path3 = v_refract.copy()
 
-## Find intersection with grating:
-#grbot = grpoly.get_face('bot')
-gr_isect = grpoly.get_face('bot').get_intersection(f2_isect, path3)
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
 
-##--------------------------------------------------------------------------##
-##--------------------------------------------------------------------------##
+## Find intersection with grating:
+grbot = grpoly.get_face('bot')
+valid, gr_isect = grbot.get_intersection(f2_isect, path3)
+
+## NOTE: grating bottom face basis vectors correspond thusly:
+## * b1 ~ parallel to grooves
+## * b2 ~ perpendicular to grooves
+
+## Along the groove direction, reflection is specular:
+order_number = 85
+useful_orders = 51.0 + np.arange(69.0)
+b_para, b_perp = grbot['basis']
+g_norm = grbot['normal']
+diffr_vecs = {}
+next_verts = {}
+wlen_um = wl_initial
+prf2 = prpoly.get_face('face2')
+for nord in useful_orders:
+    sys.stderr.write("Order: %d ... " % nord)
+    v_para = np.dot(path3, b_para)
+    v_perp = np.dot(path3, b_perp) + (nord * wlen_um / gr_spacing_um)
+    normsq = 1.0 - v_para**2 - v_perp**2
+
+    # Give up in case of imaginary wavevector:
+    if (normsq < 0.0):
+        sys.stderr.write("imaginary normal component (evanescent order)!\n")
+        diffr_vecs[nord] = np.nan
+        sys.stderr.write("\n")
+        break       # all subsequent orders imaginary
+
+    # Compute direction and check for prism intersection:
+    v_norm = np.sqrt(normsq)
+    path4 = v_para * b_para + v_perp * b_perp + v_norm * g_norm
+    hits_prism, isect = prf2.get_intersection(gr_isect, path4)
+    if not hits_prism:
+        sys.stderr.write("path exists but misses prism!\n")
+        diffr_vecs[nord] = np.nan
+        continue
+
+    sys.stderr.write("isect: %s\n" % str(isect))
+    diffr_vecs[nord] = path4
+    next_verts[nord] = isect
+    sys.stderr.write("\n")
+
+def diffracted_ray(u_incident, wlen_um, spec_ord):
+    """
+    Diffracted ray direction is produced by superposition of the components
+    parallel and perpendicular to grating grooves. Groove-parallel component
+    undergoes specular reflection. Groove-perpendicular component is determined
+    from path difference. Lastly, the grating-normal component is found from
+    normalization (total length == 1).
+
+    b_para -- basis vector parallel to grooves
+    b_perp -- basis vector perpendicular to grooves
+
+    Returns:
+    valid     --> True/False to indicate if real-valued solution exists
+    diffr_hat --> unit vector in direction of diffracted ray
+    """
+    b_para, b_perp = grpoly.get_face('bot')['basis']
+    g_norm = grpoly.get_face('bot')['normal']
+    v_para = np.dot(path3, b_para)
+    v_perp = np.dot(path3, b_perp) + (nord * wlen_um / gr_spacing_um)
+    normsq = 1.0 - v_para**2 - v_perp**2
+    if (normsq < 0.0):
+        return False, np.array([np.nan, np.nan, np.nan])
+    v_norm = np.sqrt(normsq)
+    diffr_vec = v_para * b_para + v_perp * b_perp + v_norm * g_norm
+    return True, diffr_vec
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -435,6 +516,9 @@ qconnect(f1_isect, f2_isect, **grkw)
 #path3_len = 300.0
 #path3_end = f2_isect + path3_len * path3
 qconnect(f2_isect, gr_isect, **grkw)
+
+qconnect(gr_isect, next_verts[58.0], **grkw)
+#path4_len = 300.0
 
 
 #blurb = "some text"

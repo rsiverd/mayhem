@@ -114,12 +114,7 @@ samp_per_order = 11
 FSRs_per_order = 1.6
 sample_offsets = FSRs_per_order * np.linspace(-0.5, 0.5, samp_per_order)
 for nord,wlcen in zip(useful_orders, center_wlen_um):
-    #sys.stderr.write("Order %3d has λ_cen = %.4f μm\n" % (nord, wlcen))
     this_FSR = wlcen / float(nord)
-    #wl_shift = np.array([-0.5, 0.5]) * this_FSR * FSRs_per_order
-    #sys.stderr.write("wl_shift: %s\n" % str(wl_shift))
-    #wl_samples = wlcen + this_FSR * sample_offsets
-    #sys.stderr.write("wl_samples: %s\n" % str(wl_samples))
     rtwl_samples[nord] = wlcen + this_FSR * sample_offsets
 
 
@@ -414,44 +409,6 @@ light_path.append(np.copy(gr_isect))
 ## * b1 ~ parallel to grooves
 ## * b2 ~ perpendicular to grooves
 
-## Along the groove direction, reflection is specular:
-#b_para, b_perp = grbot['basis']
-#g_norm = grbot['normal']
-#diffr_vecs = {}
-#next_verts = {}
-#wlen_um = wl_initial
-#prf2 = prpoly.get_face('face2')
-#for nord in useful_orders:
-#    sys.stderr.write("Order: %d ... " % nord)
-#    v_para = np.dot(path3, b_para)
-#    v_perp = np.dot(path3, b_perp) + (float(nord) * wlen_um / gr_spacing_um)
-#    normsq = 1.0 - v_para**2 - v_perp**2
-#    sys.stderr.write("\nOLD v_para, v_perp, normsq: %10.5f, %10.5f, %10.5f\n"
-#            % (v_para, v_perp, normsq))
-#
-#    # Give up in case of imaginary wavevector:
-#    if (normsq < 0.0):
-#        sys.stderr.write("imaginary normal component (evanescent order)!\n")
-#        diffr_vecs[nord] = np.nan
-#        sys.stderr.write("\n")
-#        break       # all subsequent orders imaginary
-#
-#    # Compute direction and check for prism intersection:
-#    v_norm = np.sqrt(normsq)
-#    sys.stderr.write("OLD v_para, v_perp, v_norm: %10.5f, %10.5f, %10.5f\n"
-#            % (v_para, v_perp, v_norm))
-#    path4 = v_para * b_para + v_perp * b_perp + v_norm * g_norm
-#    hits_prism, isect = prf2.get_intersection(gr_isect, path4)
-#    if not hits_prism:
-#        sys.stderr.write("path exists but misses prism!\n")
-#        diffr_vecs[nord] = np.nan
-#        continue
-#
-#    sys.stderr.write("isect: %s\n" % str(isect))
-#    diffr_vecs[nord] = path4
-#    next_verts[nord] = isect
-#    sys.stderr.write("\n")
-
 def diffracted_ray(u_incident, wlen_um, spec_ord):
     """
     Diffracted ray direction is produced by superposition of the components
@@ -485,10 +442,6 @@ def diffracted_ray(u_incident, wlen_um, spec_ord):
     return True, diffr_vec
 
 valid, diffr_vec = diffracted_ray(path3, wl_initial, 58)
-#sys.stderr.write("%s\n" % halfdiv)
-#sys.stderr.write("test_result: %s\n" % str(diffr_vec))
-
-#sys.stderr.write("original 58: %s\n" % str(diffr_vecs[58]))
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##

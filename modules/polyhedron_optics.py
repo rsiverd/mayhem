@@ -324,6 +324,11 @@ class PolygonFace(object):
 
     # Line intersection WITH face bounds check:
     def get_intersection(self, lpoint, lvector):
+        """Check whether specified line intersects this face.
+        Returns:
+            valid  -- True if intersection occurs, otherwise False
+            isect  -- point of intersection if possible, otherwise None
+        """
         isect = self._line_intersection(lpoint, lvector)
         if self._contains_point(isect):
             return True, isect
@@ -332,10 +337,11 @@ class PolygonFace(object):
 
     # User-friendly distance-to-intersection calculator (handles bounds):
     def get_intersect_distance(self, lpoint, lvector):
-        hit, isect = self.get_intersection(lpoint, lvector)
-        if not isinstance(isect, np.ndarray):
+        valid, isect = self.get_intersection(lpoint, lvector)
+        if not valid:
             return np.nan
-        return np.dot(isect - lpoint, lvector) / self._vec_length(lvector)
+        else:
+            return np.dot(isect - lpoint, lvector) / self._vec_length(lvector)
 
 
 ##--------------------------------------------------------------------------##

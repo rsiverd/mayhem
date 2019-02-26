@@ -69,10 +69,9 @@ def calc_surface_vectors(v_incident, surf_norm, n1_n2_ratio):
 def refracted_ray(v_incident, surf_norm, n1_n2_ratio):
     cti = -1.0 * np.dot(v_incident, surf_norm)     # cos(theta_i)
     nnr = n1_n2_ratio
-    v_reflect = v_incident + 2. * cti * surf_norm
     smult = nnr*cti - np.sqrt(1.0 - nnr**2 * (1.0 - cti**2))
     v_refract = nnr * v_incident + smult * surf_norm
-    return v_reflect, v_refract
+    return v_refract
 
 ##--------------------------------------------------------------------------##
 ## Intersection of a line and plane. In this model, both lines and planes are

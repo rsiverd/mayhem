@@ -108,6 +108,20 @@ def wlen2orders(wlen_um):
 def wlen2order(wlen_um):
     return useful_orders[argnear(center_wlen_um, wlen_um)]
 
+## Select test wavelengths from each order to test raytracing:
+rtwl_samples = {}
+samp_per_order = 11
+FSRs_per_order = 1.6
+sample_offsets = FSRs_per_order * np.linspace(-0.5, 0.5, samp_per_order)
+for nord,wlcen in zip(useful_orders, center_wlen_um):
+    #sys.stderr.write("Order %3d has λ_cen = %.4f μm\n" % (nord, wlcen))
+    this_FSR = wlcen / float(nord)
+    #wl_shift = np.array([-0.5, 0.5]) * this_FSR * FSRs_per_order
+    #sys.stderr.write("wl_shift: %s\n" % str(wl_shift))
+    #wl_samples = wlcen + this_FSR * sample_offsets
+    #sys.stderr.write("wl_samples: %s\n" % str(wl_samples))
+    rtwl_samples[nord] = wlcen + this_FSR * sample_offsets
+
 
 ##--------------------------------------------------------------------------##
 

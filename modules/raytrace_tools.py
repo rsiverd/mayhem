@@ -10,7 +10,7 @@
 #
 # Rob Siverd
 # Created:       2019-02-18
-# Last modified: 2019-02-24
+# Last modified: 2019-02-25
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
@@ -59,6 +59,14 @@ import numpy as np
 ##--------------------------------------------------------------------------##
 ## Reflection and refraction in 3 dimensions (vector forms):
 def calc_surface_vectors(v_incident, surf_norm, n1_n2_ratio):
+    cti = -1.0 * np.dot(v_incident, surf_norm)     # cos(theta_i)
+    nnr = n1_n2_ratio
+    v_reflect = v_incident + 2. * cti * surf_norm
+    smult = nnr*cti - np.sqrt(1.0 - nnr**2 * (1.0 - cti**2))
+    v_refract = nnr * v_incident + smult * surf_norm
+    return v_reflect, v_refract
+
+def refracted_ray(v_incident, surf_norm, n1_n2_ratio):
     cti = -1.0 * np.dot(v_incident, surf_norm)     # cos(theta_i)
     nnr = n1_n2_ratio
     v_reflect = v_incident + 2. * cti * surf_norm

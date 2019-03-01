@@ -339,7 +339,7 @@ light_path = []
 
 ## Input beam direction:
 #input_turn_deg = 5.0
-input_turn_deg = 2.0
+input_turn_deg = 5.0
 input_uptilt_deg = 0.0
 input_phi = np.radians(90.0 + input_turn_deg)
 input_theta = np.radians(90.0 - input_uptilt_deg)
@@ -348,20 +348,25 @@ v_initial = np.array([np.sin(input_theta) * np.cos(input_phi),
                       np.cos(input_theta)])
 
 ## An initial input beam:
-wl_initial = 0.8                        # ray wavelength (microns)
-#v_initial = np.array([0.0, 1.0, 0.0])   # headed in Y-direction
-fiber_exit = np.array([0.0, -400.0, 0.0])
+wl_initial = 0.80                        # ray wavelength (microns)
+prvtx_xmax = prpoly.get_vertices('top')[:, 0].max()     # prism +X extremum
+fiber_xpos = 0.8 * prvtx_xmax
+fiber_exit = np.array([fiber_xpos, -400.0, 0.0])
 light_path.append(fiber_exit)
 
 ## CCD position (finish line):
+demagnified = 2.0   # cheesy treatment of convergence onto CCD
 pix_size_um = 15.0
 ccd_edge_mm = 4096.0 * pix_size_um / 1e3
 
 ccd_ypos   = -450.0
 ccd_point  = np.array([0.0, ccd_ypos, 0.0])
 ccd_normal = np.array([0.0,      1.0, 0.0])
+ccd_xshift = -7.697     # from T1 schematic
+ccd_xshift = -6.25      # from Stuart Barnes' report
 
-ccd_xseg = np.array([0.0, ccd_edge_mm]) - 40.0
+ccd_xseg = ccd_edge_mm * np.array([-0.5, 0.5]) + ccd_xshift
+ccd_xseg *= demagnified
 ccd_yseg = np.ones_like(ccd_xseg) * ccd_ypos
 
 ##--------------------------------------------------------------------------##
@@ -441,7 +446,10 @@ def diffracted_ray(u_incident, wlen_um, spec_ord):
     diffr_vec = v_para * b_para + v_perp * b_perp + v_norm * g_norm
     return True, diffr_vec
 
-valid, diffr_vec = diffracted_ray(path3, wl_initial, 58)
+use_order = wlen2order(wl_initial)
+sys.stderr.write("Settled on order %d for λ=%.3f μm\n"
+        % (use_order, wl_initial))
+valid, diffr_vec = diffracted_ray(path3, wl_initial, use_order)
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##

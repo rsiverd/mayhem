@@ -768,19 +768,6 @@ for sord,ctrwl_nm in zip(spec_order_list, 1e3 * ctr_wlen):
     spec_order_wl_lims.append(wl_lims_nm)
     spec_order_line_sets.append(comb_lines)
 
-## ----------------------------------------------------------------------- ##
-## ----------------------------------------------------------------------- ##
-## Segment matching for lines?
-
-#def list_segments(xcoords):
-#    pairs = itt.combinations(range(len(xcoords)), 2)
-#    ii,jj = zip(*pairs)
-#    x_sep = np.log10(xcoords[jj,] - xcoords[ii,])
-#    params = np.column_stack((xcoords[ii], x_sep))
-#    indices = np.column_stack((ii, jj)).astype('uint16')
-#    return {'idx':indices, 'seg':params}
-#    #return np.log10(diffs)
-#
 
 ## ----------------------------------------------------------------------- ##
 ## ----------------------------------------------------------------------- ##

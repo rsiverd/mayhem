@@ -737,11 +737,13 @@ reload(wavelength_reference)
 wlf = wavelength_reference.WLFetcher()
 
 ## Wavelength fitting helpers:
+import segmatch1
+reload(segmatch1)
+smv1 = segmatch1.SegMatch()
 import wl_solve_test
 reload(wl_solve_test)
 tlf = wl_solve_test.LineFinder()
 afsr = wl_solve_test.ApproxFSR()
-wlsm = wl_solve_test.WLSegMatch()
 
 ## Compute line positions for every order:
 sys.stderr.write("Computing line positions for fib_which=%d ...\n" % fib_which)
@@ -875,36 +877,34 @@ line_ref_nm = spec_order_line_sets[tidx]
 model_wl_nm = using_wlmod[tord] * 1e3
 line_xpix = measured_line_xpix[tidx]
 line_refx = np.interp(line_ref_nm, model_wl_nm, tdata['xpix'])
-#segs_meas_data = wlsm._list_segments(line_xpix)
-#segs_lref_data = wlsm._list_segments(line_refx)
 #segs_meas = segs_meas_data['seg']
 #segs_lref = segs_lref_data['seg']
 #diffs = segs_meas[:, None] - segs_lref[None, :]
 #nseg_dims = (len(segs_meas), len(segs_lref))
 #nobj_dims = (len(line_xpix), len(line_refx))
 
-wlsm.set_measured_peaks(line_xpix)
-wlsm.set_reference_lines(line_refx)
+smv1.set_catalog1(line_xpix)
+smv1.set_catalog2(line_refx)
 
 #len_range = (-0.2, 0.2)
 #len_tol   = np.log10(1.1)
 len_tol   = np.log10(1.05)
 len_bins  = 30
-len_range = wlsm.bintol_range(len_bins, len_tol)
+len_range = smv1.bintol_range(len_bins, len_tol)
 tdivs = (3,)
 
 use_ranges = (len_range,)
 use_nbins  = (len_bins,)
-best_pars = wlsm.dither_hist_best_fit(use_ranges, use_nbins,
+best_pars = smv1.dither_hist_best_fit(use_ranges, use_nbins,
         tdivs, mode='weighted')
 
-line_pairs = wlsm.matched_source_indexes()
+line_pairs = smv1.matched_source_indexes()
 midx, ridx = zip(*line_pairs) 
 
 print(line_xpix[midx,])
 print(line_refx[ridx,])
 
-ttpix, ttref = wlsm.get_matched_coords()
+ttpix, ttref = smv1.get_matched_coords()
 
 #scale_nbins = 50
 #scale_range = (-0.2, 0.2)

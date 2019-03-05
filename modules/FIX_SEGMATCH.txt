@@ -94,8 +94,8 @@ is vastly smaller.
 
 To enable divide-and-conquer, need to change several things:
 * diffs array contents will need to be computed more than once (can't be stored)
-* want to calculate diffs using a generator routine (with yield) so that
-   iteration over all diffs works but that memory is managed.
+#* want to calculate diffs using a generator routine (with yield) so that
+#   iteration over all diffs works but that memory is managed.
 * can use all diffs by creating a cumulative *histogram* in advance. This
    histogram is then augmented with the histogramdd() results from each diffs
    chunk as it arrives. The histogram size depends on parameter space, not on

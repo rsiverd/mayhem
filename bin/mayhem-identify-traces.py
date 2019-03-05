@@ -6,13 +6,13 @@
 #
 # Rob Siverd
 # Created:       2018-12-26
-# Last modified: 2019-02-14
+# Last modified: 2019-03-05
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.3.2"
+__version__ = "0.3.5"
 
 ## Python version-agnostic module reloading:
 try:
@@ -858,57 +858,45 @@ def wlcheck(oidx):
 
 
 tidx = 45
-tord = int(spec_order_list[tidx])
-tdata = corresponding_thar[tidx]
-line_ref_nm = spec_order_line_sets[tidx]
-model_wl_nm = using_wlmod[tord] * 1e3
-line_xpix = measured_line_xpix[tidx]
-line_refx = np.interp(line_ref_nm, model_wl_nm, tdata['xpix'])
-#segs_meas = segs_meas_data['seg']
-#segs_lref = segs_lref_data['seg']
-#diffs = segs_meas[:, None] - segs_lref[None, :]
-#nseg_dims = (len(segs_meas), len(segs_lref))
-#nobj_dims = (len(line_xpix), len(line_refx))
+def linematch(tidx, need_lines=3):
+    tord = int(spec_order_list[tidx])
+    tdata = corresponding_thar[tidx]
+    line_ref_nm = spec_order_line_sets[tidx]
+    model_wl_nm = using_wlmod[tord] * 1e3
+    line_xpix = measured_line_xpix[tidx]
+    line_refx = np.interp(line_ref_nm, model_wl_nm, tdata['xpix'])
+    #segs_meas = segs_meas_data['seg']
+    #segs_lref = segs_lref_data['seg']
+    #diffs = segs_meas[:, None] - segs_lref[None, :]
+    #nseg_dims = (len(segs_meas), len(segs_lref))
+    #nobj_dims = (len(line_xpix), len(line_refx))
 
-smv1.set_catalog1(line_xpix)
-smv1.set_catalog2(line_refx)
+    sys.stderr.write("line_xpix.size: %d\n" % line_xpix.size)
+    sys.stderr.write("line_refx.size: %d\n" % line_refx.size)
+    if (line_xpix.size < need_lines) or (line_refx.size < need_lines):
+        sys.stderr.write("Too few lines to attempt match!\n")
+        return None, None
+    smv1.set_catalog1(line_xpix)
+    smv1.set_catalog2(line_refx)
+    #len_range = (-0.2, 0.2)
+    #len_tol   = np.log10(1.1)
+    len_tol   = np.log10(1.10)
+    len_bins  = 30
+    len_range = smv1.bintol_range(len_bins, len_tol)
+    tdivs = (3,)
 
-#len_range = (-0.2, 0.2)
-#len_tol   = np.log10(1.1)
-len_tol   = np.log10(1.05)
-len_bins  = 30
-len_range = smv1.bintol_range(len_bins, len_tol)
-tdivs = (3,)
+    use_ranges = (len_range,)
+    use_nbins  = (len_bins,)
+    best_pars = smv1.dither_hist_best_fit(use_ranges, use_nbins,
+            tdivs, mode='weighted')
 
-use_ranges = (len_range,)
-use_nbins  = (len_bins,)
-best_pars = smv1.dither_hist_best_fit(use_ranges, use_nbins,
-        tdivs, mode='weighted')
+    line_pairs = smv1.matched_source_indexes()
+    midx, ridx = zip(*line_pairs) 
+    print(line_xpix[midx,])
+    print(line_refx[ridx,])
+    ttpix, ttref = smv1.get_matched_coords()
+    return ttpix, ttref
 
-line_pairs = smv1.matched_source_indexes()
-midx, ridx = zip(*line_pairs) 
-
-print(line_xpix[midx,])
-print(line_refx[ridx,])
-
-ttpix, ttref = smv1.get_matched_coords()
-
-#scale_nbins = 50
-#scale_range = (-0.2, 0.2)
-#nb_attempts = [30, 35, 40, 45, 50, 55, 60]
-
-#mh_results = multi_search(diffs, scale_range, nb_attempts)
-
-#hh, edges = np.histogram(diffs.flatten(), 
-#        bins=scale_nbins, range=scale_range)
-#peak = np.unravel_index(hh.argmax(), hh.shape)
-##vparams = [0.5*(ee[ii]+ee[ii+1]) for (ee,ii) in zip(edges, peak)]
-#vpeak = 0.5 * (edges[peak[0]] + edges[peak[0]+1])
-#bsize = (max(scale_range) - min(scale_range)) / float(scale_nbins)
-
-## Extract pairings:
-#tol = 0.75 * bsize
-#hits = np.abs(diffs - vpeak) < 0.5*bsize
 
 
 
@@ -971,6 +959,21 @@ def oinspect(oidx, ww2=False, wlmode=False,
         for line in thar_show[:-1]:
             ax1.axvline(line, ls=':', c='g')
         ax1.axvline(thar_show[-1], ls=':', c='g', label='Lovis_Pepe_2007')
+
+    # Overplot seg-matched lines:
+    ttpix, ttref = linematch(oidx)
+    #try:
+    #    ttpix, ttref = linematch(oidx)
+    #except:
+    #    sys.stderr.write("line-matching error ...\n")
+    #    ttpix, ttref = None
+    if isinstance(ttpix, np.ndarray):
+        for item in ttpix:
+            ax1.axvline(pix2wl(item), ls='--', lw=1, c='m')
+        for item in ttref:
+            ax1.axvline(pix2wl(item), ls='--', lw=1, c='orange')
+        shift, scale = ts.linefit(ttpix, ttref)
+        sys.stderr.write("shift, scale = %.3f, %.3f\n" % (shift, scale)) 
 
     #return
     ax3 = ax1.twiny()

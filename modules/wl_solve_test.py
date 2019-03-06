@@ -159,6 +159,7 @@ class LineFinder(object):
     # Driver routine to find and return line positions for wavelength checks:
     def extract_lines_wlen(self, wlen, flux, boxwid=3, shallow=0.01, 
             border=20, pctile=False):
+        xpix = 1 + np.arange(wlen.size)
         smooth_flux = self._make_smooth_flux(xpix, flux, 
                 boxwid=boxwid, pctile=pctile)
         maxima_idx = ssig.argrelmax(smooth_flux, order=3)[0]
@@ -174,6 +175,7 @@ class LineFinder(object):
         x_lo, x_hi = border, xpix.max() - border
         safe_edge = (x_lo < peak_center_idx) & (peak_center_idx < x_hi)
         keep_center_idx = peak_center_idx[safe_edge]
+        #sys.stderr.write("keep_center_idx: %s\n" % str(keep_center_idx))
         return self._calc_centroids(wlen, flux, keep_center_idx, boxwid)
 
 

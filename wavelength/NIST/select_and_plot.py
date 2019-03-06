@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import astropy.io.fits as pf
 import scipy.signal as ssig
 
+nist_top = pf.getdata('./NIST_spectrum.all.fits')
 nist_all = pf.getdata('./NIST_spectrum.all.fits')
 
 wlen_nm = nist_all['wlen'] / 10.0

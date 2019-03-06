@@ -147,7 +147,9 @@ class LineFinder(object):
         keep_center_pix = xpix[keep_center_idx]
         ctr_offsets = \
                 self._calc_offsets(smooth_flux, keep_center_idx, boxwid)
-        return (keep_center_pix + ctr_offsets)
+        ctr_xpix = keep_center_pix + ctr_offsets
+        ctr_flux = flux[keep_center_idx]
+        return (ctr_xpix, ctr_flux)
 
     # Compute centroid offset from peak index based on neighbor flux:
     def _calc_centroids(self, wlen, flux, centers, ksize):

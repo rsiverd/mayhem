@@ -176,7 +176,9 @@ class LineFinder(object):
         safe_edge = (x_lo < peak_center_idx) & (peak_center_idx < x_hi)
         keep_center_idx = peak_center_idx[safe_edge]
         #sys.stderr.write("keep_center_idx: %s\n" % str(keep_center_idx))
-        return self._calc_centroids(wlen, flux, keep_center_idx, boxwid)
+        ctr_wlen = self._calc_centroids(wlen, flux, keep_center_idx, boxwid)
+        ctr_flux = flux[keep_center_idx]
+        return (ctr_wlen, ctr_flux)
 
 
 

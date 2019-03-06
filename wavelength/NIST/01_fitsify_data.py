@@ -19,14 +19,14 @@ tflux = ldata['intensity'].values
 
 ## Make full FITS table:
 columns = [pf.Column(name='wlen', format='D', unit='Angstrom', array=twlen),
-            pf.Column(name='flux', format='D', unit='Angstrom', array=tflux)]
+            pf.Column(name='flux', format='D', unit='counts', array=tflux)]
 tbhdu = pf.BinTableHDU.from_columns(pf.ColDefs(columns))
 tbhdu.writeto('NIST_spectrum.all.fits', overwrite=True)
 
 ## Make 'bright' FITS table:
 which = (tflux >= np.percentile(tflux, 95))
 columns = [pf.Column(name='wlen', format='D', unit='Angstrom', array=twlen[which]),
-            pf.Column(name='flux', format='D', unit='Angstrom', array=tflux[which])]
+            pf.Column(name='flux', format='D', unit='counts', array=tflux[which])]
 tbhdu = pf.BinTableHDU.from_columns(pf.ColDefs(columns))
 tbhdu.writeto('NIST_spectrum.top.fits', overwrite=True)
 

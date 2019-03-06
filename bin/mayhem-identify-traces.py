@@ -751,7 +751,7 @@ corresponding_thar = f0_thar_data if fib_which==0 else f1_thar_data
 measured_line_xpix = []
 slow_args = {'pctile':True, 'shallow':0.01}
 #fast_args = {'pctile':False, 'shallow':0.1}
-fast_args = {'pctile':False, 'shallow':0.01}
+fast_args = {'pctile':False, 'shallow':0.010}
 for i,tdata in enumerate(corresponding_thar, 1):
     sys.stderr.write("\rScanning order %d of %d ... "
             % (i, len(corresponding_thar)))
@@ -856,6 +856,25 @@ def wlcheck(oidx):
     return result
     #return tdata, model_wl_nm, line_wl_nm
 
+## Simple polynomial fitting in numpy:
+def polyfit(x, y, deg):
+   if (deg < 1):
+      return np.average(y)
+   nmat = np.ones_like(y)
+   for pow in range(1, deg+1, 1):
+      nmat = np.column_stack((nmat, x**pow))
+   return np.linalg.lstsq(nmat, y)[0]
+
+## Evaluation of best fit:
+def polyval(x, mod):
+   z = np.zeros_like(x)
+   for i in range(mod.size):
+      z += mod[i] * x**i
+   return z
+
+ord_lines_wlnm = None
+ord_lines_xref = None
+ord_lines_xmid = None
 
 tidx = 45
 def linematch(tidx, need_lines=3):
@@ -865,6 +884,7 @@ def linematch(tidx, need_lines=3):
     model_wl_nm = using_wlmod[tord] * 1e3
     line_xpix = measured_line_xpix[tidx]
     line_refx = np.interp(line_ref_nm, model_wl_nm, tdata['xpix'])
+
     #segs_meas = segs_meas_data['seg']
     #segs_lref = segs_lref_data['seg']
     #diffs = segs_meas[:, None] - segs_lref[None, :]
@@ -875,7 +895,7 @@ def linematch(tidx, need_lines=3):
     sys.stderr.write("line_refx.size: %d\n" % line_refx.size)
     if (line_xpix.size < need_lines) or (line_refx.size < need_lines):
         sys.stderr.write("Too few lines to attempt match!\n")
-        return None, None
+        return np.array([]), np.array([]), np.array([])
     smv1.set_catalog1(line_xpix)
     smv1.set_catalog2(line_refx)
     #len_range = (-0.2, 0.2)
@@ -890,12 +910,42 @@ def linematch(tidx, need_lines=3):
     best_pars = smv1.dither_hist_best_fit(use_ranges, use_nbins,
             tdivs, mode='weighted')
 
-    line_pairs = smv1.matched_source_indexes()
-    midx, ridx = zip(*line_pairs) 
+    midx, ridx = zip(*smv1.matched_source_indexes())
     print(line_xpix[midx,])
     print(line_refx[ridx,])
-    ttpix, ttref = smv1.get_matched_coords()
-    return ttpix, ttref
+    ttpix, refpix = smv1.get_matched_coords()
+    matchwl = line_ref_nm[ridx,].flatten()
+    sys.stderr.write("Pass 1 results: matched %d lines\n" % ttpix.size)
+    return ttpix.flatten(), refpix.flatten(), matchwl
+
+    #sys.stderr.write("Pass 2: tight tolerance matches using 1st-round solve\n")
+    ## Computed improved X-pixel positions of listed lines:
+    ##model = polyfit(ttpix.flatten(), matchwl, 2)
+    #model = polyfit(matchwl, ttpix.flatten(), 2)
+    #line_xrf2 = polyval(line_ref_nm, model)
+
+    ##globals()['ord_lines_xmid'] = line_xpix.copy()
+    ##globals()['ord_lines_xref'] = line_refx.copy()
+    ##globals()['ord_lines_wlnm'] = line_ref_nm.copy()
+    #sys.stderr.write("line_xpix: %s\n" % str(line_xpix))
+    #sys.stderr.write("line_xrf2: %s\n" % str(line_xrf2))
+
+    #smv1.set_catalog1(line_xpix)
+    #smv1.set_catalog2(line_xrf2)
+    #len_tol   = np.log10(1.03)
+    #len_bins  = 30
+    #len_range = smv1.bintol_range(len_bins, len_tol)
+    #use_ranges = (len_range,)
+    #use_nbins  = (len_bins,)
+    #best_pars = smv1.dither_hist_best_fit(use_ranges, use_nbins,
+    #        (3,), mode='weighted')
+    #midx, ridx = zip(*smv1.matched_source_indexes())
+    #print(line_xpix[midx,])
+    #print(line_refx[ridx,])
+    #ttpix, refpix = smv1.get_matched_coords()
+    #matchwl = line_ref_nm[ridx,].flatten()
+    #sys.stderr.write("Pass 2 results: matched %d lines\n" % ttpix.size)
+    #return ttpix.flatten(), refpix.flatten(), matchwl
 
 
 
@@ -913,9 +963,24 @@ max_lines_per_order = 30
 corresponding_thar = f0_thar_data if fib_which==0 else f1_thar_data
 def oinspect(oidx, ww2=False, wlmode=False,
         sdata=corresponding_thar, pad=0.1):
+
+
     thar = sdata[oidx]
     sord = thar_specord[oidx]
     wlen = 1e3 * wavelength2[sord] if ww2 else 1e3 * wavelengths[sord]
+
+    # In case of better answer, use segmatch fit:
+    ttpix, refpix, refwl = linematch(oidx)
+    #if isinstance(ttpix, np.ndarray):
+    if ttpix.size >= 3:
+        #shift, scale = ts.linefit(ttpix, refwl)
+        #wlen = shift + scale * thar['xpix']
+        model = polyfit(ttpix, refwl, 2)
+        wlen = polyval(thar['xpix'], model)
+        sys.stderr.write("matched lines: %d\n" % ttpix.size)
+
+
+
     wl2pix = lambda x: np.interp(x, wlen, thar['xpix'])
     pix2wl = lambda x: np.interp(x, thar['xpix'], wlen)
     #wlen *= 1e3     # switch to nm
@@ -959,21 +1024,32 @@ def oinspect(oidx, ww2=False, wlmode=False,
         for line in thar_show[:-1]:
             ax1.axvline(line, ls=':', c='g')
         ax1.axvline(thar_show[-1], ls=':', c='g', label='Lovis_Pepe_2007')
+    
+    if refwl.size > 0:
+        mkw = {'ls':':', 'c':'m', 'lw':1}
+        ax1.axvline(refwl[0], label='matched', **mkw)
+        for line in refwl[1:]:
+            ax1.axvline(line, **mkw)
 
-    # Overplot seg-matched lines:
-    ttpix, ttref = linematch(oidx)
-    #try:
-    #    ttpix, ttref = linematch(oidx)
-    #except:
-    #    sys.stderr.write("line-matching error ...\n")
-    #    ttpix, ttref = None
-    if isinstance(ttpix, np.ndarray):
-        for item in ttpix:
-            ax1.axvline(pix2wl(item), ls='--', lw=1, c='m')
-        for item in ttref:
-            ax1.axvline(pix2wl(item), ls='--', lw=1, c='orange')
-        shift, scale = ts.linefit(ttpix, ttref)
-        sys.stderr.write("shift, scale = %.3f, %.3f\n" % (shift, scale)) 
+
+    ## Overplot seg-matched lines:
+    #ttpix, refpix, refwl = linematch(oidx)
+    ##try:
+    ##    ttpix, ttref = linematch(oidx)
+    ##except:
+    ##    sys.stderr.write("line-matching error ...\n")
+    ##    ttpix, ttref = None
+    #if isinstance(ttpix, np.ndarray):
+    #    for item in ttpix:
+    #        ax1.axvline(pix2wl(item), ls='--', lw=1, c='m')
+    #    for item in refpix:
+    #        ax1.axvline(pix2wl(item), ls='--', lw=1, c='orange')
+    #    shift, scale = ts.linefit(ttpix, refpix)
+    #    sys.stderr.write("shift, scale = %.3f, %.3f\n" % (shift, scale)) 
+    #    xpeaks_as_wlen = pix2wl(shift + scale * measured_line_xpix[oidx])
+    #    #for item in xpeaks_as_wlen:
+    #    for item in pix2wl(measured_line_xpix[oidx]):
+    #        ax1.axvline(item, ls='-', lw=1, c='r')
 
     #return
     ax3 = ax1.twiny()

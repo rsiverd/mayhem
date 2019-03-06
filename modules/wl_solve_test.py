@@ -149,6 +149,33 @@ class LineFinder(object):
                 self._calc_offsets(smooth_flux, keep_center_idx, boxwid)
         return (keep_center_pix + ctr_offsets)
 
+    # Compute centroid offset from peak index based on neighbor flux:
+    def _calc_centroids(self, wlen, flux, centers, ksize):
+        offset = np.int_(self._make_pix_kernel(ksize))
+        f_cent = np.array([np.sum(wlen[offset+x] * flux[offset+x]) for x in centers])
+        ftotal = np.array([np.sum(flux[offset+x]) for x in centers])
+        return f_cent / ftotal
+
+    # Driver routine to find and return line positions for wavelength checks:
+    def extract_lines_xpix(self, wlen, flux, boxwid=3, shallow=0.01, 
+            border=20, pctile=False):
+        smooth_flux = self._make_smooth_flux(xpix, flux, 
+                boxwid=boxwid, pctile=pctile)
+        maxima_idx = ssig.argrelmax(smooth_flux, order=3)[0]
+        peak_fluxes = np.array([smooth_flux[x] for x in maxima_idx])
+        highest_flx = np.max(peak_fluxes)
+        #sys.stderr.write("Peaks found: %6d\n" % len(peak_fluxes))
+        #sys.stderr.write("highest_flx: %10.3f\n" % highest_flx)
+        flx_cut = shallow * highest_flx
+        #sys.stderr.write("flx_cut: %10.5f\n" % flx_cut)
+        keepers = (peak_fluxes >= flx_cut).nonzero()[0]
+        #sys.stderr.write("Uncut peaks: %6d\n" % keepers.size)
+        peak_center_idx = maxima_idx[keepers]
+        x_lo, x_hi = border, xpix.max() - border
+        safe_edge = (x_lo < peak_center_idx) & (peak_center_idx < x_hi)
+        keep_center_idx = peak_center_idx[safe_edge]
+        return self._calc_centroids(wlen, flux, keep_center_idx, boxwid)
+
 
 
 

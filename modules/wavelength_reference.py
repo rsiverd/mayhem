@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2019-02-08
-# Last modified: 2019-02-12
+# Last modified: 2019-03-06
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 ## Python version-agnostic module reloading:
 try:
@@ -143,6 +143,7 @@ wavelen_dir = os.path.join(mayhem_root, 'wavelength')
 ## NIST Argon list (cleaned up a bit):
 nist_dir = os.path.join(wavelen_dir, 'NIST')
 lope_dir = os.path.join(wavelen_dir, 'lovis_pepe_2007')
+nist_thar_path  = os.path.join(nist_dir, 'NIST_ThAr_lines.fits')
 nist_argon_path = os.path.join(nist_dir, 'clean_argon.csv')
 lovis_pepe_path = os.path.join(lope_dir, 'lovis_pepe.csv')
 nist_fft_thar_path = os.path.join(nist_dir, 'NIST_spectrum.all.fits')
@@ -167,6 +168,13 @@ def load_nist_argon(data_file=nist_argon_path):
     nist_data = append_fields(nist_data, 'lam_obs_nm', nist_data['lam_obs'])
     return nist_data
 
+def load_nist_thar(data_file=nist_thar_path):
+    ndata = pd.DataFrame(data_file)
+    lam_vac_um = nist_data['lam_obs'] / 1e3
+    nist_data = append_fields(nist_data, 'lam_obs_um', lam_obs_um)
+    nist_data = append_fields(nist_data, 'lam_obs_nm', nist_data['lam_obs'])
+    return nist_data
+
 ##--------------------------------------------------------------------------##
 ## Load Lovis & Pepe line list:
 def load_lovis_pepe_thar(data_file=lovis_pepe_path):
@@ -186,13 +194,16 @@ def load_lovis_pepe_thar(data_file=lovis_pepe_path):
 class WLFetcher(object):
 
     def __init__(self, vlevel=0,
-            nist_path=nist_argon_path,
-            lope_path=lovis_pepe_path):
+            nist_argon_path=nist_argon_path,
+            nist_thar_path=nist_thar_path,
+            lope_thar_path=lovis_pepe_path):
         self._vlevel    = vlevel
-        self._nist_path = nist_path
-        self._lope_path = lope_path
-        self._nist_data = None
-        self._lope_data = None
+        self._nist_argon_path = nist_argon_path
+        self._nist_thar_path  = nist_thar_path
+        self._lope_thar_path  = lope_thar_path
+        self._nist_argon = None
+        self._nist_thar  = None
+        self._lope_data  = None
         self.load_lines()
         return
 
@@ -211,6 +222,17 @@ class WLFetcher(object):
         ndata = ndata.assign(lam_obs_nm=lambda x: x.lam_obs_vac_nm)
         ndata = ndata.assign(lam_obs_aa=lambda x: x.lam_obs_vac_nm * 10.)
         ndata = ndata.assign(lam_obs_um=lambda x: x.lam_obs_vac_nm / 1e3)
+        return ndata
+ 
+    # Load lines I extracted from the NIST ThAr reference spectrum:
+    @staticmethod
+    def _load_nist_thar(data_file):
+        ndata = pd.DataFrame(pf.getdata(data_file))
+        ndata = ndata.assign(lam_obs_vac_nm=lambda x: x.lam_obs_vac_aa / 10.)
+        ndata = ndata.assign(lam_obs_vac_um=lambda x: x.lam_obs_vac_nm / 1e3)
+        ndata = ndata.assign(lam_obs_aa=lambda x: x.lam_obs_vac_aa)
+        ndata = ndata.assign(lam_obs_nm=lambda x: x.lam_obs_vac_nm)
+        ndata = ndata.assign(lam_obs_um=lambda x: x.lam_obs_vac_um)
         return ndata
 
     # Load Lovis & Pepe line list:
@@ -233,23 +255,47 @@ class WLFetcher(object):
 
     # Load all the line lists:
     def load_lines(self):
-        self._nist_data = self._load_nist_argon(self._nist_path)
+        self._nist_argon = self._load_nist_argon(self._nist_argon_path)
+        self._nist_thar  = self._load_nist_thar(self._nist_thar_path)
         #self._nist_fcol = 'rel_intensity'
-        self._lope_data = self._load_lovis_pepe_thar(self._lope_path)
+        self._lope_data  = self._load_lovis_pepe_thar(self._lope_thar_path)
         #self._lope_fcol = 'flux'
         return
 
     # --------------------------------------------
  
     # Line selection with some smarts:
-    def get_nist_lines(self, wl1, wl2, reltol=0.001, minflx=100.,
+    def get_nist_argon_lines(self, wl1, wl2, reltol=0.001, minflx=100.,
             lamcol='lam_obs_nm', flxcol='rel_intensity'):
-        twlen = self._nist_data[lamcol]
-        tflux = self._nist_data[flxcol]
+        twlen = self._nist_argon[lamcol]
+        tflux = self._nist_argon[flxcol]
         which = (wl1 < twlen) & (twlen < wl2) & (tflux > minflx)
-        neato = self._nist_data[which]
+        neato = self._nist_argon[which]
         nkept = which.sum()
         self.vlwrite(1, "NIST Argon: %d lines found.\n" % nkept)
+        if self._vlevel >= 2:
+            for ww,ff in neato[[lamcol, flxcol]].values:
+                sys.stderr.write("%10.5f --- %10.3f\n" % (ww, ff))
+        if not nkept:
+            return np.array([])
+
+        # stick to brightest of lines found:
+        thresh = neato[flxcol].max() * reltol
+        #sys.stderr.write("thresh: %10.5f\n" % thresh)
+        smart = (neato[flxcol] >= thresh)   # relative to high peak
+        bright = neato[smart]
+        self.vlwrite(1, "After peak-rel-cut, have %d lines.\n" % smart.sum())
+        return bright[lamcol].values
+
+    # Line selection with some smarts:
+    def get_nist_thar_lines(self, wl1, wl2, reltol=0.001, minflx=100.,
+            lamcol='lam_obs_nm', flxcol='rel_intensity'):
+        twlen = self._nist_thar[lamcol]
+        tflux = self._nist_thar[flxcol]
+        which = (wl1 < twlen) & (twlen < wl2) & (tflux > minflx)
+        neato = self._nist_thar[which]
+        nkept = which.sum()
+        self.vlwrite(1, "NIST ThAr: %d lines found.\n" % nkept)
         if self._vlevel >= 2:
             for ww,ff in neato[[lamcol, flxcol]].values:
                 sys.stderr.write("%10.5f --- %10.3f\n" % (ww, ff))
@@ -265,7 +311,7 @@ class WLFetcher(object):
         return bright[lamcol].values
 
     # Retrieve lines by wavelength range from Lovis+Pepe (2007):
-    def get_lope_lines(self, wl1, wl2, nmax=30, reltol=0.1, minflx=100.,
+    def get_lope_thar_lines(self, wl1, wl2, nmax=30, reltol=0.1, minflx=100.,
             lamcol='lam_vac_nm', flxcol='flux'):
         twlen = self._lope_data[lamcol]
         tflux = self._lope_data[flxcol]
@@ -294,8 +340,8 @@ class WLFetcher(object):
         #return neato[lamcol][top_few_idx].values
 
     def get_combined_lines(self, wl1, wl2, mtol=0.001):
-        ll_nist = self.get_nist_lines(wl1, wl2)
-        ll_lope = self.get_lope_lines(wl1, wl2)
+        ll_nist = self.get_nist_argon_lines(wl1, wl2)
+        ll_lope = self.get_lope_thar_lines(wl1, wl2)
         ll_comb = np.array(sorted(ll_lope.tolist() + ll_nist.tolist()))
         return ll_comb
 

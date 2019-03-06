@@ -749,14 +749,17 @@ afsr = wl_solve_test.ApproxFSR()
 sys.stderr.write("Computing line positions for fib_which=%d ...\n" % fib_which)
 corresponding_thar = f0_thar_data if fib_which==0 else f1_thar_data
 measured_line_xpix = []
+measured_line_flux = []
 slow_args = {'pctile':True, 'shallow':0.01}
 #fast_args = {'pctile':False, 'shallow':0.1}
 fast_args = {'pctile':False, 'shallow':0.010}
 for i,tdata in enumerate(corresponding_thar, 1):
     sys.stderr.write("\rScanning order %d of %d ... "
             % (i, len(corresponding_thar)))
-    linepos = tlf.extract_lines_xpix(tdata['xpix'], tdata['spec'], **fast_args)
-    measured_line_xpix.append(linepos)
+    linepix, lineflx = \
+            tlf.extract_lines_xpix(tdata['xpix'], tdata['spec'], **fast_args)
+    measured_line_xpix.append(linepix)
+    measured_line_flux.append(lineflx)
 sys.stderr.write("done.\n")
 
 ## Approximate (greedy) wavelength limits for the specified order:

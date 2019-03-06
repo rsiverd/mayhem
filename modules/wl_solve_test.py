@@ -157,7 +157,7 @@ class LineFinder(object):
         return f_cent / ftotal
 
     # Driver routine to find and return line positions for wavelength checks:
-    def extract_lines_xpix(self, wlen, flux, boxwid=3, shallow=0.01, 
+    def extract_lines_wlen(self, wlen, flux, boxwid=3, shallow=0.01, 
             border=20, pctile=False):
         smooth_flux = self._make_smooth_flux(xpix, flux, 
                 boxwid=boxwid, pctile=pctile)

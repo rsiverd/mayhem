@@ -635,10 +635,33 @@ def ccd2spec_xy(ccdx, ccdy, rot_deg, xnudge=0, ynudge=0,
 ## -----------------------------------------------------------------------
 ## Coordinate rotation time!
 spec_rotation = 13.091
+spec_rotation = 14.091
+spec_rotation = 12.091
+
+### Dummy 2D XY coords for testing:
+##ny, nx = 4096, 4096
+#ny, nx = 1024, 1024
+#x_list = (0.5 + np.arange(nx)) / nx - 0.5            # relative (centered)
+#y_list = (0.5 + np.arange(ny)) / ny - 0.5            # relative (centered)
+##xx, yy = np.meshgrid(x_list, y_list)                 # relative (centered)
+#xx, yy = np.meshgrid(nx*x_list, ny*y_list)           # absolute (centered)
+#
+### Build in pieces:
+#xxs, yys = [], []
+#for rowx,rowy in zip(xx, yy):
+#    tx, ty = ccd2spec_xy(rowx, rowy, spec_rotation)    
+#    xxs.append(tx)
+#    yys.append(ty)
+#xxs = np.array(xxs)
+#yys = np.array(yys)
+#
+### Note spectrum Y-axis:
+#which = (np.abs(xxs) < 1.0)
 
 ## -----------------------------------------------------------------------
 ## Initial crack at wavelength solution:
 nres_focallen_mm = 391.0
+nres_focallen_mm = 385.0
 rlist = fib0_ridges if fib_which==0 else fib1_ridges
 xpix_beta_c = 2048.5        # X-pixel where beta=beta_c
 xpix_beta_c =    0.0        # X-pixel where beta=beta_c
@@ -652,6 +675,7 @@ xpix_beta_c = 2150.0        # X-pixel where beta=beta_c
 xpix_beta_c = 2200.0        # X-pixel where beta=beta_c
 xpix_beta_c = 2300.0        # X-pixel where beta=beta_c
 xpix_beta_c = 2615.0        # X-pixel where beta=beta_c
+xpix_beta_c = 2220.0
 wavelengths = {}
 wavelength2 = {}
 some_xpix = []
@@ -680,7 +704,8 @@ for ii,spord in enumerate(spec_order_list):
     wavelengths[int(spord)] = tlam
     #wavelengths.append(tlam)
 
-    sxx, syy = ccd2spec_xy(rx, ry, spec_rotation, xnudge=-100)
+    sxx, syy = ccd2spec_xy(rx, ry, spec_rotation, xnudge=-100,
+            xcenter=0, ycenter=0)
     #sxx, syy = ccd2spec_xy(rx, ry, spec_rotation, 
     #        xcenter=2048.5, ycenter=2048.5, xnudge=-100)
     mmsx = (xpix_bet2_c - sxx) * nres_pix_size_mm
@@ -853,6 +878,7 @@ def crude_crossref(xvals1, xvals2, gsigma, pad=0.05, sfactor=1.0):
 
 ## How to check the fit for a specific order:
 fancy = True
+#fancy = False
 using_wlmod = wavelength2 if fancy else wavelengths
 def wlcheck(oidx):
     sord = int(spec_order_list[oidx])
@@ -1022,10 +1048,8 @@ def oinspect(oidx, ww2=False, wlmode=False,
     #sys.stderr.write("refwl.shape: %s\n" % str(refwl.shape))
     #if isinstance(ttpix, np.ndarray):
     if ttpix.size >= 3:
-        #shift, scale = ts.linefit(ttpix, refwl)
-        #wlen = shift + scale * thar['xpix']
-        model = polyfit(ttpix, refwl, 2)
-        wlen = polyval(thar['xpix'], model)
+        #model = polyfit(ttpix, refwl, 2)
+        #wlen = polyval(thar['xpix'], model)
         sys.stderr.write("matched lines: %d\n" % ttpix.size)
 
 

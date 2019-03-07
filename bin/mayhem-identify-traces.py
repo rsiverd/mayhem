@@ -571,7 +571,6 @@ nres_spacing_um = 1e3 / nres_ruling_lmm     # grating spacing in microns
 #    deflect_r = nrp.deflection_rad_wl(incident_ang_rad, wlen_um)
 #    return gamma_nom + deflect_r - min_dev_rad
 
-#use_gamma_eff = partial(gamma_eff, nres_nominal_gamma)
 
 ## From existing solutions ...
 nres_sine_alpha = 0.971747764900
@@ -579,16 +578,6 @@ blaze_r = np.arctan(4.0)
 #facet_r = np.radians(0.5)
 facet_r = np.arcsin(nres_sine_alpha) - blaze_r
 #fixed_geometry = 2.0 * nres_spacing_um * np.cos(facet_r) * np.sin(blaze_r)
-
-#def lamcen_residual(wlen, order=0):
-#    ls = wlen * order
-#    rs = fixed_geometry * np.cos(use_gamma_eff(wlen))
-#    return ls - rs
-#
-#def iter_calc_lamcen(order):
-#    kw = {'order':order}
-#    runme = partial(lamcen_residual, **kw)
-#    return opti.bisect(runme, 0.0, 10.0)
 
 ## FIBER CHOICE:
 fib_which = 0
@@ -659,6 +648,9 @@ spec_rotation = 12.091
 #which = (np.abs(xxs) < 1.0)
 
 ## -----------------------------------------------------------------------
+## Adopt a coordinate origin along the ridge of central wavelength:
+ccd_x_origin, ccd_y_origin = 2116.674, 1989.443     # order 98, oidx=47?
+
 ## Initial crack at wavelength solution:
 nres_focallen_mm = 391.0
 nres_focallen_mm = 385.0
@@ -678,8 +670,8 @@ xpix_beta_c = 2615.0        # X-pixel where beta=beta_c
 xpix_beta_c = 2220.0
 wavelengths = {}
 wavelength2 = {}
-some_xpix = []
-some_mmsx = []
+#some_xpix = []
+#some_mmsx = []
 #xpix_bet2_c = 1850.0
 xpix_bet2_c = 1800.0
 #xpix_bet2_c = 2000.0
@@ -696,19 +688,20 @@ for ii,spord in enumerate(spec_order_list):
     sys.stderr.write("--> beta min,max: %8.5f, %8.5f\n" % 
             (np.degrees(np.min(beta)), np.degrees(np.max(beta))))
     #sine_beta = np.sin(np.arctan(mmrx / nres_focallen_mm))
-    #center_wl = spec_order_wlmid[ii]
-    #center_wl = iter_calc_lamcen(spord)
-    #cos_gamma = np.cos(use_gamma_eff(center_wl))
     tlam = nres_spacing_um / float(spord) * cos_gamma \
             * (nres_sine_alpha + np.sin(beta))
     wavelengths[int(spord)] = tlam
     #wavelengths.append(tlam)
 
-    sxx, syy = ccd2spec_xy(rx, ry, spec_rotation, xnudge=-100,
-            xcenter=0, ycenter=0)
+    # -------------------------------------
+    center_wl = ctr_wlen[ii]
+    cos_gamma = np.cos(ctr_gamma[ii])
+    sxx, syy = ccd2spec_xy(rx, ry, spec_rotation, xnudge=-ccd_x_origin,
+            xcenter=ccd_x_origin, ycenter=ccd_y_origin)
     #sxx, syy = ccd2spec_xy(rx, ry, spec_rotation, 
     #        xcenter=2048.5, ycenter=2048.5, xnudge=-100)
-    mmsx = (xpix_bet2_c - sxx) * nres_pix_size_mm
+    #mmsx = (xpix_bet2_c - sxx) * nres_pix_size_mm
+    mmsx = -1.0 * sxx * nres_pix_size_mm
     bet2 = np.arcsin(nres_sine_alpha) - np.arctan(mmsx / nres_focallen_mm)
     sys.stderr.write("--> bet2 min,max: %8.5f, %8.5f\n" % 
             (np.degrees(np.min(bet2)), np.degrees(np.max(bet2))))
@@ -716,16 +709,16 @@ for ii,spord in enumerate(spec_order_list):
             * (nres_sine_alpha + np.sin(bet2))
     wavelength2[int(spord)] = slam
     #wavelength2.append(slam)
-    some_xpix.append(sxx)
-    some_mmsx.append(mmsx)
+    #some_xpix.append(sxx)
+    #some_mmsx.append(mmsx)
 sys.stderr.write("done.\n")
 
-mean_xpix = [x.mean() for x in some_xpix]
-lower, upper = np.min(mean_xpix), np.max(mean_xpix)
-spread = upper - lower
-sys.stderr.write("lower:  %9.3f\n" % lower)
-sys.stderr.write("upper:  %9.3f\n" % upper)
-sys.stderr.write("spread: %9.3f\n" % spread)
+#mean_xpix = [x.mean() for x in some_xpix]
+#lower, upper = np.min(mean_xpix), np.max(mean_xpix)
+#spread = upper - lower
+#sys.stderr.write("lower:  %9.3f\n" % lower)
+#sys.stderr.write("upper:  %9.3f\n" % upper)
+#sys.stderr.write("spread: %9.3f\n" % spread)
 
 ##-----------------------------------------------------------------------
 ##-----------------------------------------------------------------------

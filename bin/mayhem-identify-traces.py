@@ -623,29 +623,12 @@ def ccd2spec_xy(ccdx, ccdy, rot_deg, xnudge=0, ynudge=0,
 
 ## -----------------------------------------------------------------------
 ## Coordinate rotation time!
-spec_rotation = 13.091
-spec_rotation = 14.091
-spec_rotation = 12.091
-
-### Dummy 2D XY coords for testing:
-##ny, nx = 4096, 4096
-#ny, nx = 1024, 1024
-#x_list = (0.5 + np.arange(nx)) / nx - 0.5            # relative (centered)
-#y_list = (0.5 + np.arange(ny)) / ny - 0.5            # relative (centered)
-##xx, yy = np.meshgrid(x_list, y_list)                 # relative (centered)
-#xx, yy = np.meshgrid(nx*x_list, ny*y_list)           # absolute (centered)
-#
-### Build in pieces:
-#xxs, yys = [], []
-#for rowx,rowy in zip(xx, yy):
-#    tx, ty = ccd2spec_xy(rowx, rowy, spec_rotation)    
-#    xxs.append(tx)
-#    yys.append(ty)
-#xxs = np.array(xxs)
-#yys = np.array(yys)
-#
-### Note spectrum Y-axis:
-#which = (np.abs(xxs) < 1.0)
+spec_rotation =  13.091
+spec_rotation =  14.091
+spec_rotation =  13.
+spec_rotation =  12.091
+spec_rotation =  13.0   
+fudge = -300
 
 ## -----------------------------------------------------------------------
 ## Adopt a coordinate origin along the ridge of central wavelength:
@@ -654,6 +637,8 @@ ccd_x_origin, ccd_y_origin = 2116.674, 1989.443     # order 98, oidx=47?
 ## Initial crack at wavelength solution:
 nres_focallen_mm = 391.0
 nres_focallen_mm = 385.0
+#nres_focallen_mm = 380.
+nres_focallen_mm = 375.
 rlist = fib0_ridges if fib_which==0 else fib1_ridges
 xpix_beta_c = 2048.5        # X-pixel where beta=beta_c
 xpix_beta_c =    0.0        # X-pixel where beta=beta_c
@@ -696,7 +681,7 @@ for ii,spord in enumerate(spec_order_list):
     # -------------------------------------
     center_wl = ctr_wlen[ii]
     cos_gamma = np.cos(ctr_gamma[ii])
-    sxx, syy = ccd2spec_xy(rx, ry, spec_rotation, xnudge=-ccd_x_origin,
+    sxx, syy = ccd2spec_xy(rx, ry, spec_rotation, xnudge=fudge-ccd_x_origin,
             xcenter=ccd_x_origin, ycenter=ccd_y_origin)
     #sxx, syy = ccd2spec_xy(rx, ry, spec_rotation, 
     #        xcenter=2048.5, ycenter=2048.5, xnudge=-100)
@@ -725,27 +710,27 @@ sys.stderr.write("done.\n")
 ##-----------------------------------------------------------------------
 ## Some plotting ...
 
-def shift_normalizer(ypos):
-    yrange = ypos.max() - ypos.min()
-    ynudge = ypos - ypos.min()
-    return ynudge / yrange
-
-fig = plt.figure(8, figsize=(12,7))
-fig.clf()
-ax1 = fig.add_subplot(121)
-ax1.grid(True)
-ax1.plot(shift_normalizer(ychange_mm), label='ychange_mm')
-ax1.plot(shift_normalizer(dp_yshifts_mm), label='dp_yshifts_mm')
-ax1.plot(shift_normalizer(ydeltas), label='YDELTAS')
-ax1.legend(loc='upper left')
-ax2 = fig.add_subplot(122)
-ax2.grid(True)
-ax2.plot(shift_normalizer(pg_yshifts), label='prism-GRATING shifts')
-ax2.plot(shift_normalizer(pc_yshifts), label='prism-CAMERA  shifts')
-ax2.plot(shift_normalizer(ydeltas), label='DATA')
-ax2.legend(loc='best')
-fig.tight_layout()
-plt.draw()
+#def shift_normalizer(ypos):
+#    yrange = ypos.max() - ypos.min()
+#    ynudge = ypos - ypos.min()
+#    return ynudge / yrange
+#
+#fig = plt.figure(8, figsize=(12,7))
+#fig.clf()
+#ax1 = fig.add_subplot(121)
+#ax1.grid(True)
+#ax1.plot(shift_normalizer(ychange_mm), label='ychange_mm')
+#ax1.plot(shift_normalizer(dp_yshifts_mm), label='dp_yshifts_mm')
+#ax1.plot(shift_normalizer(ydeltas), label='YDELTAS')
+#ax1.legend(loc='upper left')
+#ax2 = fig.add_subplot(122)
+#ax2.grid(True)
+#ax2.plot(shift_normalizer(pg_yshifts), label='prism-GRATING shifts')
+#ax2.plot(shift_normalizer(pc_yshifts), label='prism-CAMERA  shifts')
+#ax2.plot(shift_normalizer(ydeltas), label='DATA')
+#ax2.legend(loc='best')
+#fig.tight_layout()
+#plt.draw()
 
 ## ----------------------------------------------------------------------- ##
 ## ----------------------------------------------------------------------- ##
@@ -1015,7 +1000,7 @@ max_lines_per_order = 30
 
 ## Visual inspection of ThAr data vs wavelength solution:
 corresponding_thar = f0_thar_data if fib_which==0 else f1_thar_data
-def oinspect(oidx, ww2=False, wlmode=False,
+def oinspect(oidx, ww2=True, wlmode=False, fitwl=False,
         sdata=corresponding_thar, pad=0.1):
 
 
@@ -1041,8 +1026,9 @@ def oinspect(oidx, ww2=False, wlmode=False,
     #sys.stderr.write("refwl.shape: %s\n" % str(refwl.shape))
     #if isinstance(ttpix, np.ndarray):
     if ttpix.size >= 3:
-        #model = polyfit(ttpix, refwl, 2)
-        #wlen = polyval(thar['xpix'], model)
+        if fitwl:
+            model = polyfit(ttpix, refwl, 2)
+            wlen = polyval(thar['xpix'], model)
         sys.stderr.write("matched lines: %d\n" % ttpix.size)
 
 

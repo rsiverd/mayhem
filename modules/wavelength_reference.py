@@ -342,10 +342,14 @@ class WLFetcher(object):
         #return neato[lamcol][top_few_idx].values
 
     def get_combined_lines(self, wl1, wl2, mtol=0.001):
-        ll_nist = self.get_nist_argon_lines(wl1, wl2)
-        ll_lope = self.get_lope_thar_lines(wl1, wl2)
-        ll_comb = np.array(sorted(ll_lope.tolist() + ll_nist.tolist()))
-        return ll_comb
+        lam_nist, flx_nist = self.get_nist_argon_lines(wl1, wl2)
+        lam_lope, flx_lope = self.get_lope_thar_lines(wl1, wl2)
+        lam_comb = np.array(lam_nist.tolist() + lam_lope.tolist())
+        flx_comb = np.array(flx_nist.tolist() + flx_lope.tolist())
+        wl_order = np.argsort(lam_comb)
+        return (lam_comb[order], flx_comb[order])
+        #ll_comb = np.array(sorted(ll_lope.tolist() + ll_nist.tolist()))
+        #return ll_comb
 
 
     # --------------------------------------------

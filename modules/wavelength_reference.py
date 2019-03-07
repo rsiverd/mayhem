@@ -347,7 +347,7 @@ class WLFetcher(object):
         lam_comb = np.array(lam_nist.tolist() + lam_lope.tolist())
         flx_comb = np.array(flx_nist.tolist() + flx_lope.tolist())
         wl_order = np.argsort(lam_comb)
-        return (lam_comb[order], flx_comb[order])
+        return (lam_comb[wl_order], flx_comb[wl_order])
         #ll_comb = np.array(sorted(ll_lope.tolist() + ll_nist.tolist()))
         #return ll_comb
 

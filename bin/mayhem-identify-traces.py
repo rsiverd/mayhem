@@ -994,36 +994,6 @@ def linematch(tidx, need_lines=3):
 ## ----------------------------------------------------------------------- ##
 max_lines_per_order = 30
 
-def _exclude_point(idx, coords1, coords2):
-    keep = (np.arange(coords1.shape[0]) != idx)
-    return (coords1[keep], coords2[keep])
-
-def rmscheck(pix, wlen, order):
-    model = polyfit(pix, wlen, order)
-    resid = wlen - polyval(pix, model)
-    return np.sqrt(np.sum(resid * resid))
-    #rmse_pp = rms_err / float(pix.size)
-    #return rms_err, rmse_pp
-
-def too_rms(idx, pix, wlen, order):
-    tpx, twl = _exclude_point(idx, pix, wlen)
-    return rmscheck(tpx, twl, order)
-
-def calc_improvements(pix, wlen, order):
-    rms0 = rmscheck(pix, wlen, order)
-    return rms0 - np.array([too_rms(i, pix, wlen, order) \
-                            for i in range(pix.size)])
-
-
-## Residual checker:
-def residcheck(pix, wlen):
-    rms0 = rmscheck(pix, wlen, 1)
-    sys.stderr.write("rms0: %10.5s\n" % str(rms0))
-    #model = polyfit(pix, wlen, 2)
-    #resid = wlen - polyval(pix, model)
-    #return resid
-    return rms0
-
 ## Visual inspection of ThAr data vs wavelength solution:
 corresponding_thar = f0_thar_data if fib_which==0 else f1_thar_data
 def oinspect(oidx, ww2=False, wlmode=False,

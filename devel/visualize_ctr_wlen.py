@@ -85,8 +85,8 @@ _, ccdx_iter, ccdy_iter = wl_midpoints_iter.T
 
 ## -----------------------------------------------------------------------
 ## Save midpoint coordinates to file:
-save_file_iter = "lamcen_iter_coords.dat"
-save_file_dumb = "lamcen_dumb_coords.dat"
+save_file_iter = "lamcen_iter_xy.dat"
+save_file_dumb = "lamcen_dumb_xy.dat"
 with open(save_file_iter, 'w') as f:
     f.write("lamcen_nm  ccd_xpix  ccd_ypix\n")
     for row in wl_midpoints_iter:

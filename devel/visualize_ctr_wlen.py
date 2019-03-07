@@ -84,6 +84,21 @@ _, ccdx_dumb, ccdy_dumb = wl_midpoints_dumb.T
 _, ccdx_iter, ccdy_iter = wl_midpoints_iter.T
 
 ## -----------------------------------------------------------------------
+## Save midpoint coordinates to file:
+save_file_iter = "lamcen_iter_coords.dat"
+save_file_dumb = "lamcen_dumb_coords.dat"
+with open(save_file_iter, 'w') as f:
+    f.write("lamcen_nm  ccd_xpix  ccd_ypix\n")
+    for row in wl_midpoints_iter:
+        f.write("%9.4f %9.3f %9.3f\n" % tuple(row))
+    pass
+with open(save_file_dumb, 'w') as f:
+    f.write("lamcen_nm  ccd_xpix  ccd_ypix\n")
+    for row in wl_midpoints_dumb:
+        f.write("%9.4f %9.3f %9.3f\n" % tuple(row))
+    pass
+
+## -----------------------------------------------------------------------
 ## Linear fit to central wavelengths:
 icept, slope = ts.linefit(ccdx_iter, ccdy_iter)
 fitted_x = np.array([0, 4000])

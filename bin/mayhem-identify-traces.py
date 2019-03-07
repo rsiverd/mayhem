@@ -36,6 +36,7 @@ import scipy.optimize as opti
 import matplotlib.pyplot as plt
 from numpy.lib.recfunctions import append_fields
 from functools import partial
+np.set_printoptions(suppress=True, linewidth=160)
 #from collections import OrderedDict
 #import multiprocessing as mp
 #import pandas as pd
@@ -745,21 +746,33 @@ reload(wl_solve_test)
 tlf = wl_solve_test.LineFinder()
 afsr = wl_solve_test.ApproxFSR()
 
+## Segment match results clean-up:
+import segmodel
+reload(segmodel)
+smf = segmodel.SegModelFit()
+import segclean
+reload(segclean)
+scu = segclean.SegCleanUp()
+
+
 ## Compute line positions for every order:
 sys.stderr.write("Computing line positions for fib_which=%d ...\n" % fib_which)
 corresponding_thar = f0_thar_data if fib_which==0 else f1_thar_data
-measured_line_xpix = []
-measured_line_flux = []
+#measured_line_xpix = []
+#measured_line_flux = []
+measured_lines = []
 slow_args = {'pctile':True, 'shallow':0.01}
 #fast_args = {'pctile':False, 'shallow':0.1}
 fast_args = {'pctile':False, 'shallow':0.010}
+fast_args = {'pctile':False, 'shallow':0.003}
 for i,tdata in enumerate(corresponding_thar, 1):
     sys.stderr.write("\rScanning order %d of %d ... "
             % (i, len(corresponding_thar)))
     linepix, lineflx = \
             tlf.extract_lines_xpix(tdata['xpix'], tdata['spec'], **fast_args)
-    measured_line_xpix.append(linepix)
-    measured_line_flux.append(lineflx)
+    #measured_line_xpix.append(linepix)
+    #measured_line_flux.append(lineflx)
+    measured_lines.append((linepix, lineflx))
 sys.stderr.write("done.\n")
 
 ## Approximate (greedy) wavelength limits for the specified order:
@@ -768,8 +781,11 @@ spec_order_line_sets = []
 for sord,ctrwl_nm in zip(spec_order_list, 1e3 * ctr_wlen):
     wl_lims_nm = afsr.greedy_wl_limits(ctrwl_nm, sord, nFSR=1.5)
     comb_lines = wlf.get_combined_lines(*wl_lims_nm)
+    #nist_linfo = wlf.get_nist_thar_lines(*wl_lims_nm, reltol=1e-4, minflx=10)
+    nist_linfo = wlf.get_nist_thar_lines(*wl_lims_nm, reltol=1e-4, minflx=50)
     spec_order_wl_lims.append(wl_lims_nm)
-    spec_order_line_sets.append(comb_lines)
+    #spec_order_line_sets.append(comb_lines)
+    spec_order_line_sets.append(nist_linfo)
 
 
 ## ----------------------------------------------------------------------- ##
@@ -845,7 +861,8 @@ def wlcheck(oidx):
     line_ref_nm = spec_order_line_sets[oidx]
     #line_wl_um = line_wl_nm / 1e3   # convert to um
     model_wl_nm = using_wlmod[sord] * 1e3   # convert to nm
-    lcenter_pix = measured_line_xpix[oidx]
+    #lcenter_pix = measured_line_xpix[oidx]
+    lcenter_pix = measured_lines[oidx][0]
     #lcenter_lam = np.interp(lcenter_pix, tdata['xpix'], model_wl_nm)
         #ar_xpixels = np.interp(ar_lines, wlen, thar['xpix'])
     #sys.stderr.write("lcenter_lam: %s\n" % str(lcenter_lam))
@@ -875,49 +892,65 @@ def polyval(x, mod):
       z += mod[i] * x**i
    return z
 
-ord_lines_wlnm = None
-ord_lines_xref = None
-ord_lines_xmid = None
+# Flux to magnitude conversion:
+def kmag(adu, zeropt=25.0):
+    return (zeropt - 2.5 * np.log10(adu))
 
-tidx = 45
+#tidx = 45
 def linematch(tidx, need_lines=3):
     tord = int(spec_order_list[tidx])
     tdata = corresponding_thar[tidx]
-    line_ref_nm = spec_order_line_sets[tidx]
+    comp_wlen_nm, comp_flux  = spec_order_line_sets[tidx]
     model_wl_nm = using_wlmod[tord] * 1e3
-    line_xpix = measured_line_xpix[tidx]
-    line_refx = np.interp(line_ref_nm, model_wl_nm, tdata['xpix'])
+    #line_xpix = measured_line_xpix[tidx]
+    #line_flux = measured_line_flux[tidx]
+    line_xpix, line_flux = measured_lines[tidx]
+    comp_xpix = np.interp(comp_wlen_nm, model_wl_nm, tdata['xpix'])
 
     #segs_meas = segs_meas_data['seg']
     #segs_lref = segs_lref_data['seg']
     #diffs = segs_meas[:, None] - segs_lref[None, :]
     #nseg_dims = (len(segs_meas), len(segs_lref))
-    #nobj_dims = (len(line_xpix), len(line_refx))
+    #nobj_dims = (len(line_xpix), len(comp_xpix))
 
     sys.stderr.write("line_xpix.size: %d\n" % line_xpix.size)
-    sys.stderr.write("line_refx.size: %d\n" % line_refx.size)
-    if (line_xpix.size < need_lines) or (line_refx.size < need_lines):
+    sys.stderr.write("comp_xpix.size: %d\n" % comp_xpix.size)
+    if (line_xpix.size < need_lines) or (comp_xpix.size < need_lines):
         sys.stderr.write("Too few lines to attempt match!\n")
         return np.array([]), np.array([]), np.array([])
+    #smv1.set_catalog1(line_xpix, mag=kmag(line_flux))
+    #smv1.set_catalog2(comp_xpix, mag=kmag(comp_flux))
     smv1.set_catalog1(line_xpix)
-    smv1.set_catalog2(line_refx)
+    smv1.set_catalog2(comp_xpix)
     #len_range = (-0.2, 0.2)
     #len_tol   = np.log10(1.1)
     len_tol   = np.log10(1.10)
-    len_bins  = 30
+    #len_tol   = np.log10(1.05)
+    #len_tol   = np.log10(1.15)
+    #len_tol   = np.log10(1.12)
+    mag_bins  = 3
+    mag_tol   = 1.0
+    len_bins  = 10
     len_range = smv1.bintol_range(len_bins, len_tol)
+    mag_range = smv1.bintol_range(mag_bins, mag_tol)
     tdivs = (3,)
 
     use_ranges = (len_range,)
     use_nbins  = (len_bins,)
+    #use_ranges = (len_range, mag_range)
+    #use_nbins  = (len_bins, mag_bins)
     best_pars = smv1.dither_hist_best_fit(use_ranges, use_nbins,
             tdivs, mode='weighted')
 
+    sys.stderr.write("best_pars: %s\n" % str(best_pars))
     midx, ridx = zip(*smv1.matched_source_indexes())
     print(line_xpix[midx,])
-    print(line_refx[ridx,])
+    print(comp_xpix[ridx,])
     ttpix, refpix = smv1.get_matched_coords()
-    matchwl = line_ref_nm[ridx,].flatten()
+    scu.setup(ttpix, refpix, best_pars)
+    smf.setup(ttpix, refpix, best_pars)
+    #import pdb; pdb.set_trace()
+    matchwl = comp_wlen_nm[ridx,].flatten()
     sys.stderr.write("Pass 1 results: matched %d lines\n" % ttpix.size)
     return ttpix.flatten(), refpix.flatten(), matchwl
 
@@ -958,9 +991,38 @@ def linematch(tidx, need_lines=3):
 ## ----------------------------------------------------------------------- ##
 ## ----------------------------------------------------------------------- ##
 
-###-----------------------------------------------------------------------
-
+## ----------------------------------------------------------------------- ##
 max_lines_per_order = 30
+
+def _exclude_point(idx, coords1, coords2):
+    keep = (np.arange(coords1.shape[0]) != idx)
+    return (coords1[keep], coords2[keep])
+
+def rmscheck(pix, wlen, order):
+    model = polyfit(pix, wlen, order)
+    resid = wlen - polyval(pix, model)
+    return np.sqrt(np.sum(resid * resid))
+    #rmse_pp = rms_err / float(pix.size)
+    #return rms_err, rmse_pp
+
+def too_rms(idx, pix, wlen, order):
+    tpx, twl = _exclude_point(idx, pix, wlen)
+    return rmscheck(tpx, twl, order)
+
+def calc_improvements(pix, wlen, order):
+    rms0 = rmscheck(pix, wlen, order)
+    return rms0 - np.array([too_rms(i, pix, wlen, order) \
+                            for i in range(pix.size)])
+
+
+## Residual checker:
+def residcheck(pix, wlen):
+    rms0 = rmscheck(pix, wlen, 1)
+    sys.stderr.write("rms0: %10.5s\n" % str(rms0))
+    #model = polyfit(pix, wlen, 2)
+    #resid = wlen - polyval(pix, model)
+    #return resid
+    return rms0
 
 ## Visual inspection of ThAr data vs wavelength solution:
 corresponding_thar = f0_thar_data if fib_which==0 else f1_thar_data
@@ -974,6 +1036,20 @@ def oinspect(oidx, ww2=False, wlmode=False,
 
     # In case of better answer, use segmatch fit:
     ttpix, refpix, refwl = linematch(oidx)
+    #ikept = scu.drop_crap(1)
+    #ttpix, refpix, refwl = ttpix[ikept], refpix[ikept], refwl[ikept]
+    #resid = residcheck(ttpix, refwl)
+    #sys.stderr.write("resid: %s\n" % str(resid))
+    #resid = rmscheck(ttpix, refwl, 1)
+    #rimp1 = calc_improvements(ttpix, refwl, 1)
+    #rimp2 = calc_improvements(ttpix, refwl, 2)
+    #sys.stderr.write("resid: %10.5f\n" % resid)
+    #sys.stderr.write("rimp1: %s\n" % str(rimp1))
+    #sys.stderr.write("rimp2: %s\n" % str(rimp2))
+    #sys.stderr.write("ttpix: %s\n" % str(ttpix))
+    #sys.stderr.write("ttpix.shape: %s\n" % str(ttpix.shape))
+    #sys.stderr.write("refpix.shape: %s\n" % str(refpix.shape))
+    #sys.stderr.write("refwl.shape: %s\n" % str(refwl.shape))
     #if isinstance(ttpix, np.ndarray):
     if ttpix.size >= 3:
         #shift, scale = ts.linefit(ttpix, refwl)
@@ -1008,26 +1084,42 @@ def oinspect(oidx, ww2=False, wlmode=False,
     ax1.set_xlabel('Wavelength (nm)')
     ax1.set_xlim(wl1, wl2)
 
-    # Overplot NIST Argon lines:
-    ar_lines = wlf.get_nist_lines(wl1, wl2, reltol=0.05) #reltol=0.001)
-    if (ar_lines.size > 0):
-        #ar_xpixels = np.interp(ar_lines, wlen, thar['xpix'])
-        #ar_show = wl2pix(ar_lines)     # pixels
-        ar_show = ar_lines              # wavelength
-        for line in ar_show[:-1]:
-            ax1.axvline(line, ls=':', c='r')
-        ax1.axvline(ar_show[-1], ls=':', c='r', label='NIST Argon')
+    ## Overplot NIST Argon lines:
+    #ar_lines = wlf.get_nist_argon_lines(wl1, wl2, reltol=0.05) #reltol=0.001)
+    #if (ar_lines.size > 0):
+    #    #ar_xpixels = np.interp(ar_lines, wlen, thar['xpix'])
+    #    #ar_show = wl2pix(ar_lines)     # pixels
+    #    ar_show = ar_lines              # wavelength
+    #    for line in ar_show[:-1]:
+    #        ax1.axvline(line, ls=':', c='r')
+    #    ax1.axvline(ar_show[-1], ls=':', c='r', label='NIST Argon')
 
-    # Overplot Lovis & Pepe (2007) lines:
-    thar_lines = wlf.get_lope_lines(wl1, wl2, reltol=0.05)
+    # Overplot NIST ThAr lines (RJS special):
+    #thar_lines, _ = wlf.get_nist_thar_lines(wl1, wl2, reltol=0.0005, minflx=10.)
+    thar_lines, _ = spec_order_line_sets[oidx]
     if (thar_lines.size > 0):
+        opts = {'ls':':', 'c':'g', 'lw':1}
+        thar_show = thar_lines          # wavelength
+        ax1.axvline(thar_show[0], label='NIST_ThAr_RJS', **opts)
         #thar_xpix = wl2pix(thar_lines)
         #thar_show = wl2pix(thar_lines)  # pixels
-        thar_show = thar_lines          # wavelength
-        for line in thar_show[:-1]:
-            ax1.axvline(line, ls=':', c='g')
-        ax1.axvline(thar_show[-1], ls=':', c='g', label='Lovis_Pepe_2007')
-    
+        for line in thar_show[1:]:
+            #sys.stderr.write("Adding %.3f ...\n" % line)
+            ax1.axvline(line, **opts)
+    sys.stderr.write("Loaded %d lines with %.3f <= λ <= %.3f\n"
+            % (thar_lines.size, wl1, wl2))
+
+    ## Overplot Lovis & Pepe (2007) lines:
+    #thar_lines = wlf.get_lope_thar_lines(wl1, wl2, reltol=0.05)
+    #if (thar_lines.size > 0):
+    #    opts = {'ls':':', 'c':'g'}
+    #    #thar_xpix = wl2pix(thar_lines)
+    #    #thar_show = wl2pix(thar_lines)  # pixels
+    #    thar_show = thar_lines          # wavelength
+    #    ax1.axvline(thar_show[0], label='Lovis_Pepe_2007', **opts)
+    #    for line in thar_show[1:]:
+    #        ax1.axvline(line, **opts)
+
     if refwl.size > 0:
         mkw = {'ls':':', 'c':'m', 'lw':1}
         ax1.axvline(refwl[0], label='matched', **mkw)

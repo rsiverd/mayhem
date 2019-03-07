@@ -277,7 +277,7 @@ class WLFetcher(object):
             for ww,ff in neato[[lamcol, flxcol]].values:
                 sys.stderr.write("%10.5f --- %10.3f\n" % (ww, ff))
         if not nkept:
-            return np.array([])
+            return np.array([]), np.array([])
 
         # stick to brightest of lines found:
         thresh = neato[flxcol].max() * reltol

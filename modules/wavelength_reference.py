@@ -285,7 +285,7 @@ class WLFetcher(object):
         smart = (neato[flxcol] >= thresh)   # relative to high peak
         bright = neato[smart]
         self.vlwrite(1, "After peak-rel-cut, have %d lines.\n" % smart.sum())
-        return bright[lamcol].values
+        return (bright[lamcol].values, bright[flxcol].values)
 
     # Line selection with some smarts:
     def get_nist_thar_lines(self, wl1, wl2, reltol=0.001, minflx=0.0,

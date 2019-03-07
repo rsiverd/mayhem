@@ -325,7 +325,7 @@ class WLFetcher(object):
             for ww,ff in zip(neato[lamcol], neato[flxcol]):
                 sys.stderr.write("%10.5f --- %10.3f\n" % (ww, ff))
         if not nkept:
-            return np.array([])
+            return np.array([]), np.array([])
     
         # stick to brightest of lines found:
         thresh = neato[flxcol].max() * reltol
@@ -336,7 +336,9 @@ class WLFetcher(object):
         #top_few_idx = np.argsort(neato[flxcol])[-nmax:]
         top_few_idx = np.argsort(bright[flxcol])[-nmax:]
         self.vlwrite(1, "Selecting top %d with highest flux ...\n" % nmax)
-        return bright[lamcol].values[top_few_idx]
+        return (bright[lamcol].values[top_few_idx],
+                bright[flxcol].values[top_few_idx])
+
         #return neato[lamcol][top_few_idx].values
 
     def get_combined_lines(self, wl1, wl2, mtol=0.001):

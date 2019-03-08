@@ -523,17 +523,13 @@ for ii,spord in enumerate(spec_order_list):
     rx, ry = rlist[ii]
     center_wl = ctr_wlen[ii]
     cos_gamma = np.cos(ctr_gamma[ii])
-    #mmrx = (rx - xpix_beta_c) * nres_pix_size_mm
     mmrx = (xpix_beta_c - rx) * nres_pix_size_mm
-    #beta = np.arcsin(nres_sine_alpha) - np.arcsin(mmrx / nres_focallen_mm)
     beta = np.arcsin(nres_sine_alpha) - np.arctan(mmrx / nres_focallen_mm)
     sys.stderr.write("--> beta min,max: %8.5f, %8.5f\n" % 
             (np.degrees(np.min(beta)), np.degrees(np.max(beta))))
-    #sine_beta = np.sin(np.arctan(mmrx / nres_focallen_mm))
     tlam = nres_spacing_um / float(spord) * cos_gamma \
             * (nres_sine_alpha + np.sin(beta))
     wavelengths[int(spord)] = tlam
-    #wavelengths.append(tlam)
 
     # -------------------------------------
     center_wl = ctr_wlen[ii]
@@ -550,17 +546,8 @@ for ii,spord in enumerate(spec_order_list):
     slam = nres_spacing_um / float(spord) * cos_gamma \
             * (nres_sine_alpha + np.sin(bet2))
     wavelength2[int(spord)] = slam
-    #wavelength2.append(slam)
-    #some_xpix.append(sxx)
-    #some_mmsx.append(mmsx)
-sys.stderr.write("done.\n")
 
-#mean_xpix = [x.mean() for x in some_xpix]
-#lower, upper = np.min(mean_xpix), np.max(mean_xpix)
-#spread = upper - lower
-#sys.stderr.write("lower:  %9.3f\n" % lower)
-#sys.stderr.write("upper:  %9.3f\n" % upper)
-#sys.stderr.write("spread: %9.3f\n" % spread)
+sys.stderr.write("done.\n")
 
 ##-----------------------------------------------------------------------
 ##-----------------------------------------------------------------------
@@ -618,8 +605,6 @@ scu = segclean.SegCleanUp()
 ## Compute line positions for every order:
 sys.stderr.write("Computing line positions for fib_which=%d ...\n" % fib_which)
 corresponding_thar = f0_thar_data if fib_which==0 else f1_thar_data
-#measured_line_xpix = []
-#measured_line_flux = []
 measured_lines = []
 slow_args = {'pctile':True, 'shallow':0.01}
 #fast_args = {'pctile':False, 'shallow':0.1}
@@ -630,8 +615,6 @@ for i,tdata in enumerate(corresponding_thar, 1):
             % (i, len(corresponding_thar)))
     linepix, lineflx = \
             tlf.extract_lines_xpix(tdata['xpix'], tdata['spec'], **fast_args)
-    #measured_line_xpix.append(linepix)
-    #measured_line_flux.append(lineflx)
     measured_lines.append((linepix, lineflx))
 sys.stderr.write("done.\n")
 

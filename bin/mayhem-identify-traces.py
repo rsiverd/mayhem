@@ -6,13 +6,13 @@
 #
 # Rob Siverd
 # Created:       2018-12-26
-# Last modified: 2019-03-05
+# Last modified: 2019-03-08
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.3.5"
+__version__ = "0.3.6"
 
 ## Python version-agnostic module reloading:
 try:
@@ -125,12 +125,14 @@ minimum_dev_r = 2.0 * np.arcsin(center_wl_nn * np.sin(0.5 * apex_rad)) - apex_ra
 incident_ang_1_r = 0.5 * (minimum_dev_r + apex_rad)
 
 ## TESTING brute-force prism deflection:
+use_n_air = 1.0
+n_ratio_glass_air = spec_order_nn / use_n_air
 incidence_1_r = incident_ang_rad * np.ones_like(spec_order_nn)
-deflections_1_r = nrp.deflection_rad_n2(incidence_1_r, spec_order_nn**2)
+deflections_1_r = nrp.deflection_rad_nr2(incidence_1_r, n_ratio_glass_air**2)
 
 inc_change_r = deflections_1_r - min_dev_rad
 incidence_2_r = incidence_1_r + inc_change_r
-deflections_2_r = nrp.deflection_rad_n2(incidence_2_r, spec_order_nn**2)
+deflections_2_r = nrp.deflection_rad_nr2(incidence_2_r, n_ratio_glass_air**2)
 
 ychange_mm = (2.0 * inc_change_r) * nres_focallen_mm
 ychange_pix = ychange_mm / nres_pix_size_mm

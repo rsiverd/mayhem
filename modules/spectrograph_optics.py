@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2018-12-29
-# Last modified: 2019-02-14
+# Last modified: 2019-03-08
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.1.6"
+__version__ = "0.1.7"
 
 ## Python version-agnostic module reloading:
 try:
@@ -117,11 +117,12 @@ class Glass(object):
 ## Prism object to calculate deflections for the specified material and shape:
 class Prism(object):
 
-    def __init__(self, glasstype, apex_deg):
+    def __init__(self, glasstype, apex_deg, n_air=1.0):
         #self._apex_deg = apex_deg
         #self._apex_rad = np.radians(apex_deg)
         self._material = Glass(glasstype)
         self.set_apex_deg(apex_deg)
+        self.set_n_air(n_air)    # index of refraction of air in spectrograph
         return
 
     # -------------------------------------
@@ -137,33 +138,41 @@ class Prism(object):
         self._apex_rad = np.radians(apex_deg)
         return
 
+    def set_n_air(self, index_refr):
+        self._n_air = index_refr
+        return
+
     # -------------------------------------
 
     @staticmethod
-    def _wiki_deflection_rad_n(i, A, n):
-        """Deflection angle using formula from Wikipedia (which seems to be
-        identical to others used here. Inputs are:
-        i -- incidence angle (RADIANS)
-        A -- prism apex angle (RADIANS)
-        n -- glass index of refraction at wavelength(s) of interest
+    def _wiki_deflection_rad_n(i, A, nr):
+        """Deflection angle using formula from Wikipedia (which seems
+        to be identical to others used here. Inputs are:
+        i  -- incidence angle (RADIANS)
+        A  -- prism apex angle (RADIANS)
+        nr -- index of refraction RATIO at desired wavelength(s): 
+                    n_glass / n_air
         """
-        return i - A + np.arcsin(n * np.sin(A - np.arcsin(np.sin(i) / n)))
+        return i - A + np.arcsin(nr * np.sin(A - np.arcsin(np.sin(i) / nr)))
 
-    def deflection_rad_n(self, incidence_r, n):
-        return self._wiki_deflection_rad_n(incidence_r, self._apex_rad, n)
+    def deflection_rad_nr(self, incidence_r, nr):
+        """Deflection angle as a function of incidence angle and 
+        index of refraction RATIO (n_glass / n_air)."""
+        return self._wiki_deflection_rad_nr(incidence_r, self._apex_rad, nr)
 
-    def deflection_rad_n2(self, incidence_r, n2):
+    def deflection_rad_nr2(self, incidence_r, nr2):
         """Calculate deflection angle from incidence and SQUARED index of
-        refraction. Units of RADIANS used throughout."""
-        ptemp = np.sqrt(n2 - np.sin(incidence_r)**2) * np.sin(self._apex_rad) \
+        refraction RATIO (glass / air). Units of RADIANS used throughout."""
+        ptemp = np.sqrt(nr2 - np.sin(incidence_r)**2) * np.sin(self._apex_rad) \
                 - np.cos(self._apex_rad) * np.sin(incidence_r)
         return incidence_r - self._apex_rad + np.arcsin(ptemp)
 
     def deflection_rad_wl(self, incidence_r, wavelength_um):
         """Calculate deflection angle given incidence angle and wavelength
         in microns. Units of RADIANS used throughout."""
-        n2 = self._material.refraction_index_squared(wavelength_um)
-        return self.deflection_rad_n2(incidence_r, n2)
+        n2_glass = self._material.refraction_index_squared(wavelength_um)
+        n2_air   = self._n_air**2
+        return self.deflection_rad_nr2(incidence_r, n2_glass/n2_air)
         #ptemp = np.sqrt(n2 - np.sin(incidence_r)**2) * np.sin(self._apex_rad) \
         #        - np.cos(self._apex_rad) * np.sin(incidence_r)
         #return incidence_r - self._apex_rad + np.arcsin(ptemp)

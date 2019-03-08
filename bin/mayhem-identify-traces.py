@@ -118,44 +118,12 @@ spec_config = {
         }
 dppgp = spectrograph_optics.DoublePassPrismGratingPrism(spec_config)
 
-#spec_order_list = np.arange(10, 151)
 spec_order_list = np.copy(useful_orders)
-#spec_order_wlmid = ogt.get_blaze_wavelengths(spec_order_list, units='um')
 spec_order_wlmid, spec_order_FSR, spec_order_angsize = \
         ogt.get_order_params(spec_order_list, units='um')
 #spec_order_table = {kk:vv for kk,vv in zip(spec_order_list, spec_order_wlmid)}
 for ii,ww in enumerate(spec_order_wlmid):
     sys.stderr.write("oid %3d --> %10.5f nm\n" % (ii, 1e3 * ww))
-#spec_order_FSR = spec_order_wlmid / spec_order_list
-
-### Prism index of refraction for each order:
-##sog = spectrograph_optics.Glass()
-#sog = spectrograph_optics.Glass(nres_prism_glass)
-#spec_order_nn = sog.refraction_index(spec_order_wlmid) #, nres_prism_glass)
-#
-### Minimum deviation angle of prism at central wavelength:
-### D = 2 * arcsin[n * sin(a / 2)] - a
-#center_wl_nn = sog.refraction_index(nres_center_wl_um) #, nres_prism_glass)
-#apex_rad = np.radians(nres_prism_apex_deg)      # NRES prism apex angle in RADIANS
-#incident_ang_rad = np.arcsin(center_wl_nn * np.sin(0.5 * apex_rad))
-#min_dev_rad = 2.0 * incident_ang_rad - apex_rad
-##halfdev_rad = 0.5 * min_dev_rad
-#
-#minimum_dev_r = 2.0 * np.arcsin(center_wl_nn * np.sin(0.5 * apex_rad)) - apex_rad
-#incident_ang_1_r = 0.5 * (minimum_dev_r + apex_rad)
-#
-### TESTING brute-force prism deflection:
-#use_n_air = 1.0
-#n_ratio_glass_air = spec_order_nn / use_n_air
-#incidence_1_r = incident_ang_rad * np.ones_like(spec_order_nn)
-#deflections_1_r = nrp.deflection_rad_nr2(incidence_1_r, n_ratio_glass_air**2)
-#
-#inc_change_r = deflections_1_r - min_dev_rad
-#incidence_2_r = incidence_1_r + inc_change_r
-#deflections_2_r = nrp.deflection_rad_nr2(incidence_2_r, n_ratio_glass_air**2)
-#
-#ychange_mm = (2.0 * inc_change_r) * nres_focallen_mm
-#ychange_pix = ychange_mm / nres_pix_size_mm
 
 
 ##--------------------------------------------------------------------------##
@@ -245,29 +213,6 @@ def signal_handler(signum, frame):
     sys.exit(1)
 
 signal.signal(signal.SIGINT, signal_handler)
-
-##--------------------------------------------------------------------------##
-## Save FITS image with clobber (astropy / pyfits):
-#def qsave(iname, idata, header=None, padkeys=1000, **kwargs):
-#    this_func = sys._getframe().f_code.co_name
-#    sys.stderr.write("Writing to '%s' ... " % iname)
-#    if header:
-#        while (len(header) < padkeys):
-#            header.append() # pad header
-#    if os.path.isfile(iname):
-#        os.remove(iname)
-#    pf.writeto(iname, idata, header=header, **kwargs)
-#    sys.stderr.write("done.\n")
-
-##--------------------------------------------------------------------------##
-## Save FITS image with clobber (fitsio):
-#def qsave(iname, idata, header=None, **kwargs):
-#    this_func = sys._getframe().f_code.co_name
-#    sys.stderr.write("Writing to '%s' ... " % iname)
-#    #if os.path.isfile(iname):
-#    #    os.remove(iname)
-#    fitsio.write(iname, idata, clobber=True, header=header, **kwargs)
-#    sys.stderr.write("done.\n")
 
 ##--------------------------------------------------------------------------##
 

@@ -867,28 +867,11 @@ def oinspect(oidx, ww2=True, wlmode=False, fitwl=False,
 
     # In case of better answer, use segmatch fit:
     ttpix, refpix, refwl = linematch(oidx)
-    #ikept = scu.drop_crap(1)
-    #ttpix, refpix, refwl = ttpix[ikept], refpix[ikept], refwl[ikept]
-    #resid = residcheck(ttpix, refwl)
-    #sys.stderr.write("resid: %s\n" % str(resid))
-    #resid = rmscheck(ttpix, refwl, 1)
-    #rimp1 = calc_improvements(ttpix, refwl, 1)
-    #rimp2 = calc_improvements(ttpix, refwl, 2)
-    #sys.stderr.write("resid: %10.5f\n" % resid)
-    #sys.stderr.write("rimp1: %s\n" % str(rimp1))
-    #sys.stderr.write("rimp2: %s\n" % str(rimp2))
-    #sys.stderr.write("ttpix: %s\n" % str(ttpix))
-    #sys.stderr.write("ttpix.shape: %s\n" % str(ttpix.shape))
-    #sys.stderr.write("refpix.shape: %s\n" % str(refpix.shape))
-    #sys.stderr.write("refwl.shape: %s\n" % str(refwl.shape))
-    #if isinstance(ttpix, np.ndarray):
     if ttpix.size >= 3:
         if fitwl:
             model = polyfit(ttpix, refwl, 2)
             wlen = polyval(thar['xpix'], model)
         sys.stderr.write("matched lines: %d\n" % ttpix.size)
-
-
 
     wl2pix = lambda x: np.interp(x, wlen, thar['xpix'])
     pix2wl = lambda x: np.interp(x, thar['xpix'], wlen)

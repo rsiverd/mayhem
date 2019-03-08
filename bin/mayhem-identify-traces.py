@@ -72,6 +72,7 @@ nres_ruling_lmm = 41.59     # lines per mm ruled
 #nres_spacing_lmm = 24.0442  # grating lines per mm
 nres_grating_tilt_deg = 13.786  # grating tilt w.r.t. optical bench surface
 nres_alpha_angle_rad = np.radians(90.0 - nres_grating_tilt_deg)
+nres_blaze_angle_rad = np.arctan(nres_gratio)
 
 nres_prism_glass = "PBM2"   # glass type used in cross-dispersing prism
 nres_prism_apex_deg = 55.0  # apex angle of cross-dispersing prism
@@ -79,9 +80,9 @@ nres_prism_apex_deg = 55.0  # apex angle of cross-dispersing prism
 bluemost_order = 119        # spectroscopic order of 'upper' order
 
 #nres_focallen_mm = 375.15   # approximate camera focal length
-nres_focallen_mm = 400.00   # TESTING
-nres_focallen_mm = 390.00   # TESTING
-nres_focallen_mm = 385.00   # TESTING
+#nres_focallen_mm = 400.00   # TESTING
+#nres_focallen_mm = 390.00   # TESTING
+#nres_focallen_mm = 385.00   # TESTING
 nres_focallen_mm = 380.00   # TESTING
 nres_center_wl_um = 0.479   # [I THINK] light wavelength nearest CCD center
 nres_pix_size_mm = 0.015
@@ -89,6 +90,12 @@ nres_pix_size_mm = 0.015
 useful_orders = 52.0 + np.arange(67.0)
 useful_orders = 51.0 + np.arange(69.0)
 #useful_orders = 54.0 + np.arange(67.0)
+
+#SINALP  =       0.971747764900 / Sine of echelle incidence angle
+#FL      =        375.146862776 / [mm] Camera focal length
+#Y0      =       -22.1621828561 / [mm] y-position on CCD where gamma=0
+#Z0      =    0.000267784405245 / Air (n-1) refractive index in spectrograph
+
 
 ## Spectrograph/optics brilliance:
 import spectrograph_optics
@@ -104,8 +111,8 @@ spec_config = {
         'air_index_refr'        :                   1.000,
         'grating_ruling_lmm'    :         nres_ruling_lmm,
         'grating_tilt_deg'      :   nres_grating_tilt_deg,
-        'blaze_angle_rad'       :  np.arctan(nres_gratio),
-        'coll_focallen_mm'      :                   380.0,
+        'blaze_angle_rad'       :    nres_blaze_angle_rad,
+        'coll_focallen_mm'      :        nres_focallen_mm,
         'prism_grating_mm'      :                   100.0,
         'lens_compression'      :                     2.0,
         }
@@ -421,50 +428,6 @@ f0_thar_data = [y for x,y in zip(all_traces, thar_norm) if x['fnum']==0]
 f1_thar_data = [y for x,y in zip(all_traces, thar_norm) if x['fnum']==1]
 thar_specord = bluemost_order - np.arange(len(f0_thar_data))[::-1]
 
-#def nearest_xy(x1, y1, x2, y2, xmax=110):
-#    tdiff = []
-#    for tx,ty in zip(x1, y1):
-#        which = (np.abs(tx - x2) <= xmax)
-#        if (np.sum(which) > 0):
-#            tdiff.append(np.min(np.hypot(tx - x2[which], ty - y2[which])))
-#    return np.min(tdiff)
-#
-### Closest separations:
-#def get_minseps(ridges):
-#    ndiffs = len(ridges) - 1
-#    separations = []
-#    for ii in range(ndiffs):
-#        x1, y1 = ridges[ii]
-#        x2, y2 = ridges[ii+1]
-#        tsep = [np.min(np.hypot(x2 - tx, y2 - ty)) for tx,ty in zip(x1,y1)]
-#        separations.append(np.min(tsep))
-#    return np.array(separations)
-#
-### Closest separations:
-#def get_minseps2(ridges):
-#    ndiffs = len(ridges) - 1
-#    separations = []
-#    for ii in range(ndiffs):
-#        x1, y1 = ridges[ii]
-#        x2, y2 = ridges[ii+1]
-#        sys.stderr.write("matching orders %d,%d\n" % (ii, ii+1))
-#        separations.append(nearest_xy(x1, y1, x2, y2))
-#    return np.array(separations)
-#
-##sys.stderr.write("Timing approach 1 ... ")
-##tik = time.time()
-##yay_seps_1 = get_minseps(fib0_ridges)
-##tok = time.time()
-##sys.stderr.write("took %.3f seconds.\n" % (tok-tik))
-## TAKES 20 SECONDS
-#
-#sys.stderr.write("Timing approach 2 ... ")
-#tik = time.time()
-#yay_seps_2 = get_minseps2(fib0_ridges)
-#tok = time.time()
-#sys.stderr.write("took %.3f seconds.\n" % (tok-tik))
-## TAKES 14 SECONDS
-
 ## -----------------------------------------------------------------------
 ## -----------------------------------------------------------------------
 ## -----------------------------------------------------------------------
@@ -510,49 +473,6 @@ norm_ydelta = ydeltas / ydeltas.max()
 #shift, scale = ts.linefit(ychange_pix, np.array(f0_ymid))
 
 
-## -----------------------------------------------------------------------
-## Compare estimate with measurement:
-
-#norm_ychange_pix = ychange_pix - np.min(ychange_pix)
-#norm_ychange_pix /= ychange_pix.max() - ychange_pix.min()
-#comp_f0_ymid_pix = np.array(f0_ymid) - np.min(f0_ymid)
-#comp_f0_ymid_pix /= comp_f0_ymid_pix.max() - comp_f0_ymid_pix.min()
-
-#norm_ychange_rng = norm_ychange_pix.max() - norm_ychange_pix.min()
-#comp_f0_ymid_rng = comp_f0_ymid_pix.max() - comp_f0_ymid_pix.min()
-
-### Load NIST data for fiddling:
-#nist_data, nist_hdrs = pf.getdata('NIST_spectrum.top.fits', header=True)
-#nist_data, nist_hdrs = pf.getdata('NIST_spectrum.all.fits', header=True)
-#
-#
-### TODO: need a way to consistently identify a specific order as
-### starting point for downstream work. This should safely exclude
-### orders that are likely to be inconsistently identified by these
-### procedures.
-#
-#### Look for lines (potential Argon maxima):
-#peak_pctg = 99.5
-#peak_pctg = 95.0
-###thar_smoo = copy.deepcopy(thar_data)
-#line_centers = []
-#peak_fluxes  = []
-#for odata in thar_data:
-#    peak_thresh = np.percentile(odata['spec'], peak_pctg)
-#    #odata['spec'] = nrex.boxcar_smooth(odata['spec'], 3)
-#    maxima_idx = ssig.argrelmax(odata['spec'], order=3)[0]
-#    #maxima_val = odata['spec'][maxima_idx] 
-#    which_high = (odata['spec'][maxima_idx] >= peak_thresh)
-#    maxima_use = maxima_idx[which_high]
-#    line_centers.append(maxima_use)
-#    peak_fluxes.append(odata['spec'][maxima_use])
-#    sys.stderr.write("peak_thresh: %10.5f\n" % peak_thresh) 
-#    #sys.stderr.write("maxima_idx: %s\n" % str(maxima_idx))
-#    #sys.stderr.write("maxima_val: %s\n" % str(maxima_val))
-#    sys.stderr.write("maxima_use: %s\n" % str(maxima_use))
-#    sys.stderr.write("\n")
-#intensities = np.concatenate(peak_fluxes)
-
 ## Build a single, concatenated spectrum for fiddling:
 
 ## Inspection routine:
@@ -560,39 +480,12 @@ norm_ydelta = ydeltas / ydeltas.max()
 #    plt.clf()
 #    for 
 
-#SINALP  =       0.971747764900 / Sine of echelle incidence angle
-#FL      =        375.146862776 / [mm] Camera focal length
-#Y0      =       -22.1621828561 / [mm] y-position on CCD where gamma=0
-#Z0      =    0.000267784405245 / Air (n-1) refractive index in spectrograph
-
 ## -----------------------------------------------------------------------
 ## -----------------------------------------------------------------------
 ## -----------------------------------------------------------------------
 ## -----------------------------------------------------------------------
 
-nres_nominal_gamma = 0.0    # [radians] gamma angle for nres_center_wl_um
-nres_prism_apex_deg = 55.0  # apex angle of cross-dispersing prism
-nres_prism_apex_rad = np.radians(nres_prism_apex_deg)
-nres_spacing_um = 1e3 / nres_ruling_lmm     # grating spacing in microns
 
-
-### -----------------------------------------------------------------------
-### Effective gamma angle is the nominal gamma angle plus the changes in prism
-### deflection angle due to difference from nominal wavelength.
-#def gamma_eff(gamma_nom, wlen_um):
-#    # delta_gamma = deflection_rad - min_dev_rad
-#    #deflect_r = spectrograph_optics.prism_deflection_n(incident_ang_rad,
-#    #        nres_prism_apex_rad, sog.refraction_index(wlen_um))
-#    deflect_r = nrp.deflection_rad_wl(incident_ang_rad, wlen_um)
-#    return gamma_nom + deflect_r - min_dev_rad
-
-
-## From existing solutions ...
-nres_sine_alpha = 0.971747764900
-blaze_r = np.arctan(4.0)
-#facet_r = np.radians(0.5)
-facet_r = np.arcsin(nres_sine_alpha) - blaze_r
-#fixed_geometry = 2.0 * nres_spacing_um * np.cos(facet_r) * np.sin(blaze_r)
 
 ## FIBER CHOICE:
 fib_which = 0
@@ -611,7 +504,7 @@ dp_yshifts_pix = dp_yshifts_mm / nres_pix_size_mm
 #normed_dp_yshifts = (dp_yshifts_pix - dp_yshifts_pix.min()) / dp_yshifts_range
 
 ## Compute corresponding line tilts (TESTING):
-ctr_line_tilts = ogt._calc_line_tilt_ctr(blaze_r, ctr_gamma)
+ctr_line_tilts = ogt._calc_line_tilt_ctr(nres_blaze_angle_rad, ctr_gamma)
 ctr_tilts_deg  = np.degrees(ctr_line_tilts)
 
 ## -----------------------------------------------------------------------
@@ -649,11 +542,15 @@ fudge = -300
 ## Adopt a coordinate origin along the ridge of central wavelength:
 ccd_x_origin, ccd_y_origin = 2116.674, 1989.443     # order 98, oidx=47?
 
+## Miscellany for model calculation (FIXME):
+nres_sine_alpha = np.sin(nres_alpha_angle_rad)
+nres_spacing_um = 1e3 / nres_ruling_lmm     # grating spacing in microns
+
 ## Initial crack at wavelength solution:
-nres_focallen_mm = 391.0
-nres_focallen_mm = 385.0
+#nres_focallen_mm = 391.0
+#nres_focallen_mm = 385.0
 #nres_focallen_mm = 380.
-nres_focallen_mm = 375.
+#nres_focallen_mm = 375.
 rlist = fib0_ridges if fib_which==0 else fib1_ridges
 xpix_beta_c = 2048.5        # X-pixel where beta=beta_c
 xpix_beta_c =    0.0        # X-pixel where beta=beta_c
@@ -810,30 +707,30 @@ for sord,ctrwl_nm in zip(spec_order_list, 1e3 * ctr_wlen):
 ## ----------------------------------------------------------------------- ##
 ## Brute force comparison ...
 soi = lambda x: int(spec_order_list[x])
-wl_refpoints_nm = {}
-
-## 11th order (spec order 62) has two booming lines in it:
-#tord = int(spec_order_list[11])
-wl_refpoints_nm[soi( 2)] = np.array([871.162590, 875.043326, 876.064871, 
-                877.798276, 884.361065, 887.126858])
-wl_refpoints_nm[soi( 3)] = np.array([857.547551, 866.786549, 
-                                            867.032496, 871.162590])
-wl_refpoints_nm[soi( 4)] = np.array([841.052601, 841.904021, 842.031154,
-            842.353957, 842.697974, 844.780782,
-            844.883236, 848.068736, 848.086191, 852.378507])
-
-
-
-wl_refpoints_nm[soi(11)] = np.array([750.59341792, 751.67241877])
-wl_refpoints_nm[soi(12)] = np.array([738.60150497])
-wl_refpoints_nm[soi(13)] = np.array([727.49377621])
-wl_refpoints_nm[soi(14)] = np.array([717.0870892])
-wl_refpoints_nm[soi(15)] = np.array([706.9167041])
-wl_refpoints_nm[soi(16)] = np.array([696.735506])
-wl_refpoints_nm[soi(20)] = np.array([651.416368, 653.314665, 655.597097,
-                657.903089, 658.572414, 659.035969, 659.330542, 659.575998])
-wl_refpoints_nm[soi(21)] = np.array([641.367089, 641.538735, 645.906730,
-                646.439855, 649.253065, 651.416368])
+#wl_refpoints_nm = {}
+#
+### 11th order (spec order 62) has two booming lines in it:
+##tord = int(spec_order_list[11])
+#wl_refpoints_nm[soi( 2)] = np.array([871.162590, 875.043326, 876.064871, 
+#                877.798276, 884.361065, 887.126858])
+#wl_refpoints_nm[soi( 3)] = np.array([857.547551, 866.786549, 
+#                                            867.032496, 871.162590])
+#wl_refpoints_nm[soi( 4)] = np.array([841.052601, 841.904021, 842.031154,
+#            842.353957, 842.697974, 844.780782,
+#            844.883236, 848.068736, 848.086191, 852.378507])
+#
+#
+#
+#wl_refpoints_nm[soi(11)] = np.array([750.59341792, 751.67241877])
+#wl_refpoints_nm[soi(12)] = np.array([738.60150497])
+#wl_refpoints_nm[soi(13)] = np.array([727.49377621])
+#wl_refpoints_nm[soi(14)] = np.array([717.0870892])
+#wl_refpoints_nm[soi(15)] = np.array([706.9167041])
+#wl_refpoints_nm[soi(16)] = np.array([696.735506])
+#wl_refpoints_nm[soi(20)] = np.array([651.416368, 653.314665, 655.597097,
+#                657.903089, 658.572414, 659.035969, 659.330542, 659.575998])
+#wl_refpoints_nm[soi(21)] = np.array([641.367089, 641.538735, 645.906730,
+#                646.439855, 649.253065, 651.416368])
 
 
 

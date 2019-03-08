@@ -96,7 +96,20 @@ reload(spectrograph_optics)
 nrp = spectrograph_optics.Prism(nres_prism_glass, nres_prism_apex_deg)
 ogt = spectrograph_optics.GratingTools(nres_gratio, 
         lines_per_mm=nres_ruling_lmm)
-dppgp = spectrograph_optics.DoublePassPrismGratingPrism()
+spec_config = {
+        'prism_glass'           :        nres_prism_glass,
+        'apex_angle_deg'        :     nres_prism_apex_deg,
+        'prism_turn_deg'        :                  23.507,
+        'input_turn_deg'        :                   2.000,
+        'air_index_refr'        :                   1.000,
+        'grating_ruling_lmm'    :         nres_ruling_lmm,
+        'grating_tilt_deg'      :   nres_grating_tilt_deg,
+        'blaze_angle_rad'       :  np.arctan(nres_gratio),
+        'coll_focallen_mm'      :                   380.0,
+        'prism_grating_mm'      :                   100.0,
+        'lens_compression'      :                     2.0,
+        }
+dppgp = spectrograph_optics.DoublePassPrismGratingPrism(spec_config)
 
 #spec_order_list = np.arange(10, 151)
 spec_order_list = np.copy(useful_orders)

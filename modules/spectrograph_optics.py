@@ -322,7 +322,7 @@ class GratingTools(object):
 ## More sophisticated grating+prism class (closer to real design):
 class DoublePassPrismGratingPrism(object):
 
-    def __init__(self):
+    def __init__(self, config={}):
         # PARAMETERS LIST:
         # 0. coordinate system:
         #       * x-axis points "right" towards input fiber (grating at -X).
@@ -350,36 +350,50 @@ class DoublePassPrismGratingPrism(object):
         #           of grating on optical bench (same units as prism base)
 
         # For prism apex 'perpendicular' to optical axis, incidence ~ apex/2
-        self.prism_glass = "PBM2"
-        self.apex_angle_deg = 55.0
-        self.prism_turn_deg = 23.507         # how far prism base is "turned"
-        self.input_turn_deg = 2.0            # positive angles go towards grating
-                                        # MAY VARY WITH WAVELENGTH???
+        self.prism_glass    = config.get('prism_glass', "PBM2")
+        self.apex_angle_deg = config.get('apex_angle_deg', 55.0)
+
+        # How far prism is "turned" w.r.t. main optical axis (def from CAD):
+        self.prism_turn_deg = config.get('prism_turn_deg', 23.507)
+
+        # Turn of incident beam (from fiber/collimator) 
+        # w.r.t. main optical axis (positive angles towards grating):
+        # MAY VARY WITH WAVELENGTH???
+        self.input_turn_deg = config.get('input_turn_deg', 2.0)
+
+        # Allow non-unity index of refraction for air:
+        self.air_index_refr = config.get('air_index_refr', 1.0)
 
         # Front and rear prism face orientations w.r.t. z-axis:
         self.prism_face1_deg = self.prism_turn_deg + 0.5 * self.apex_angle_deg
         self.prism_face2_deg = self.prism_turn_deg - 0.5 * self.apex_angle_deg
 
+        # Angle of incidence of input beam w.r.t. prism face1 normal:
         self.prism_front_incid_deg = self.prism_face1_deg - self.input_turn_deg
+
+        # Create prism object with given settings:
         self.pr_obj = Prism(self.prism_glass, self.apex_angle_deg)
+        self.pr_obj.set_n_air(self.air_index_refr)
 
-        self.grating_ruling_lmm = 41.59 # lines per millimeter
+        # ---------------------------------------------------
+
+        # Grating ruling in lines / millimeter:
+        self.grating_ruling_lmm = config.get('grating_ruling_lmm', 41.59)
         self.grating_spacing_um = 1e3 / self.grating_ruling_lmm
-        self.grating_turn_deg = 44.827  # angle made with nominal z-axis
-        #self.grating_turn_deg = 42.000  # angle made with nominal z-axis
-        #self.grating_turn_deg = 42.000  # angle made with nominal z-axis
-        #self.grating_turn_deg = 44.000  # angle made with nominal z-axis
-        #self.grating_turn_deg = 43.000  # angle made with nominal z-axis
-        self.grating_tilt_deg = 13.786  # angle made with optical bench
-        #self.grating_tilt_deg = 13.000  # angle made with optical bench
 
+        # Grating face angle w.r.t. optical axis (turn about bench normal):
+        self.grating_turn_deg = config.get('grating_turn_deg', 44.827)
 
+        # Grating face tilt w.r.t. optical bench:
+        self.grating_tilt_deg = config.get('grating_tilt_deg', 13.786)
+
+        # Derived quantities:
         self.input_turn_rad   = np.radians(self.input_turn_deg)
         self.grating_turn_rad = np.radians(self.grating_turn_deg)
         self.grating_tilt_rad = np.radians(self.grating_tilt_deg)
 
         self.alpha_angle_rad  = np.radians(90.0 - self.grating_tilt_deg)
-        self.blaze_angle_rad  = np.arctan(4.)
+        self.blaze_angle_rad  = config.get('blaze_angle_rad', np.arctan(4.))
         self.facet_angle_rad  = self.alpha_angle_rad - self.blaze_angle_rad
 
         self.fixed_geometry   = 2.0 * self.grating_spacing_um \
@@ -392,13 +406,13 @@ class DoublePassPrismGratingPrism(object):
         #pass2_new_incid_d = pass1_out_incid_d - 2.0 * gamma_eff_grating
 
         # Lastly include some distances:
-        self.coll_focallen_mm = 380.0
+        self.coll_focallen_mm = config.get('coll_focallen_mm', 380.0)
         #self.coll_focallen_mm = 375.0
         #self.prism_grating_mm = 284.0       # approximately
-        self.prism_grating_mm = 275.0       # approximately
+        #self.prism_grating_mm = 275.0       # approximately
         #self.prism_grating_mm = 250.0       # approximately
-        self.prism_grating_mm = 100.0       # approximately
-        self.lens_compression = 2.0
+        self.prism_grating_mm = config.get('prism_grating_mm', 100.0)
+        self.lens_compression = config.get('lens_compression',   2.0)
         return
 
     # ---------------------------------------------------------

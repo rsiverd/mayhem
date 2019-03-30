@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2019-02-19
-# Last modified: 2019-02-25
+# Last modified: 2019-03-30
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.2.0"
+__version__ = "0.2.5"
 
 ## Python version-agnostic module reloading:
 try:
@@ -308,7 +308,8 @@ gr_spacing_um = 1e3 / gr_ruling_lmm     # groove spacing in microns
 grating_turn_deg = 44.827
 grating_tilt_deg = 13.786
 
-grpoly = po.GratingPolyhedron(gr_width_mm, gr_length_mm, gr_height_mm)
+grpoly = po.GratingPolyhedron(gr_width_mm, gr_length_mm, gr_height_mm,
+                                gr_ruling_lmm)
 #grb1, grb2 = grpoly.get_face('bot')['basis']
 #sys.stderr.write("grb1: %s\n" % str(grb1))
 #sys.stderr.write("grb2: %s\n" % str(grb2))
@@ -334,12 +335,13 @@ grpoly.shift_vec(nudge)
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
+
 ## Keep a list of traced vertexes for plotting:
 light_path = []
 
 ## Input beam direction:
 #input_turn_deg = 5.0
-input_turn_deg = 5.0
+input_turn_deg = 3.0
 input_uptilt_deg = 0.0
 input_phi = np.radians(90.0 + input_turn_deg)
 input_theta = np.radians(90.0 - input_uptilt_deg)
@@ -353,6 +355,7 @@ prvtx_xmax = prpoly.get_vertices('top')[:, 0].max()     # prism +X extremum
 fiber_xpos = 0.8 * prvtx_xmax
 fiber_exit = np.array([fiber_xpos, -400.0, 0.0])
 light_path.append(fiber_exit)
+keep_going = True
 
 ## CCD position (finish line):
 demagnified = 2.0   # cheesy treatment of convergence onto CCD
@@ -368,6 +371,10 @@ ccd_xshift = -6.25      # from Stuart Barnes' report
 ccd_xseg = ccd_edge_mm * np.array([-0.5, 0.5]) + ccd_xshift
 ccd_xseg *= demagnified
 ccd_yseg = np.ones_like(ccd_xseg) * ccd_ypos
+
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+## Initialize end-to-end raytracer with faces:
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -455,33 +462,41 @@ valid, diffr_vec = diffracted_ray(path3, wl_initial, use_order)
 ##--------------------------------------------------------------------------##
 ## Make sure that vector goes back to prism:
 hits_prism, f2_isect = prf2.get_intersection(gr_isect, diffr_vec)
-if not hits_prism:
+if hits_prism:
+    light_path.append(np.copy(f2_isect))
+else:
     sys.stderr.write("No valid return path!!\n")
-    sys.exit(1)
-light_path.append(np.copy(f2_isect))
+    keep_going = False
 
 ## Direction change at face2:
-tmp_path = rt.calc_surface_vectors(diffr_vec, prf2['normal'], n1_n2_ratio)[1]
+if keep_going:
+    tmp_path = \
+            rt.calc_surface_vectors(diffr_vec, prf2['normal'], n1_n2_ratio)[1]
 
 ## Exit point from prism face1:
-valid, f1_isect = prf1.get_intersection(f2_isect, tmp_path)
-if not valid:
-    sys.stderr.write("\nPROBLEM: input beam failed to exit prism!\n") 
-    sys.exit(1)
-light_path.append(np.copy(f1_isect))
+if keep_going:
+    valid, f1_isect = prf1.get_intersection(f2_isect, tmp_path)
+    if not valid:
+        sys.stderr.write("\nPROBLEM: input beam failed to exit prism!\n") 
+        sys.exit(1)
+    light_path.append(np.copy(f1_isect))
 
 ## Exit direction from prism face1:
-to_ccd = rt.calc_surface_vectors(tmp_path, -prf1['normal'], 1. / n1_n2_ratio)[1]
+if keep_going:
+    to_ccd = \
+            rt.calc_surface_vectors(tmp_path, -prf1['normal'], 
+                                                1. / n1_n2_ratio)[1]
 
 ## Find intersection with CCD plane:
-ccd_isect = rt.line_plane_intersection(f1_isect, to_ccd, ccd_point, ccd_normal)
-light_path.append(np.copy(ccd_isect))
+if keep_going:
+    ccd_isect = rt.line_plane_intersection(f1_isect, to_ccd, ccd_point, ccd_normal)
+    light_path.append(np.copy(ccd_isect))
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 ## Edges from vertices:
 def edges_from_vertices(vtx_array):
-    nhalf = vtx_array.shape[0] / 2
+    nhalf = int(vtx_array.shape[0] / 2)
     vtx_bot = vtx_array[:nhalf]
     vtx_top = vtx_array[-nhalf:]
     idx_list = np.arange(nhalf)

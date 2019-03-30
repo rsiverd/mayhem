@@ -10,13 +10,13 @@
 #
 # Rob Siverd
 # Created:       2019-02-18
-# Last modified: 2019-02-25
+# Last modified: 2019-03-29
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 ## Python version-agnostic module reloading:
 try:
@@ -30,6 +30,7 @@ except NameError:
 ## Modules:
 import os
 import sys
+import copy
 import time
 import numpy as np
 #from numpy.lib.recfunctions import append_fields
@@ -80,48 +81,62 @@ def refracted_ray(v_incident, surf_norm, n1_n2_ratio):
 #def line_plane_intersection(line, plane):
     #lpoint, lvector =  line['point'],  line['vector']
     #ppoint, pvector = plane['point'], plane['vector']
-
-def line_plane_intersection(lpoint, lvector, ppoint, pnormal):
-    """
-    All inputs should be 3-element numpy ndarray type. The case of parallel
-    line and plane should be handled ~correctly.
-
-    lpoint  -  any point (x, y, z) on the line
-    lvector -  any vector (dx, dy, dz) along the line
-    ppoint  -  any point (x, y, z) on the plane
-    pnormal -  any vector (dx, dy, dz) normal to plane surface
-
-    Returns:
-    intersection  -  (x, y, z) point of intersection
-    """
-
-    pl_sep = np.dot(ppoint - lpoint, pnormal)
-    angsep = np.dot(lvector, pnormal)
-    # Parallel line/plane is handled separately:
-    if (angsep == 0.0):
-        sys.stderr.write("WARNING: line and plane are PARALLEL!\n")
-        if (pl_sep == 0.0):
-            sys.stderr.write("Line lies within plane!\n")
-            return lpoint
-            #return (0.0, lpoint)
-        else:
-            sys.stderr.write("Line and plane do not intersect!\n")
-            return None
-            #return None, None
-    # If not parallel, get distance and intersection: 
-    distance = pl_sep / angsep
-    return lpoint + distance * lvector
-    #isect = lpoint + distance * lvector
-    #truedist = np.sqrt(np.sum((isect - lpoint)**2))
-    #sys.stderr.write("truedist: %10.5f\n" % truedist)
-    #return distance, isect
+#def line_plane_intersection(lpoint, lvector, ppoint, pnormal):
+#    """
+#    All inputs should be 3-element numpy ndarray type. The case of parallel
+#    line and plane should be handled ~correctly.
+#
+#    lpoint  -  any point (x, y, z) on the line
+#    lvector -  any vector (dx, dy, dz) along the line
+#    ppoint  -  any point (x, y, z) on the plane
+#    pnormal -  any vector (dx, dy, dz) normal to plane surface
+#
+#    Returns:
+#    intersection  -  (x, y, z) point of intersection
+#    """
+#
+#    pl_sep = np.dot(ppoint - lpoint, pnormal)
+#    angsep = np.dot(lvector, pnormal)
+#    # Parallel line/plane is handled separately:
+#    if (angsep == 0.0):
+#        sys.stderr.write("WARNING: line and plane are PARALLEL!\n")
+#        if (pl_sep == 0.0):
+#            sys.stderr.write("Line lies within plane!\n")
+#            return lpoint
+#            #return (0.0, lpoint)
+#        else:
+#            sys.stderr.write("Line and plane do not intersect!\n")
+#            return None
+#            #return None, None
+#    # If not parallel, get distance and intersection: 
+#    distance = pl_sep / angsep
+#    return lpoint + distance * lvector
+#    #isect = lpoint + distance * lvector
+#    #truedist = np.sqrt(np.sum((isect - lpoint)**2))
+#    #sys.stderr.write("truedist: %10.5f\n" % truedist)
+#    #return distance, isect
 
 ##--------------------------------------------------------------------------##
 ## Point-in-polygon test routine. This will be useful to check whether a
 ## calculated line-plane intersection point resides within the boundaries of
 ## a face as defined by its vertices.
-def point_in_polygon(point, vtx_list):
-    return
+#def point_in_polygon(point, vtx_list):
+#    return
+
+##--------------------------------------------------------------------------##
+##------------------         Grating Diffraction            ----------------##
+##--------------------------------------------------------------------------##
+
+##--------------------------------------------------------------------------##
+##------------------     End-to-end Spectrograph Raytrace   ----------------##
+##--------------------------------------------------------------------------##
+
+class E2ERT(object):
+
+    def __init__(self, prism, grating, ccd):
+        self._faces = [x for x in face_list]
+        #self._faces = copy.deepcopy(face_list)
+        return
 
 
 ######################################################################

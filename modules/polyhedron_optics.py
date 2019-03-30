@@ -18,13 +18,13 @@
 #
 # Rob Siverd
 # Created:       2019-02-20
-# Last modified: 2019-02-25
+# Last modified: 2019-03-30
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.2.5"
+__version__ = "0.3.0"
 
 ## Python version-agnostic module reloading:
 try:
@@ -528,13 +528,16 @@ class IsosPrismPolyhedron(PolyhedralOptic):
 ## Grating represented by rectangular prism:
 class GratingPolyhedron(PolyhedralOptic):
 
-    def __init__(self, width_mm, length_mm, height_mm, unit='mm', debug=False):
+    def __init__(self, width_mm, length_mm, height_mm, ruling_lmm, 
+            unit='mm', debug=False):
         super(GratingPolyhedron, self).__init__()
         self._unit      = unit
         self._debug      = debug
         self._width_mm  = width_mm
         self._length_mm = length_mm
         self._height_mm = height_mm
+        self._ruling_lmm = ruling_lmm
+        self._spacing_um = 1e3 / self._ruling_lmm
         self._vtx['bot'] = self._bottom_vertices()
         self._vtx['top'] = self._vtx['bot'] \
                             + np.array([0.0, 0.0, self._height_mm])
@@ -554,6 +557,44 @@ class GratingPolyhedron(PolyhedralOptic):
         vtx3 = np.array([self._width_mm, self._length_mm,  0.0])
         vtx4 = np.array([           0.0, self._length_mm,  0.0])
         return np.array([vtx1, vtx2, vtx3, vtx4])
+
+    # 3-D diffraction from grating bottom. Basis vectors are:
+    # * b1 ~ parallel to grooves
+    # * b2 ~ perpendicular to grooves
+    def diffracted_ray(self, u_incident, wlen_um, spec_ord):
+        """
+        Diffracted ray direction is produced by superposition of the components
+        parallel and perpendicular to grating grooves. Groove-parallel component
+        undergoes specular reflection. Groove-perpendicular component is determined
+        from path difference. Lastly, the grating-normal component is found from
+        normalization (total length == 1).
+    
+        b_para -- basis vector parallel to grooves
+        b_perp -- basis vector perpendicular to grooves
+    
+        Returns:
+        valid     --> True/False to indicate if real-valued solution exists
+        diffr_hat --> unit vector in direction of diffracted ray
+        """
+        bottom = self.get_face('bot')
+        b_para, b_perp = bottom['basis']
+        g_norm = bottom['normal']
+        v_para = np.dot(path3, b_para)
+        v_perp = np.dot(path3, b_perp) \
+                    + (spec_ord * wlen_um / self._spacing_um)
+        normsq = 1.0 - v_para**2 - v_perp**2
+        sys.stderr.write("NEW v_para, v_perp, normsq: %10.5f, %10.5f, %10.5f\n"
+                % (v_para, v_perp, normsq))
+        if (normsq < 0.0):
+            sys.stderr.write("Imaginary diffracted ray!\n")
+            sys.stderr.write("normsq: %s\n" % str(normsq))
+            return False, np.array([np.nan, np.nan, np.nan])
+        v_norm = np.sqrt(normsq)
+        sys.stderr.write("NEW v_para, v_perp, v_norm: %10.5f, %10.5f, %10.5f\n"
+                % (v_para, v_perp, v_norm))
+        diffr_vec = v_para * b_para + v_perp * b_perp + v_norm * g_norm
+        diffr_vec /= bottom._vec_length(diffr_vec)
+        return True, diffr_vec
 
 
 ######################################################################

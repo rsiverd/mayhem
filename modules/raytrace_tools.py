@@ -134,9 +134,16 @@ def refracted_ray(v_incident, surf_norm, n1_n2_ratio):
 class E2ERT(object):
 
     def __init__(self, prism, grating, ccd):
-        self._faces = [x for x in face_list]
+        #self._faces = [x for x in face_list]
         #self._faces = copy.deepcopy(face_list)
+        self._probj = prism
+        self._grobj = grating
+        self._cmobj = ccd
+        self._prf1  = self._probj.get_face('face1')
+        self._prf2  = self._probj.get_face('face2')
         return
+
+    def follow(self, ray0):
 
 
 ######################################################################

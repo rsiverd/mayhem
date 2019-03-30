@@ -47,6 +47,9 @@ import numpy as np
 #np.set_printoptions(suppress=True, linewidth=160)
 #import itertools as itt
 
+## Indexes of refraction for glass types:
+from glass import Glass
+
 ## Rotations in 3D:
 import fov_rotation
 reload(fov_rotation)

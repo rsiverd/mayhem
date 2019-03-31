@@ -18,7 +18,7 @@
 #
 # Rob Siverd
 # Created:       2019-02-20
-# Last modified: 2019-03-30
+# Last modified: 2019-03-31
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
@@ -590,8 +590,8 @@ class GratingPolyhedron(PolyhedralOptic):
         bottom = self.get_face('bot')
         b_para, b_perp = bottom['basis']
         g_norm = bottom['normal']
-        v_para = np.dot(path3, b_para)
-        v_perp = np.dot(path3, b_perp) \
+        v_para = np.dot(u_incident, b_para)
+        v_perp = np.dot(u_incident, b_perp) \
                     + (spec_ord * wlen_um / self._spacing_um)
         normsq = 1.0 - v_para**2 - v_perp**2
         sys.stderr.write("NEW v_para, v_perp, normsq: %10.5f, %10.5f, %10.5f\n"
@@ -611,6 +611,10 @@ class GratingPolyhedron(PolyhedralOptic):
 ######################################################################
 # CHANGELOG (polyhedron_optics.py):
 #---------------------------------------------------------------------
+#
+#  2019-03-31:
+#     -- Increased __version__ to 0.3.0.
+#     -- Added diffraction to grating object and refraction to prism object.
 #
 #  2019-02-25:
 #     -- Increased __version__ to 0.2.5.

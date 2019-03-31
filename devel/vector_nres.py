@@ -286,7 +286,8 @@ short_edge_mm = 190.0
 #symmetryax_mm = 0.5 * short_edge_mm / np.tan(0.5 * apex_angle_rad)
 height_mm     = 130.0
 
-prpoly = po.IsosPrismPolyhedron(apex_angle_deg, short_edge_mm, height_mm)
+prpoly = po.IsosPrismPolyhedron(apex_angle_deg, short_edge_mm, height_mm,
+                                            nres_prism_glass)
 prpoly.zrotate(np.radians(-90.0))
 prpoly.zrotate(np.radians(prism_turn_deg))
 
@@ -340,8 +341,8 @@ grpoly.shift_vec(nudge)
 light_path = []
 
 ## Input beam direction:
-#input_turn_deg = 5.0
-input_turn_deg = 3.0
+input_turn_deg = 5.0
+#input_turn_deg = 7.0
 input_uptilt_deg = 0.0
 input_phi = np.radians(90.0 + input_turn_deg)
 input_theta = np.radians(90.0 - input_uptilt_deg)
@@ -375,122 +376,131 @@ ccd_yseg = np.ones_like(ccd_xseg) * ccd_ypos
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 ## Initialize end-to-end raytracer with faces:
+spectr = rt.E2ERT(prpoly, grpoly, None)
+test_path = spectr.follow(fiber_exit, v_initial, wl_initial, 59)
+#test_path = spectr.follow(fiber_exit, v_initial, 0.799, 59)
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 ## Cross prism forward (face1 --> face2):
-prf1, prf2 = prpoly.get_face('face1'), prpoly.get_face('face2') # useful faces
-
-## Index of refraction for air and glass:
-n_spec_air = 1.0                        # spectrograph air index of refraction
-n_pris_glass = sog.refraction_index(wl_initial) # prism index of refraction
-n1_n2_ratio = n_spec_air / n_pris_glass
-
-## Find intersection with face1:
-valid, f1_isect = prf1.get_intersection(fiber_exit, v_initial)
-if not valid:
-    sys.stderr.write("\nInput beam missed prism, something is wrong!\n")
-    sys.exit(1)
-light_path.append(np.copy(f1_isect))
+#prf1, prf2 = prpoly.get_face('face1'), prpoly.get_face('face2') # useful faces
+#
+### Index of refraction for air and glass:
+#n_spec_air = 1.0                        # spectrograph air index of refraction
+#n_pris_glass = sog.refraction_index(wl_initial) # prism index of refraction
+#n1_n2_ratio = n_spec_air / n_pris_glass
+#
+### Find intersection with face1:
+#valid, f1_isect = prf1.get_intersection(fiber_exit, v_initial)
+#if not valid:
+#    sys.stderr.write("\nInput beam missed prism, something is wrong!\n")
+#    sys.exit(1)
+#light_path.append(np.copy(f1_isect))
 
 ## Direction change at face1:
-tmp_path = rt.calc_surface_vectors(v_initial, prf1['normal'], n1_n2_ratio)[1]
+#sys.stderr.write("---------------------------\n")
+#sys.stderr.write("v_initial (OLD): %s\n" % str(v_initial))
+#sys.stderr.write("prf1_norm (OLD): %s\n" % str(prf1['normal']))
+#sys.stderr.write("n1n2ratio (OLD): %s\n" % str(n1_n2_ratio))
+#tmp_path = rt.calc_surface_vectors(v_initial, prf1['normal'], n1_n2_ratio)[1]
+#sys.stderr.write("new path at face1 (old): %s\n" % str(tmp_path))
+#sys.stderr.write("\n\n") 
 
-## Exit point from prism face2:
-valid, f2_isect = prf2.get_intersection(f1_isect, tmp_path)
-if not valid:
-    sys.stderr.write("\nPROBLEM: input beam failed to exit prism!\n") 
-    sys.exit(1)
-light_path.append(np.copy(f2_isect))
+### Exit point from prism face2:
+#valid, f2_isect = prf2.get_intersection(f1_isect, tmp_path)
+#if not valid:
+#    sys.stderr.write("\nPROBLEM: input beam failed to exit prism!\n") 
+#    sys.exit(1)
+#light_path.append(np.copy(f2_isect))
 
 ## Exit direction from prism face2:
-path3 = rt.calc_surface_vectors(tmp_path, -prf2['normal'], 1. / n1_n2_ratio)[1]
+#path3 = rt.calc_surface_vectors(tmp_path, -prf2['normal'], 1. / n1_n2_ratio)[1]
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 
-## Find intersection with grating:
-grbot = grpoly.get_face('bot')
-valid, gr_isect = grbot.get_intersection(f2_isect, path3)
-if not valid:
-    sys.stderr.write("PROBLEM: light ray misses grating!\n") 
-    sys.exit(1)
-light_path.append(np.copy(gr_isect))
+### Find intersection with grating:
+#grbot = grpoly.get_face('bot')
+#valid, gr_isect = grbot.get_intersection(f2_isect, path3)
+#if not valid:
+#    sys.stderr.write("PROBLEM: light ray misses grating!\n") 
+#    sys.exit(1)
+#light_path.append(np.copy(gr_isect))
 
 ## NOTE: grating bottom face basis vectors correspond thusly:
 ## * b1 ~ parallel to grooves
 ## * b2 ~ perpendicular to grooves
 
-def diffracted_ray(u_incident, wlen_um, spec_ord):
-    """
-    Diffracted ray direction is produced by superposition of the components
-    parallel and perpendicular to grating grooves. Groove-parallel component
-    undergoes specular reflection. Groove-perpendicular component is determined
-    from path difference. Lastly, the grating-normal component is found from
-    normalization (total length == 1).
+#def diffracted_ray(u_incident, wlen_um, spec_ord):
+#    """
+#    Diffracted ray direction is produced by superposition of the components
+#    parallel and perpendicular to grating grooves. Groove-parallel component
+#    undergoes specular reflection. Groove-perpendicular component is determined
+#    from path difference. Lastly, the grating-normal component is found from
+#    normalization (total length == 1).
+#
+#    b_para -- basis vector parallel to grooves
+#    b_perp -- basis vector perpendicular to grooves
+#
+#    Returns:
+#    valid     --> True/False to indicate if real-valued solution exists
+#    diffr_hat --> unit vector in direction of diffracted ray
+#    """
+#    b_para, b_perp = grpoly.get_face('bot')['basis']
+#    g_norm = grpoly.get_face('bot')['normal']
+#    v_para = np.dot(u_incident, b_para)
+#    v_perp = np.dot(u_incident, b_perp) + (spec_ord * wlen_um / gr_spacing_um)
+#    normsq = 1.0 - v_para**2 - v_perp**2
+#    sys.stderr.write("NEW v_para, v_perp, normsq: %10.5f, %10.5f, %10.5f\n"
+#            % (v_para, v_perp, normsq))
+#    if (normsq < 0.0):
+#        sys.stderr.write("Imaginary diffracted ray!\n")
+#        sys.stderr.write("normsq: %s\n" % str(normsq)) 
+#        return False, np.array([np.nan, np.nan, np.nan])
+#    v_norm = np.sqrt(normsq)
+#    sys.stderr.write("NEW v_para, v_perp, v_norm: %10.5f, %10.5f, %10.5f\n"
+#            % (v_para, v_perp, v_norm))
+#    diffr_vec = v_para * b_para + v_perp * b_perp + v_norm * g_norm
+#    return True, diffr_vec
 
-    b_para -- basis vector parallel to grooves
-    b_perp -- basis vector perpendicular to grooves
-
-    Returns:
-    valid     --> True/False to indicate if real-valued solution exists
-    diffr_hat --> unit vector in direction of diffracted ray
-    """
-    b_para, b_perp = grpoly.get_face('bot')['basis']
-    g_norm = grpoly.get_face('bot')['normal']
-    v_para = np.dot(path3, b_para)
-    v_perp = np.dot(path3, b_perp) + (spec_ord * wlen_um / gr_spacing_um)
-    normsq = 1.0 - v_para**2 - v_perp**2
-    sys.stderr.write("NEW v_para, v_perp, normsq: %10.5f, %10.5f, %10.5f\n"
-            % (v_para, v_perp, normsq))
-    if (normsq < 0.0):
-        sys.stderr.write("Imaginary diffracted ray!\n")
-        sys.stderr.write("normsq: %s\n" % str(normsq)) 
-        return False, np.array([np.nan, np.nan, np.nan])
-    v_norm = np.sqrt(normsq)
-    sys.stderr.write("NEW v_para, v_perp, v_norm: %10.5f, %10.5f, %10.5f\n"
-            % (v_para, v_perp, v_norm))
-    diffr_vec = v_para * b_para + v_perp * b_perp + v_norm * g_norm
-    return True, diffr_vec
-
-use_order = wlen2order(wl_initial)
-sys.stderr.write("Settled on order %d for λ=%.3f μm\n"
-        % (use_order, wl_initial))
-valid, diffr_vec = diffracted_ray(path3, wl_initial, use_order)
+#use_order = wlen2order(wl_initial)
+#sys.stderr.write("Settled on order %d for λ=%.3f μm\n"
+#        % (use_order, wl_initial))
+#valid, diffr_vec = diffracted_ray(path3, wl_initial, use_order)
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 ## Make sure that vector goes back to prism:
-hits_prism, f2_isect = prf2.get_intersection(gr_isect, diffr_vec)
-if hits_prism:
-    light_path.append(np.copy(f2_isect))
-else:
-    sys.stderr.write("No valid return path!!\n")
-    keep_going = False
+#hits_prism, f2_isect = prf2.get_intersection(gr_isect, diffr_vec)
+#if hits_prism:
+#    light_path.append(np.copy(f2_isect))
+#else:
+#    sys.stderr.write("No valid return path!!\n")
+#    keep_going = False
 
 ## Direction change at face2:
-if keep_going:
-    tmp_path = \
-            rt.calc_surface_vectors(diffr_vec, prf2['normal'], n1_n2_ratio)[1]
+#if keep_going:
+#    tmp_path = \
+#            rt.calc_surface_vectors(diffr_vec, prf2['normal'], n1_n2_ratio)[1]
 
 ## Exit point from prism face1:
-if keep_going:
-    valid, f1_isect = prf1.get_intersection(f2_isect, tmp_path)
-    if not valid:
-        sys.stderr.write("\nPROBLEM: input beam failed to exit prism!\n") 
-        sys.exit(1)
-    light_path.append(np.copy(f1_isect))
+#if keep_going:
+#    valid, f1_isect = prf1.get_intersection(f2_isect, tmp_path)
+#    if not valid:
+#        sys.stderr.write("\nPROBLEM: input beam failed to exit prism!\n") 
+#        sys.exit(1)
+#    light_path.append(np.copy(f1_isect))
 
-## Exit direction from prism face1:
-if keep_going:
-    to_ccd = \
-            rt.calc_surface_vectors(tmp_path, -prf1['normal'], 
-                                                1. / n1_n2_ratio)[1]
-
-## Find intersection with CCD plane:
-if keep_going:
-    ccd_isect = rt.line_plane_intersection(f1_isect, to_ccd, ccd_point, ccd_normal)
-    light_path.append(np.copy(ccd_isect))
+### Exit direction from prism face1:
+#if keep_going:
+#    to_ccd = \
+#            rt.calc_surface_vectors(tmp_path, -prf1['normal'], 
+#                                                1. / n1_n2_ratio)[1]
+#
+### Find intersection with CCD plane:
+#if keep_going:
+#    ccd_isect = rt.line_plane_intersection(f1_isect, to_ccd, ccd_point, ccd_normal)
+#    light_path.append(np.copy(ccd_isect))
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -554,22 +564,25 @@ for p1,p2 in itt.combinations(range(3), 2):
     ax1.plot([vx[p1], vx[p2]], [vy[p1], vy[p2]], c='b')
     pass
 
-# Draw prism face normals:
-arr_len = 50.0
-for which in ['face1', 'face2']: #, 'face3']:
-    fdata = prpoly.get_face(which)
-    arrx1, arry1, _ = fdata['center']
-    ndx, ndy, ndz = arr_len * fdata['normal']
-    ax1.arrow(arrx1, arry1, ndx, ndy, head_width=5, head_length=5, color='b')
-    pass
+## Draw prism face normals:
+draw_normals = False
+if draw_normals:
+    arr_len = 50.0
+    for which in ['face1', 'face2']: #, 'face3']:
+        fdata = prpoly.get_face(which)
+        arrx1, arry1, _ = fdata['center']
+        ndx, ndy, ndz = arr_len * fdata['normal']
+        ax1.arrow(arrx1, arry1, ndx, ndy,
+                head_width=5, head_length=5, color='b')
+        pass
 
-# -----------------------------------------------------------------------
-# Grating vertices:
+## -----------------------------------------------------------------------
+## Grating vertices:
 gcolor = 'k'
 for x,y,z in grpoly.get_vertices():
     ax1.scatter(x, y, lw=0, s=30, c=gcolor)
 
-# Grating edges:
+## Grating edges:
 for pair in edges_from_vertices(grpoly.get_vertices()):
     vx, vy = pair.T
     ax1.plot(vx, vy, c=gcolor)
@@ -579,17 +592,33 @@ ax1.set_ylim(-500, 500)
 ax1.set_xlabel("X axis (mm)")
 ax1.set_ylabel("Y axis (mm)")
 
-# -----------------------------------------------------------------------
-# Routine to connect two xyz points:
+## -----------------------------------------------------------------------
+## Routine to connect two xyz points:
 def qconnect(xyz1, xyz2, **kwargs):
     x1, y1, z1 = xyz1
     x2, y2, z2 = xyz2
     ax1.plot([x1, x2], [y1, y2], **kwargs)
     return
 
-# Light paths (green):
+## Light paths (green):
 grkw = {'ls':'--', 'c':'g'}
 for pstart,pstop in zip(light_path[:-1], light_path[1:]):
+    qconnect(pstart, pstop, **grkw)
+
+## Make plottable series of points:
+test_verts = [x[0] for x in test_path]
+
+## Add another point to show final trajectory if destination not reached:
+if isinstance(test_path[-1][1], np.ndarray):
+    draw_dist = 500.
+    last_posn, last_traj = test_path[-1]
+    after_posn = last_posn + draw_dist * last_traj
+    test_verts.append(after_posn)
+
+
+## Light paths (magenta):
+grkw = {'ls':'--', 'c':'g'}
+for pstart,pstop in zip(test_verts[:-1], test_verts[1:]):
     qconnect(pstart, pstop, **grkw)
 
 #beam_start = np.array([0.0, -400.0, 0.0])

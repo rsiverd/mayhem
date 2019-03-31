@@ -484,7 +484,7 @@ class PolyhedralOptic(object):
 class IsosPrismPolyhedron(PolyhedralOptic):
 
     def __init__(self, apex_angle_deg, apex_edge_mm, height_mm,
-            unit='mm', debug=False):
+            glass_type, n_air=1.0, unit='mm', debug=False):
         super(IsosPrismPolyhedron, self).__init__()
         self._unit       = unit
         self._debug      = debug
@@ -510,6 +510,10 @@ class IsosPrismPolyhedron(PolyhedralOptic):
         #self._update_face_names()
         #self._update_face_normals()
         self._update_face_names_norms()
+        
+        # Indexes of refraction:
+        self._n_air      = n_air
+        self._glass      = Glass(glass_type)
         return
 
     def _bottom_vertices(self):
@@ -522,6 +526,10 @@ class IsosPrismPolyhedron(PolyhedralOptic):
         tmpvtx = [self._vtx['bot'][x] for x in bvlist]      # bottom vertices
         tmpvtx += [self._vtx['top'][x] for x in reversed(bvlist)]   # add tops
         return self._make_face(np.array(tmpvtx))
+
+    def _n1n2_ratio(self, wl_um):
+        return self._n_air / self._glass.refraction_index(wl_um)
+        #return self._glass.refraction_index(wl_um) / self._n_air
 
 ##--------------------------------------------------------------------------##
 ##------------------      Diffraction Grating Polyhedron    ----------------##

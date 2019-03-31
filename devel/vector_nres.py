@@ -358,25 +358,29 @@ fiber_exit = np.array([fiber_xpos, -400.0, 0.0])
 light_path.append(fiber_exit)
 keep_going = True
 
+## Make CCD polyhedron:
+ccdpoly = po.CameraPolyhedron(200.0, 0.1, 200.0)
+ccdpoly.shift_xyz(0.0, -450.0, 0.0)
+
 ## CCD position (finish line):
-demagnified = 2.0   # cheesy treatment of convergence onto CCD
-pix_size_um = 15.0
-ccd_edge_mm = 4096.0 * pix_size_um / 1e3
-
-ccd_ypos   = -450.0
-ccd_point  = np.array([0.0, ccd_ypos, 0.0])
-ccd_normal = np.array([0.0,      1.0, 0.0])
-ccd_xshift = -7.697     # from T1 schematic
-ccd_xshift = -6.25      # from Stuart Barnes' report
-
-ccd_xseg = ccd_edge_mm * np.array([-0.5, 0.5]) + ccd_xshift
-ccd_xseg *= demagnified
-ccd_yseg = np.ones_like(ccd_xseg) * ccd_ypos
+#demagnified = 2.0   # cheesy treatment of convergence onto CCD
+#pix_size_um = 15.0
+#ccd_edge_mm = 4096.0 * pix_size_um / 1e3
+#
+#ccd_ypos   = -450.0
+#ccd_point  = np.array([0.0, ccd_ypos, 0.0])
+#ccd_normal = np.array([0.0,      1.0, 0.0])
+#ccd_xshift = -7.697     # from T1 schematic
+#ccd_xshift = -6.25      # from Stuart Barnes' report
+#
+#ccd_xseg = ccd_edge_mm * np.array([-0.5, 0.5]) + ccd_xshift
+#ccd_xseg *= demagnified
+#ccd_yseg = np.ones_like(ccd_xseg) * ccd_ypos
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 ## Initialize end-to-end raytracer with faces:
-spectr = rt.E2ERT(prpoly, grpoly, None)
+spectr = rt.E2ERT(prpoly, grpoly, ccdpoly)
 test_path = spectr.follow(fiber_exit, v_initial, wl_initial, 59)
 #test_path = spectr.follow(fiber_exit, v_initial, 0.799, 59)
 
@@ -548,8 +552,20 @@ ax1.grid(True)
 
 # -----------------------------------------------------------------------
 # Mark CCD position:
-ax1.scatter(ccd_xseg, ccd_yseg, lw=0, s=30, c='m')
-ax1.plot(ccd_xseg, ccd_yseg, c='m')
+#ax1.scatter(ccd_xseg, ccd_yseg, lw=0, s=30, c='m')
+#ax1.plot(ccd_xseg, ccd_yseg, c='m')
+
+# CCD vertices:
+for x,y,z in ccdpoly.get_vertices():
+    ax1.scatter(x, y, lw=0, s=30, c='m')
+    pass
+
+## CCD edges:
+vx, vy, vz = zip(*ccdpoly.get_vertices())
+for p1,p2 in itt.combinations(range(3), 2):
+    ax1.plot([vx[p1], vx[p2]], [vy[p1], vy[p2]], c='m')
+    pass
+
 
 # -----------------------------------------------------------------------
 # Prism vertices:

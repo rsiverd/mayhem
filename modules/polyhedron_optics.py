@@ -369,6 +369,11 @@ class PolyhedralOptic(object):
     def get_face(self, fname):
         return self._faces.get(fname, None)
 
+    def _prism_face(self, bvlist):
+        tmpvtx = [self._vtx['bot'][x] for x in bvlist]      # bottom vertices
+        tmpvtx += [self._vtx['top'][x] for x in reversed(bvlist)]   # add tops
+        return self._make_face(np.array(tmpvtx))
+
     # ------------------------------------
     # Polygon face initializer:
     def _make_face(self, face_vtx_list):
@@ -507,7 +512,8 @@ class IsosPrismPolyhedron(PolyhedralOptic):
         self._faces['face1'] = self._prism_face((0, 1))
         self._faces['face2'] = self._prism_face((1, 2))
         self._faces['face3'] = self._prism_face((2, 0))
-        #self._update_face_names()
+        #j = calc_surface_vectors(traj0, prf1['normal'], p_n1n2)[1]
+        self._update_face_names()
         #self._update_face_normals()
         self._update_face_names_norms()
         
@@ -522,14 +528,45 @@ class IsosPrismPolyhedron(PolyhedralOptic):
         vtx3 = np.array([-0.5 * self._ap_edge_mm,               0.0, 0.0])
         return np.array([vtx1, vtx2, vtx3])
 
-    def _prism_face(self, bvlist):
-        tmpvtx = [self._vtx['bot'][x] for x in bvlist]      # bottom vertices
-        tmpvtx += [self._vtx['top'][x] for x in reversed(bvlist)]   # add tops
-        return self._make_face(np.array(tmpvtx))
+    #def _prism_face(self, bvlist):
+    #    tmpvtx = [self._vtx['bot'][x] for x in bvlist]      # bottom vertices
+    #    tmpvtx += [self._vtx['top'][x] for x in reversed(bvlist)]   # add tops
+    #    return self._make_face(np.array(tmpvtx))
 
     def _n1n2_ratio(self, wl_um):
         return self._n_air / self._glass.refraction_index(wl_um)
         #return self._glass.refraction_index(wl_um) / self._n_air
+
+##--------------------------------------------------------------------------##
+##------------------          CCD Camera Polyhedron         ----------------##
+##--------------------------------------------------------------------------##
+
+class CameraPolyhedron(PolyhedralOptic):
+    
+    def __init__(self, width_mm, length_mm, height_mm,
+            unit='mm', debug=False):
+        super(CameraPolyhedron, self).__init__()
+        self._unit      = unit
+        self._debug     = debug
+        self._width_mm  = width_mm
+        self._length_mm = length_mm
+        self._height_mm = height_mm
+        self._vtx['bot'] = self._bottom_vertices()
+        self._vtx['top'] = self._vtx['bot'] \
+                            + np.array([0.0, 0.0, self._height_mm])
+        self._vtx['all'] = np.vstack((self._vtx['bot'], self._vtx['top']))
+        self.recenter_origin()
+        self._faces['front'] = self._prism_face((2, 3))
+        #self._faces['face2'] = self._prism_face((1, 2))
+        #self._faces['face3'] = self._prism_face((2, 0))
+        return
+
+    def _bottom_vertices(self):
+        vtx1 = np.array([           0.0,             0.0,  0.0])
+        vtx2 = np.array([self._width_mm,             0.0,  0.0])
+        vtx3 = np.array([self._width_mm, self._length_mm,  0.0])
+        vtx4 = np.array([           0.0, self._length_mm,  0.0])
+        return np.array([vtx1, vtx2, vtx3, vtx4])
 
 ##--------------------------------------------------------------------------##
 ##------------------      Diffraction Grating Polyhedron    ----------------##
@@ -543,7 +580,7 @@ class GratingPolyhedron(PolyhedralOptic):
             unit='mm', debug=False):
         super(GratingPolyhedron, self).__init__()
         self._unit      = unit
-        self._debug      = debug
+        self._debug     = debug
         self._width_mm  = width_mm
         self._length_mm = length_mm
         self._height_mm = height_mm

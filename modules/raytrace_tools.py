@@ -149,6 +149,7 @@ class E2ERT(object):
         prf2   = self._probj.get_face('face2')
         p_n1n2 = self._probj._n1n2_ratio(wl_um) # n_glass / n_air
         grbot  = self._grobj.get_face('bot')
+        sensor = self._cmobj.get_face('front')
         light_path = [(xyz0, traj0)]
         sys.stderr.write("v_initial (NEW): %s\n" % str(traj0))
         sys.stderr.write("prf1_norm (NEW): %s\n" % str(prf1['normal']))
@@ -209,6 +210,11 @@ class E2ERT(object):
 
         # -------------------------------------------------------
         # Check for intersection with CCD plane:
+        valid, cam_isect = sensor.get_intersection(f1_isect, new_traj)
+        if not valid:
+            sys.stderr.write("Beam misses CCD sensor!\n")
+            return light_path
+        light_path.append((cam_isect, None))
 
         return light_path
 

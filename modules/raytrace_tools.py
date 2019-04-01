@@ -133,60 +133,63 @@ def refracted_ray(v_incident, surf_norm, n1_n2_ratio):
 
 class E2ERT(object):
 
-    def __init__(self, prism, grating, ccd):
+    def __init__(self, prism, grating, ccd, vlevel=1):
         #self._faces = [x for x in face_list]
         #self._faces = copy.deepcopy(face_list)
-        self._probj = prism
-        self._grobj = grating
-        self._cmobj = ccd
-        self._prf1  = self._probj.get_face('face1')
-        self._prf2  = self._probj.get_face('face2')
+        self._probj  = prism
+        self._grobj  = grating
+        self._cmobj  = ccd
+        self._prf1   = self._probj.get_face('face1')
+        self._prf2   = self._probj.get_face('face2')
+
+        # Feedback messaging:
+        self._stream = sys.stderr
+        self._vlevel = vlevel
+        return
+
+    def _vlwrite(self, vlmin, msgtxt):
+        if self._vlevel >= vlmin:
+            self._stream.write(msgtxt)
         return
 
     def follow(self, xyz0, traj0, wl_um, spec_order):
-        #sys.stderr.write("--------------------------------------------\n")
+        # collect useful pieces:
         prf1   = self._probj.get_face('face1')
         prf2   = self._probj.get_face('face2')
         p_n1n2 = self._probj._n1n2_ratio(wl_um) # n_glass / n_air
         grbot  = self._grobj.get_face('bot')
         sensor = self._cmobj.get_face('front')
         light_path = [(xyz0, traj0)]
-        #sys.stderr.write("v_initial (NEW): %s\n" % str(traj0))
-        #sys.stderr.write("prf1_norm (NEW): %s\n" % str(prf1['normal']))
-        #sys.stderr.write("n1n2ratio (NEW): %s\n" % str(p_n1n2))
 
         # -------------------------------------------------------
         # Enter prism through face1 (point + trajectory):
         valid, f1_isect = prf1.get_intersection(xyz0, traj0)
         if not valid:
-            sys.stderr.write("Input beam missed prism!\n")
+            self._vlwrite(1, "Input beam missed prism!\n")
             return light_path
         new_traj = calc_surface_vectors(traj0, prf1['normal'], p_n1n2)[1]
-        #sys.stderr.write("new_traj after face1: %s\n" % str(new_traj))
         light_path.append((f1_isect, new_traj))
 
         # Exit through prism face2 (point + trajectory):
         valid, f2_isect = prf2.get_intersection(f1_isect, new_traj)
         if not valid:
-            sys.stderr.write("Beam failed to exit prism through face2!\n")
+            self._vlwrite(1, "Beam failed to exit prism through face2!\n")
             return light_path
         new_traj = calc_surface_vectors(new_traj, 
                         -prf2['normal'], 1. / p_n1n2)[1]
-
         light_path.append((f2_isect, new_traj))
-        #sys.stderr.write("--------------------------------------------\n")
 
         # -------------------------------------------------------
         # Intersect grating and change direction (diffract):
         hits_grating, gr_isect = grbot.get_intersection(f2_isect, new_traj)
         if not valid:
-            sys.stderr.write("Light ray misses grating!\n")
+            self._vlwrite(1, "Light ray misses grating!\n")
             return light_path
         valid, diffr_vec = \
                 self._grobj.diffracted_ray(new_traj, wl_um, spec_order)
         if not valid:
             light_path.append((gr_isect, None))
-            sys.stderr.write("No valid diffracted beam from grating!\n")
+            self._vlwrite(1, "No valid diffracted beam from grating!\n")
             return light_path
         light_path.append((gr_isect, diffr_vec))
  
@@ -194,7 +197,7 @@ class E2ERT(object):
         # Re-enter prism through face2 (point + trajectory):
         hits_prism, f2_isect = prf2.get_intersection(gr_isect, diffr_vec)
         if not hits_prism:
-            sys.stderr.write("Diffracted ray does not return to prism!\n")
+            self._vlwrite(1, "Diffracted ray does not return to prism!\n")
             return light_path
         new_traj = calc_surface_vectors(diffr_vec, prf2['normal'], p_n1n2)[1]
         light_path.append((f2_isect, new_traj))
@@ -202,7 +205,7 @@ class E2ERT(object):
         # Exit through prism face1 (point + trajectory):
         valid, f1_isect = prf1.get_intersection(f2_isect, new_traj)
         if not valid:
-            sys.stderr.write("Beam failed to exit prism through face1!\n")
+            self._vlwrite(1, "Beam failed to exit prism through face1!\n")
             return light_path
         new_traj = calc_surface_vectors(new_traj, 
                         -prf1['normal'], 1. / p_n1n2)[1]
@@ -212,7 +215,7 @@ class E2ERT(object):
         # Check for intersection with CCD plane:
         valid, cam_isect = sensor.get_intersection(f1_isect, new_traj)
         if not valid:
-            sys.stderr.write("Beam misses CCD sensor!\n")
+            self._vlwrite(1, "Beam misses CCD sensor!\n")
             return light_path
         light_path.append((cam_isect, None))
 

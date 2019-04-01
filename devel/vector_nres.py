@@ -65,6 +65,10 @@ np.set_printoptions(suppress=True, linewidth=160)
 #import window_filter as wf
 import itertools as itt
 
+## Colorize-by-wavelength:
+import wavelength_colors
+reload(wavelength_colors)
+
 ## Rotation kit:
 import fov_rotation
 reload(fov_rotation)
@@ -110,8 +114,9 @@ def wlen2order(wlen_um):
 
 ## Select test wavelengths from each order to test raytracing:
 rtwl_samples = {}
-samp_per_order = 11
-FSRs_per_order = 1.6
+#samp_per_order = 11
+samp_per_order = 21
+FSRs_per_order = 1.3
 sample_offsets = FSRs_per_order * np.linspace(-0.5, 0.5, samp_per_order)
 for nord,wlcen in zip(useful_orders, center_wlen_um):
     this_FSR = wlcen / float(nord)
@@ -357,13 +362,36 @@ ccdpoly.shift_xyz(0.0, -450.0, 0.0)
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
-## Initialize end-to-end raytracer with faces:
-spectr = rt.E2ERT(prpoly, grpoly, ccdpoly)
-test_path = spectr.follow(fiber_exit, v_initial, wl_initial, 59)
+## Initialize end-to-end raytracer with polygons:
+spectr = rt.E2ERT(prpoly, grpoly, ccdpoly, vlevel=1)
+owhich = wlen2order(wl_initial)
+test_path = spectr.follow(fiber_exit, v_initial, wl_initial, owhich)
+test_path = spectr.follow(fiber_exit, v_initial, wl_initial, owhich+1)
 #test_path = spectr.follow(fiber_exit, v_initial, 0.799, 59)
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
+## Raytrace numerous orders:
+path_details = {}
+spec_mod_pts = {}
+for i,(sord, wsamp) in enumerate(rtwl_samples.items(), 1):
+    sys.stderr.write("sord: %3d (order %d of %d)\n" 
+            % (sord, i, useful_orders.size))
+    paths = [spectr.follow(fiber_exit, v_initial, ww, sord) for ww in wsamp]
+    path_details[sord] = paths
+    endpoints = [x[-1] for x in paths]
+    #kept = []
+    #for ww,(cc,tt) in zip(wsamp, endpoints):
+    #    ccdx, _, ccdy = cc
+    #    sys.stderr.write("ww: %.3f\n" % ww)
+    #    sys.stderr.write("cc: %s\n" % str(cc))
+    #    sys.stderr.write("tt: %s\n" % str(tt))
+    #    if tt is None:
+    #        kept.append((ww, ccdx, ccdy))
+    #    pass
+    kept = [(ww, cx, cz) for ww,((cx,cy,cz),tt) \
+                        in zip(wsamp, endpoints) if (tt is None)]
+    spec_mod_pts[sord] = np.array(kept)
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -391,19 +419,46 @@ def edges_from_vertices(vtx_array):
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 ## Plot layout and annotations as sanity check:
-fig_dims = (12, 10)
+fig_dims = (9, 10)
 fig = plt.figure(1, figsize=fig_dims)
-plt.gcf().clf()
+#plt.gcf().clf()
+fig.clf()
 #fig, axs = plt.subplots(2, 2, sharex=True, figsize=fig_dims, num=1)
 # sharex='col' | sharex='row'
 #fig.frameon = False # disable figure frame drawing
 #fig.subplots_adjust(left=0.07, right=0.95)
 #ax1 = plt.subplot(gs[0, 0])
-ax1 = fig.add_subplot(111, aspect='equal')
-#ax1 = fig.add_axes([0, 0, 1, 1])
+#ax1 = fig.add_subplot(111, aspect='equal')
+ax1 = fig.add_axes([0.05, 0.05, 0.93, 0.93], aspect='equal')
 #ax1.patch.set_facecolor((0.8, 0.8, 0.8))
 ax1.grid(True)
 #ax1.axis('off')
+
+fig2 = plt.figure(2, figsize=(6, 6))
+fig2.clf()
+ax2 = fig2.add_subplot(111, aspect='equal')
+sskw = {'lw':0, 's':15}
+#spkw = {
+flip_plot = True
+for onum,odata in spec_mod_pts.items():
+    wlen, xcoo, ycoo = odata.T
+    #ax2.scatter(xcoo, ycoo, **sskw)
+    color = wavelength_colors.wave2rgb(1e3*wlen.mean())
+    if flip_plot:
+        ax2.plot(ycoo, -xcoo, color=color)
+    else:
+        ax2.plot(xcoo, ycoo, color=color)
+ax2.set_xlim(-100, 100)
+ax2.set_ylim(-100, 100)
+
+## Combined data set:
+_, mod_xcoo, mod_ycoo = np.concatenate([x for x in spec_mod_pts.values()]).T
+if flip_plot:
+    mod_xcoo, mod_ycoo = mod_ycoo, -mod_xcoo
+xavg = np.average(mod_xcoo)
+yavg = np.average(mod_ycoo)
+ax2.set_xlim(xavg - 55., xavg + 75.)
+ax2.set_ylim(yavg - 53., yavg + 65.)
 
 ## Disable axis offsets:
 #ax1.xaxis.get_major_formatter().set_useOffset(False)
@@ -545,7 +600,7 @@ for pstart,pstop in zip(test_verts[:-1], test_verts[1:]):
 #cbar.formatter.set_useOffset(False)
 #cbar.update_ticks()
 
-fig.tight_layout() # adjust boundaries sensibly, matplotlib v1.1+
+#fig.tight_layout() # adjust boundaries sensibly, matplotlib v1.1+
 plt.draw()
 #fig.savefig(plot_name, bbox_inches='tight')
 

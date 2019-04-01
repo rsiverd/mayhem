@@ -148,7 +148,7 @@ class Prism(object):
     # -------------------------------------
 
     @staticmethod
-    def _wiki_deflection_rad_n(i, A, nr):
+    def _wiki_deflection_rad_nr(i, A, nr):
         """Deflection angle using formula from Wikipedia (which seems
         to be identical to others used here. Inputs are:
         i  -- incidence angle (RADIANS)

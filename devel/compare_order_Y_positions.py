@@ -194,6 +194,8 @@ trdata = trio.load_traces(test_traces)
 ## Spectrograph/optics brilliance:
 import spectrograph_optics
 reload(spectrograph_optics)
+import glass
+reload(glass)
 
 ##--------------------------------------------------------------------------##
 ## Spectrograph hardware config items (constants):
@@ -217,7 +219,7 @@ nres_focallen_mm = 375.15   # approximate camera focal length
 
 
 ##--------------------------------------------------------------------------##
-sog = spectrograph_optics.Glass(nres_prism_glass)
+sog = glass.Glass(nres_prism_glass)
 nrp = spectrograph_optics.Prism(nres_prism_glass, nres_prism_apex_deg)
 ogt = spectrograph_optics.GratingTools(nres_gratio,
         lines_per_mm=nres_ruling_lmm)
@@ -292,7 +294,8 @@ iter_order_table = {kk:vv for kk,vv in zip(spec_order_list, iter_order_wlmid)}
 ## Comparison of methods:
 for ii,ww in enumerate(spec_order_wlmid):
     w2 = iter_order_wlmid[ii]
-    sys.stderr.write("oid %3d --> %10.5f nm || %10.5f\n" % (ii, 1e3 * ww, 1e3 * w2))
+    sys.stderr.write("oid %3d --> %10.5f nm || %10.5f\n" 
+            % (ii, 1e3 * ww, 1e3 * w2))
 
 
 

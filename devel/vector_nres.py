@@ -331,7 +331,7 @@ grpoly.shift_vec(nudge)
 ##--------------------------------------------------------------------------##
 
 ## Keep a list of traced vertexes for plotting:
-light_path = []
+#light_path = []
 
 ## Input beam direction:
 input_turn_deg = 5.0
@@ -348,7 +348,7 @@ wl_initial = 0.80                        # ray wavelength (microns)
 prvtx_xmax = prpoly.get_vertices('top')[:, 0].max()     # prism +X extremum
 fiber_xpos = 0.8 * prvtx_xmax
 fiber_exit = np.array([fiber_xpos, -400.0, 0.0])
-light_path.append(fiber_exit)
+#light_path.append(fiber_exit)
 keep_going = True
 
 ## Make CCD polyhedron:
@@ -475,10 +475,10 @@ def qconnect(xyz1, xyz2, **kwargs):
     ax1.plot([x1, x2], [y1, y2], **kwargs)
     return
 
-## Light paths (green):
-grkw = {'ls':'--', 'c':'g'}
-for pstart,pstop in zip(light_path[:-1], light_path[1:]):
-    qconnect(pstart, pstop, **grkw)
+### Light paths (green):
+#grkw = {'ls':'--', 'c':'g'}
+#for pstart,pstop in zip(light_path[:-1], light_path[1:]):
+#    qconnect(pstart, pstop, **grkw)
 
 ## Make plottable series of points:
 test_verts = [x[0] for x in test_path]
@@ -489,7 +489,6 @@ if isinstance(test_path[-1][1], np.ndarray):
     last_posn, last_traj = test_path[-1]
     after_posn = last_posn + draw_dist * last_traj
     test_verts.append(after_posn)
-
 
 ## Light paths (magenta):
 grkw = {'ls':'--', 'c':'g'}

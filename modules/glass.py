@@ -62,7 +62,7 @@ class Glass(object):
 
     # Squared index of refraction for specified wavelengths:
     def refraction_index_squared(self, wlen_um):
-        lam_um_sq = float(wlen_um * wlen_um)
+        lam_um_sq = wlen_um**2
         n_squared = np.ones_like(wlen_um, dtype='float')
         for bb,cc in self._coeffs:
             n_squared += (lam_um_sq * bb) / (lam_um_sq - cc)

@@ -13,14 +13,14 @@
 ## Current version:
 __version__ = "0.1.0"
 
-## Python version-agnostic module reloading:
-try:
-    reload                              # Python 2.7
-except NameError:
-    try:
-        from importlib import reload    # Python 3.4+
-    except ImportError:
-        from imp import reload          # Python 3.0 - 3.3
+### Python version-agnostic module reloading:
+#try:
+#    reload                              # Python 2.7
+#except NameError:
+#    try:
+#        from importlib import reload    # Python 3.4+
+#    except ImportError:
+#        from imp import reload          # Python 3.0 - 3.3
 
 ## Modules:
 import os

@@ -5,13 +5,13 @@
 #
 # Rob Siverd
 # Created:       2019-02-19
-# Last modified: 2019-03-30
+# Last modified: 2019-04-01
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.2.5"
+__version__ = "0.3.0"
 
 ## Python version-agnostic module reloading:
 try:
@@ -97,6 +97,7 @@ dppgp = spectrograph_optics.DoublePassPrismGratingPrism()
 ##--------------------------------------------------------------------------##
 ## Spectroscopic orders and a lookup routine:
 useful_orders = 51 + np.arange(69)
+#useful_orders = 54 + np.arange(66)
 center_wlen_um = dppgp.calc_central_wlen_um(useful_orders.astype('float'))
 spec_order_FSR = center_wlen_um / useful_orders.astype('float')
 spec_order_wlmin = center_wlen_um - spec_order_FSR
@@ -116,7 +117,8 @@ def wlen2order(wlen_um):
 rtwl_samples = {}
 #samp_per_order = 11
 samp_per_order = 21
-FSRs_per_order = 1.3
+#FSRs_per_order = 1.3
+FSRs_per_order = 1.0
 sample_offsets = FSRs_per_order * np.linspace(-0.5, 0.5, samp_per_order)
 for nord,wlcen in zip(useful_orders, center_wlen_um):
     this_FSR = wlcen / float(nord)
@@ -437,28 +439,43 @@ ax1.grid(True)
 fig2 = plt.figure(2, figsize=(6, 6))
 fig2.clf()
 ax2 = fig2.add_subplot(111, aspect='equal')
+ax2.grid(True)
 sskw = {'lw':0, 's':15}
 #spkw = {
 flip_plot = True
+derp = []
 for onum,odata in spec_mod_pts.items():
     wlen, xcoo, ycoo = odata.T
     #ax2.scatter(xcoo, ycoo, **sskw)
-    color = wavelength_colors.wave2rgb(1e3*wlen.mean())
+    wlnm = 1e3 * wlen.mean()
+    derp.append((onum, wlnm))
+    color = wavelength_colors.wave2rgb(wlnm)
+    sys.stderr.write("wlnm=%.3f, color: %s\n" % (wlnm, str(color)))
     if flip_plot:
         ax2.plot(ycoo, -xcoo, color=color)
     else:
         ax2.plot(xcoo, ycoo, color=color)
-ax2.set_xlim(-100, 100)
-ax2.set_ylim(-100, 100)
+#ax2.set_xlim(-100, 100)
+#ax2.set_ylim(-100, 100)
+sys.stderr.write("MADE IT HERE!\n")
 
 ## Combined data set:
-_, mod_xcoo, mod_ycoo = np.concatenate([x for x in spec_mod_pts.values()]).T
+mod_wlen, mod_xcoo, mod_ycoo = \
+        np.concatenate([x for x in spec_mod_pts.values()]).T
 if flip_plot:
     mod_xcoo, mod_ycoo = mod_ycoo, -mod_xcoo
-xavg = np.average(mod_xcoo)
-yavg = np.average(mod_ycoo)
-ax2.set_xlim(xavg - 55., xavg + 75.)
-ax2.set_ylim(yavg - 53., yavg + 65.)
+xmin, xmax = mod_xcoo.min(), mod_xcoo.max()
+ymin, ymax = mod_ycoo.min(), mod_ycoo.max()
+span = 1.05 * max(xmax - xmin, ymax - ymin)
+span = 1.05 * (ymax - ymin)
+xmid, ymid = 0.50 * (xmin + xmax), 0.5 * (ymin + ymax)
+#xavg = np.average(mod_xcoo)
+#yavg = np.average(mod_ycoo)
+#ax2.set_xlim(xavg - 65., xavg + 65.)
+#ax2.set_ylim(yavg - 53., yavg + 65.)
+ax2.set_xlim(xmid - 0.5*span, xmid + 0.5*span)
+ax2.set_ylim(ymid - 0.5*span, ymid + 0.5*span)
+fig2.tight_layout()
 
 ## Disable axis offsets:
 #ax1.xaxis.get_major_formatter().set_useOffset(False)
@@ -545,7 +562,7 @@ if isinstance(test_path[-1][1], np.ndarray):
     after_posn = last_posn + draw_dist * last_traj
     test_verts.append(after_posn)
 
-## Light paths (magenta):
+## Light paths (green):
 grkw = {'ls':'--', 'c':'g'}
 for pstart,pstop in zip(test_verts[:-1], test_verts[1:]):
     qconnect(pstart, pstop, **grkw)

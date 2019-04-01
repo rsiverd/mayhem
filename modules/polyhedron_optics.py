@@ -631,15 +631,15 @@ class GratingPolyhedron(PolyhedralOptic):
         v_perp = np.dot(u_incident, b_perp) \
                     + (spec_ord * wlen_um / self._spacing_um)
         normsq = 1.0 - v_para**2 - v_perp**2
-        sys.stderr.write("NEW v_para, v_perp, normsq: %10.5f, %10.5f, %10.5f\n"
-                % (v_para, v_perp, normsq))
+        #sys.stderr.write("NEW v_para, v_perp, normsq: %10.5f, %10.5f, %10.5f\n"
+        #        % (v_para, v_perp, normsq))
         if (normsq < 0.0):
             sys.stderr.write("Imaginary diffracted ray!\n")
             sys.stderr.write("normsq: %s\n" % str(normsq))
             return False, np.array([np.nan, np.nan, np.nan])
         v_norm = np.sqrt(normsq)
-        sys.stderr.write("NEW v_para, v_perp, v_norm: %10.5f, %10.5f, %10.5f\n"
-                % (v_para, v_perp, v_norm))
+        #sys.stderr.write("NEW v_para, v_perp, v_norm: %10.5f, %10.5f, %10.5f\n"
+        #        % (v_para, v_perp, v_norm))
         diffr_vec = v_para * b_para + v_perp * b_perp + v_norm * g_norm
         diffr_vec /= bottom._vec_length(diffr_vec)
         return True, diffr_vec

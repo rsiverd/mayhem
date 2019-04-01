@@ -311,18 +311,11 @@ grating_tilt_deg = 13.786
 
 grpoly = po.GratingPolyhedron(gr_width_mm, gr_length_mm, gr_height_mm,
                                 gr_ruling_lmm)
-#grb1, grb2 = grpoly.get_face('bot')['basis']
-#sys.stderr.write("grb1: %s\n" % str(grb1))
-#sys.stderr.write("grb2: %s\n" % str(grb2))
-#sys.exit(0)
 grpoly.xrotate(np.radians(-grating_tilt_deg))
 grpoly.zrotate(np.radians(grating_turn_deg))
 grpoly.shift_xyz(-165.0, 235.0, 0.0)
-#grpoly.shift_xyz(-165.0, 235.0, 0.0)
-#grpoly.shift_vec(np.array([-165.0, 235.0, 0.0]))
 
 ## Adjust grating so center of bottom face lies on z=0:
-#gr_bot = grpoly.get_face('bot')
 gr_bot_ctr = np.copy(grpoly.get_face('bot')['center'])
 #sys.stderr.write("grating bottom-center: %s\n" % str(gr_bot_ctr))
 grpoly.shift_vec(gr_bot_ctr * np.array([0.0, 0.0, -1.0]))

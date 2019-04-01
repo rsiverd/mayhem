@@ -302,7 +302,7 @@ def calc_order_sep(central_wlen_um):
     refr_idx = sog.refraction_index(central_wlen_um)
     #deflections = spectrograph_optics.prism_deflection_n(incident_ang_rad,
     #            nres_prism_apex_rad, refr_idx)
-    deflections = nrp.deflection_rad_n(incident_ang_rad, refr_idx)
+    deflections = nrp.deflection_rad_nr(incident_ang_rad, refr_idx)
     angle_change = deflections - min_dev_rad
     return 2*angle_change
 

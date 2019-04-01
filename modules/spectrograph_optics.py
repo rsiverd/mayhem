@@ -14,13 +14,13 @@
 __version__ = "0.2.0"
 
 ## Python version-agnostic module reloading:
-try:
-    reload                              # Python 2.7
-except NameError:
-    try:
-        from importlib import reload    # Python 3.4+
-    except ImportError:
-        from imp import reload          # Python 3.0 - 3.3
+#try:
+#    reload                              # Python 2.7
+#except NameError:
+#    try:
+#        from importlib import reload    # Python 3.4+
+#    except ImportError:
+#        from imp import reload          # Python 3.0 - 3.3
 
 ## Modules:
 import os
@@ -49,9 +49,9 @@ from functools import partial
 #import itertools as itt
 
 ## Glass indexes of refraction:
-#from glass import Glass
-import glass
-reload(glass)
+from glass import Glass
+#import glass
+#reload(glass)
 
 ###--------------------------------------------------------------------------##
 ### Calculating index of refraction for several glass types:
@@ -125,7 +125,7 @@ class Prism(object):
     def __init__(self, glasstype, apex_deg, n_air=1.0):
         #self._apex_deg = apex_deg
         #self._apex_rad = np.radians(apex_deg)
-        self._material = glass.Glass(glasstype)
+        self._material = Glass(glasstype)
         self.set_apex_deg(apex_deg)
         self.set_n_air(n_air)    # index of refraction of air in spectrograph
         return

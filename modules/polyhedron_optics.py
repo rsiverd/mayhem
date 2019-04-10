@@ -612,10 +612,11 @@ class GratingPolyhedron(PolyhedralOptic):
     def diffracted_ray(self, u_incident, wlen_um, spec_ord):
         """
         Diffracted ray direction is produced by superposition of the components
-        parallel and perpendicular to grating grooves. Groove-parallel component
-        undergoes specular reflection. Groove-perpendicular component is determined
-        from path difference. Lastly, the grating-normal component is found from
-        normalization (total length == 1).
+        parallel and perpendicular to grating grooves. The groove-parallel 
+        component undergoes specular reflection while the groove-perpendicular
+        component direction change is determined by path difference. Once those
+        in-grating-plane components are found, the grating-normal component 
+        follows from the normalization condition (total length == 1).
     
         b_para -- basis vector parallel to grooves
         b_perp -- basis vector perpendicular to grooves

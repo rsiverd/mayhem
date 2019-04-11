@@ -117,8 +117,9 @@ def wlen2order(wlen_um):
 rtwl_samples = {}
 #samp_per_order = 11
 samp_per_order = 21
-#FSRs_per_order = 1.3
-FSRs_per_order = 1.0
+FSRs_per_order = 1.3
+FSRs_per_order = 1.6
+#FSRs_per_order = 1.0
 sample_offsets = FSRs_per_order * np.linspace(-0.5, 0.5, samp_per_order)
 for nord,wlcen in zip(useful_orders, center_wlen_um):
     this_FSR = wlcen / float(nord)
@@ -340,8 +341,12 @@ grpoly.shift_vec(nudge)
 ## Keep a list of traced vertexes for plotting:
 #light_path = []
 
+## Guesstimated scale factor change from collimator lenses:
+guess_magnify = 2.0
+
 ## Input beam direction:
 input_turn_deg = 5.0
+input_turn_deg = 4.0
 #input_turn_deg = 7.0
 input_uptilt_deg = 0.0
 input_phi = np.radians(90.0 + input_turn_deg)
@@ -353,21 +358,18 @@ v_initial = np.array([np.sin(input_theta) * np.cos(input_phi),
 ## An initial input beam (center fiber):
 wl_initial = 0.80                        # ray wavelength (microns)
 prvtx_xmax = prpoly.get_vertices('top')[:, 0].max()     # prism +X extremum
-fiber_xpos = 0.85 * prvtx_xmax
+fiber_xpos = 0.89 * prvtx_xmax
 ferrule_fsep = 0.250                                    # mm between fibers
+ferrule_fsep *= guess_magnify
 
 ## Fibers 0+2 are offset from fiber1 in X-Y plane:
 frac_offset = np.array([-np.sin(input_phi), np.cos(input_phi), 0.0])
-#fib2_offset = np.array([ , , 0.0])
-
 fiber_exit = np.array([fiber_xpos, -400.0, 0.0])
 
 ## Starting positions for all three fibers:
 fiber_ends = [fiber_exit.copy() + ferrule_fsep * frac_offset,
               fiber_exit.copy(),
               fiber_exit.copy() - ferrule_fsep * frac_offset]
-#light_path.append(fiber_exit)
-#keep_going = True
 
 ## Make CCD polyhedron:
 ccdpoly = po.CameraPolyhedron(200.0, 0.1, 200.0)
@@ -466,6 +468,8 @@ fig2.clf()
 ax2 = fig2.add_subplot(111, aspect='equal')
 ax2.grid(True)
 sskw = {'lw':0, 's':15}
+ppkw = {}
+ppkw = {'marker':'o', 'ms':5}
 flip_plot = True
 everything = []
 for onum,odata in spec_mod_pts.items():
@@ -476,9 +480,11 @@ for onum,odata in spec_mod_pts.items():
         wlnm = 1e3 * wlen.mean()
         color = wavelength_colors.wave2rgb(wlnm)
         if flip_plot:
-            ax2.plot(ycoo, -xcoo, color=color)
+            ax2.plot(ycoo, -xcoo, color=color, **ppkw)
+            #ax2.scatter(ycoo, -xcoo, color=color, **sskw)
         else:
-            ax2.plot(xcoo, ycoo, color=color)
+            ax2.plot(xcoo, ycoo, color=color, **ppkw)
+            #ax2.scatter(xcoo, ycoo, color=color, **sskw)
 
 ## Combined data set:
 #mod_wlen, mod_xcoo, mod_ycoo = \
@@ -495,13 +501,64 @@ xmid, ymid = 0.50 * (xmin + xmax), 0.5 * (ymin + ymax)
 #yavg = np.average(mod_ycoo)
 #ax2.set_xlim(xavg - 65., xavg + 65.)
 #ax2.set_ylim(yavg - 53., yavg + 65.)
-ax2.set_xlim(xmid - 0.5*span, xmid + 0.5*span)
-ax2.set_ylim(ymid - 0.5*span, ymid + 0.5*span)
+xlo, xhi = xmid - 0.5*span, xmid + 0.5*span
+ylo, yhi = ymid - 0.5*span, ymid + 0.5*span
+ax2.set_xlim(xlo, xhi)
+ax2.set_ylim(ylo, yhi)
 fig2.tight_layout()
 
-## Disable axis offsets:
-#ax1.xaxis.get_major_formatter().set_useOffset(False)
-#ax1.yaxis.get_major_formatter().set_useOffset(False)
+## Limit tweaking:
+xp0, xp1, yp0, yp1 = xmin, xmax, ymin, ymax
+xp0, xp1, yp0, yp1 =  xlo,  xhi,  ylo,  yhi
+
+## Adjust image scale to match reality:
+nr1_sep =  29.0                    # in 2nd-bluemost order
+nr1_ord = 118
+delta = spec_mod_pts[nr1_ord][1] - spec_mod_pts[nr1_ord][0]
+sep_avg = np.sqrt(np.sum(delta[:, 1:]**2, axis=1)).mean()
+enlarge = nr1_sep / sep_avg
+
+## Fill mock image:
+hridge = 2
+nx, ny = 4096, 4096
+xx, yy = np.meshgrid(np.arange(nx), np.arange(ny))   # absolute
+mocked = np.zeros_like(xx, dtype=np.float32)
+for onum,odata in spec_mod_pts.items():
+    for ff in trace_fibers:
+        wlen, xcoo, ycoo = odata[ff].T
+        txcoo =  ycoo-1 if flip_plot else xcoo-1    # pixel -> array coords
+        tycoo = -xcoo-1 if flip_plot else ycoo-1    # pixel -> array coords
+        ixcoo = float(nx) * (txcoo - xp0) / (xp1 - xp0)
+        iycoo = float(ny) * (tycoo - yp0) / (yp1 - yp0)
+        #ixcoo = enlarge * (txcoo - xp0)
+        #iycoo = enlarge * (tycoo - yp0)
+        #ixcoo = enlarge * (txcoo - xmid)
+        #iycoo = 0.5 * (ny - 1) + enlarge * (tycoo - ymid)
+        xl = max(   0, int(np.floor(ixcoo.min())))
+        xr = min(nx-1, int(np.ceil( ixcoo.max())))
+        #xl,xr = int(np.floor(ixcoo.min())), int(np.ceil(ixcoo.max()))
+        #yl,yr = int(np.floor(iycoo.min())), int(np.ceil(iycoo.max()))
+        xpnts = xl + np.arange(xr - xl + 1)
+        yterp = np.interp(xpnts, ixcoo, iycoo)
+        y_int = np.int_(np.floor(yterp))
+        for dy in range(2*hridge):
+            ynear = y_int - hridge + 1 + dy
+            ydist = np.abs(ynear - yterp)
+            valid = ynear < ny
+            mocked[ynear[valid], xpnts[valid]] = float(hridge) - ydist[valid]
+
+        #mocked[np.int_(np.ceil( yterp))-1, xpnts-1] = 1.0
+        #mocked[np.int_(np.floor(yterp))-1, xpnts-1] = 1.0
+        #y_top = np.int_(np.ceil(yterp))
+
+## Prevent negative values (just in case):
+mocked = np.clip(mocked, a_min=0, a_max=float(hridge))
+
+## Save image to disk:
+sys.stderr.write("Saving mocked image ... ")
+import astropy.io.fits as pf
+pf.writeto('mocked.fits', mocked, overwrite=True)
+sys.stderr.write("done.\n")
 
 # -----------------------------------------------------------------------
 # Mark CCD position:

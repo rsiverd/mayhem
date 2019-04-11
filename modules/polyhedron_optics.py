@@ -85,7 +85,7 @@ class PolygonFace(object):
         self._center    = self._calc_center(self._verts)
         self._normal    = np.cross(*self._basis)
         self._uv_origin = np.copy(self._verts[0])       # UV coordinate origin
-        self._uv_verts  = self._xyz2uv_m(self._verts)   # UV vertex coords (fixed)
+        self._uv_verts  = self._xyz2uv_m(self._verts)   # UV vertex coo (fixed)
         self._vtxcount  = self._verts.shape[0]          # number of vertices
 
         # Lookup-table for dictionary-like access:

@@ -298,10 +298,10 @@ prpoly = po.IsosPrismPolyhedron(apex_angle_deg, short_edge_mm, height_mm,
 prpoly.zrotate(np.radians(-90.0))
 prpoly.zrotate(np.radians(prism_turn_deg))
 
-ft = prpoly.get_face('top')
+#ft = prpoly.get_face('top')
 
 # for experimentation:
-f1 = prpoly.get_face('face1')
+#f1 = prpoly.get_face('face1')
 
 
 ##--------------------------------------------------------------------------##
@@ -350,13 +350,24 @@ v_initial = np.array([np.sin(input_theta) * np.cos(input_phi),
                       np.sin(input_theta) * np.sin(input_phi),
                       np.cos(input_theta)])
 
-## An initial input beam:
+## An initial input beam (center fiber):
 wl_initial = 0.80                        # ray wavelength (microns)
 prvtx_xmax = prpoly.get_vertices('top')[:, 0].max()     # prism +X extremum
-fiber_xpos = 0.8 * prvtx_xmax
+fiber_xpos = 0.85 * prvtx_xmax
+ferrule_fsep = 0.250                                    # mm between fibers
+
+## Fibers 0+2 are offset from fiber1 in X-Y plane:
+frac_offset = np.array([-np.sin(input_phi), np.cos(input_phi), 0.0])
+#fib2_offset = np.array([ , , 0.0])
+
 fiber_exit = np.array([fiber_xpos, -400.0, 0.0])
+
+## Starting positions for all three fibers:
+fiber_ends = [fiber_exit.copy() + ferrule_fsep * frac_offset,
+              fiber_exit.copy(),
+              fiber_exit.copy() - ferrule_fsep * frac_offset]
 #light_path.append(fiber_exit)
-keep_going = True
+#keep_going = True
 
 ## Make CCD polyhedron:
 ccdpoly = po.CameraPolyhedron(200.0, 0.1, 200.0)
@@ -374,26 +385,40 @@ test_path = spectr.follow(fiber_exit, v_initial, wl_initial, owhich+1)
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
 ## Raytrace numerous orders:
+sys.stderr.write("Tracing spectrum ...\n")
 path_details = {}
 spec_mod_pts = {}
+trace_fibers = [0, 1, 2]
+#for ff in range(3):
+#    path_details[ff] = {}
+#    t_spec_mod_pts = {}
+#all_path_details = {}
+#all_spec_mod_pts = {}
+#for ff in trace_fibers:
+#    path_details = {}
+#    spec_mod_pts = {}
 for i,(sord, wsamp) in enumerate(rtwl_samples.items(), 1):
-    sys.stderr.write("sord: %3d (order %d of %d)\n" 
+    sys.stderr.write("\rsord: %3d (order %d of %d) ... " 
             % (sord, i, useful_orders.size))
-    paths = [spectr.follow(fiber_exit, v_initial, ww, sord) for ww in wsamp]
-    path_details[sord] = paths
-    endpoints = [x[-1] for x in paths]
-    #kept = []
-    #for ww,(cc,tt) in zip(wsamp, endpoints):
-    #    ccdx, _, ccdy = cc
-    #    sys.stderr.write("ww: %.3f\n" % ww)
-    #    sys.stderr.write("cc: %s\n" % str(cc))
-    #    sys.stderr.write("tt: %s\n" % str(tt))
-    #    if tt is None:
-    #        kept.append((ww, ccdx, ccdy))
-    #    pass
-    kept = [(ww, cx, cz) for ww,((cx,cy,cz),tt) \
-                        in zip(wsamp, endpoints) if (tt is None)]
-    spec_mod_pts[sord] = np.array(kept)
+    path_details[sord] = {}
+    spec_mod_pts[sord] = {}
+    for ff in trace_fibers:
+        launch = fiber_ends[ff]
+        paths = [spectr.follow(launch, v_initial, ww, sord) for ww in wsamp]
+        path_details[sord][ff] = paths
+        endpoints = [x[-1] for x in paths]
+        kept = [(ww, cx, cz) for ww,((cx,cy,cz),tt) \
+                            in zip(wsamp, endpoints) if (tt is None)]
+        #spec_mod_pts[ff][sord] = np.array(kept)
+        spec_mod_pts[sord][ff] = np.array(kept)
+    
+    #all_path_details[ff] = path_details
+    #all_spec_mod_pts[ff] = spec_mod_pts
+sys.stderr.write("done.\n")
+
+#pickone = 0
+#path_details = all_path_details[pickone]
+#spec_mod_pts = all_spec_mod_pts[pickone]
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -441,27 +466,24 @@ fig2.clf()
 ax2 = fig2.add_subplot(111, aspect='equal')
 ax2.grid(True)
 sskw = {'lw':0, 's':15}
-#spkw = {
 flip_plot = True
-derp = []
+everything = []
 for onum,odata in spec_mod_pts.items():
-    wlen, xcoo, ycoo = odata.T
-    #ax2.scatter(xcoo, ycoo, **sskw)
-    wlnm = 1e3 * wlen.mean()
-    derp.append((onum, wlnm))
-    color = wavelength_colors.wave2rgb(wlnm)
-    sys.stderr.write("wlnm=%.3f, color: %s\n" % (wlnm, str(color)))
-    if flip_plot:
-        ax2.plot(ycoo, -xcoo, color=color)
-    else:
-        ax2.plot(xcoo, ycoo, color=color)
-#ax2.set_xlim(-100, 100)
-#ax2.set_ylim(-100, 100)
-sys.stderr.write("MADE IT HERE!\n")
+    for ff in trace_fibers:
+        wlen, xcoo, ycoo = odata[ff].T
+        everything.extend([x for x in odata.values()])
+        #ax2.scatter(xcoo, ycoo, **sskw)
+        wlnm = 1e3 * wlen.mean()
+        color = wavelength_colors.wave2rgb(wlnm)
+        if flip_plot:
+            ax2.plot(ycoo, -xcoo, color=color)
+        else:
+            ax2.plot(xcoo, ycoo, color=color)
 
 ## Combined data set:
-mod_wlen, mod_xcoo, mod_ycoo = \
-        np.concatenate([x for x in spec_mod_pts.values()]).T
+#mod_wlen, mod_xcoo, mod_ycoo = \
+#        np.concatenate([x for x in spec_mod_pts.values()]).T
+mod_wlen, mod_xcoo, mod_ycoo = np.concatenate(everything).T
 if flip_plot:
     mod_xcoo, mod_ycoo = mod_ycoo, -mod_xcoo
 xmin, xmax = mod_xcoo.min(), mod_xcoo.max()

@@ -1,3 +1,13 @@
+## Python version-agnostic module reloading:
+try:
+    reload                              # Python 2.7
+except NameError:
+    try:
+        from importlib import reload    # Python 3.4+
+    except ImportError:
+        from imp import reload          # Python 3.0 - 3.3
+
+
 import os, sys, time
 import numpy as np
 import astropy.io.fits as pf

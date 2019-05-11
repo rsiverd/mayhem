@@ -159,67 +159,90 @@ class E2ERT(object):
         p_n1n2 = self._probj._n1n2_ratio(wl_um) # n_glass / n_air
         grbot  = self._grobj.get_face('bot')
         sensor = self._cmobj.get_face('front')
-        light_path = [(xyz0, traj0)]
+        result = {'complete':False, 'ccdxy':None, 'path':[(xyz0, traj0)],
+                'wlen_um':wl_um, 'specmod':None}
+        #light_path = [(xyz0, traj0)]
 
         # -------------------------------------------------------
         # Enter prism through face1 (point + trajectory):
         valid, f1_isect = prf1.get_intersection(xyz0, traj0)
         if not valid:
             self._vlwrite(1, "Input beam missed prism!\n")
-            return light_path
+            return result
+            #return light_path
         new_traj = calc_surface_vectors(traj0, prf1['normal'], p_n1n2)[1]
-        light_path.append((f1_isect, new_traj))
+        #light_path.append((f1_isect, new_traj))
+        result['path'].append((f1_isect, new_traj))
 
         # Exit through prism face2 (point + trajectory):
         valid, f2_isect = prf2.get_intersection(f1_isect, new_traj)
         if not valid:
             self._vlwrite(1, "Beam failed to exit prism through face2!\n")
-            return light_path
+            return result
+            #return light_path
         new_traj = calc_surface_vectors(new_traj, 
                         -prf2['normal'], 1. / p_n1n2)[1]
-        light_path.append((f2_isect, new_traj))
+        #light_path.append((f2_isect, new_traj))
+        result['path'].append((f2_isect, new_traj))
 
         # -------------------------------------------------------
         # Intersect grating and change direction (diffract):
         hits_grating, gr_isect = grbot.get_intersection(f2_isect, new_traj)
         if not valid:
             self._vlwrite(1, "Light ray misses grating!\n")
-            return light_path
+            return result
+            #return light_path
         valid, diffr_vec = \
                 self._grobj.diffracted_ray(new_traj, wl_um, spec_order)
         if not valid:
-            light_path.append((gr_isect, None))
+            #light_path.append((gr_isect, None))
+            result['path'].append((gr_isect, None))
             self._vlwrite(1, "No valid diffracted beam from grating!\n")
-            return light_path
-        light_path.append((gr_isect, diffr_vec))
+            return result
+            #return light_path
+        result['path'].append((gr_isect, diffr_vec))
+        #light_path.append((gr_isect, diffr_vec))
  
         # -------------------------------------------------------
         # Re-enter prism through face2 (point + trajectory):
         hits_prism, f2_isect = prf2.get_intersection(gr_isect, diffr_vec)
         if not hits_prism:
             self._vlwrite(1, "Diffracted ray does not return to prism!\n")
-            return light_path
+            return result
+            #return light_path
         new_traj = calc_surface_vectors(diffr_vec, prf2['normal'], p_n1n2)[1]
-        light_path.append((f2_isect, new_traj))
+        result['path'].append((f2_isect, new_traj))
+        #light_path.append((f2_isect, new_traj))
 
         # Exit through prism face1 (point + trajectory):
         valid, f1_isect = prf1.get_intersection(f2_isect, new_traj)
         if not valid:
             self._vlwrite(1, "Beam failed to exit prism through face1!\n")
-            return light_path
+            return result
+            #return light_path
         new_traj = calc_surface_vectors(new_traj, 
                         -prf1['normal'], 1. / p_n1n2)[1]
-        light_path.append((f1_isect, new_traj))
+        result['path'].append((f1_isect, new_traj))
+        #light_path.append((f1_isect, new_traj))
 
         # -------------------------------------------------------
         # Check for intersection with CCD plane:
         valid, cam_isect = sensor.get_intersection(f1_isect, new_traj)
         if not valid:
             self._vlwrite(1, "Beam misses CCD sensor!\n")
-            return light_path
-        light_path.append((cam_isect, None))
-
-        return light_path
+            #return light_path
+            return result
+        #sys.stderr.write("cam_isect: %s\n" % str(cam_isect)) 
+        result['path'].append((cam_isect, None))
+        result['ccdxy'] = sensor._xyz2uv_s(cam_isect)
+        result['complete'] = True
+        result['specmod'] = [wl_um] + result['ccdxy'].tolist()
+        #result['summary'] = [wl_um] + 
+        #light_path.append((cam_isect, None))
+        #light_path.append((cam_isect, native_isect))
+        #sys.stderr.write("dir(sensor): %s\n" % str(dir(sensor)))
+        return result
+        #return light_path
 
 
 ######################################################################

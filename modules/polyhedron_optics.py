@@ -18,13 +18,13 @@
 #
 # Rob Siverd
 # Created:       2019-02-20
-# Last modified: 2019-03-31
+# Last modified: 2019-04-11
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 ## Python version-agnostic module reloading:
 try:
@@ -251,7 +251,8 @@ class PolygonFace(object):
 
     # Convert a single XYZ point to 'natural' UV coordinates:
     def _xyz2uv_s(self, point):
-        return np.array([np.dot(bb, point - self._uv_origin) for bb in self._basis])
+        return np.array([np.dot(bb, point - self._uv_origin) \
+                                            for bb in self._basis])
 
     # Convert an array of XYZ points to 'natural' UV coordinates:
     def _xyz2uv_m(self, xyz_list):
@@ -546,6 +547,7 @@ class CameraPolyhedron(PolyhedralOptic):
     def __init__(self, width_mm, length_mm, height_mm,
             unit='mm', debug=False):
         super(CameraPolyhedron, self).__init__()
+        self._ccd_roll  = 0.0
         self._unit      = unit
         self._debug     = debug
         self._width_mm  = width_mm
@@ -559,6 +561,7 @@ class CameraPolyhedron(PolyhedralOptic):
         self._faces['front'] = self._prism_face((2, 3))
         #self._faces['face2'] = self._prism_face((1, 2))
         #self._faces['face3'] = self._prism_face((2, 0))
+        #self.set_sensor_roll_deg(roll_deg)
         return
 
     def _bottom_vertices(self):
@@ -567,6 +570,22 @@ class CameraPolyhedron(PolyhedralOptic):
         vtx3 = np.array([self._width_mm, self._length_mm,  0.0])
         vtx4 = np.array([           0.0, self._length_mm,  0.0])
         return np.array([vtx1, vtx2, vtx3, vtx4])
+
+    #def set_sensor_roll_deg(self, roll_degrees):
+    #    """This rotation routine is used to set and track a 'roll' angle of
+    #    the sensor about the optical axis (the 'front' face normal vector).
+    #    Importantly, the roll position is tracked internally to simplify
+    #    transformation from spectrograph to CCD coordinates.
+    #    
+    #    Effectively, this is a sensor adjustment INSIDE the polygon face
+    #    This roll serves two purposes:
+    #    1) Within the polygon, it orients the sensor in the spectrograph 
+    #    coordinate system so that
+    #    intersections can be identified in raytracing.
+    #    2) that 'rolls' the CCD sensor about the (potentially arbitrary)
+    #    optical axis (the 'front' face normal).  and tracks the
+    #    rotation. rather than
+    #    """
 
 ##--------------------------------------------------------------------------##
 ##------------------      Diffraction Grating Polyhedron    ----------------##

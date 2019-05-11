@@ -83,7 +83,7 @@ if [ -z "$1" ]; then
 fi
 
 ## Defaults for optional settings:
-erase_lag=5
+erase_lag=3
 
 ## Check for arguments:
 usage () {

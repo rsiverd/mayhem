@@ -82,9 +82,12 @@ if [ -z "$1" ]; then
    exit 1
 fi
 
+## Defaults for optional settings:
+erase_lag=5
+
 ## Check for arguments:
 usage () {
-   Recho "\nSyntax: $this_prog camera day-obs1 day-obs2 chunkdays\n\n"
+   Recho "\nSyntax: $this_prog camera day-obs1 day-obs2 chunkdays [erase_lag]\n\n"
    yecho "Input date range should correspond to the day-obs of lamp/target \n"
    yecho "frames (i.e., after DAY-OBS rollover). The corresponding biases and\n"
    yecho "darks for lamp/target spectra are obtained on the previous DAY-OBS.\n"
@@ -97,6 +100,7 @@ usage () {
    yecho "        the nights that have been fully processed (for which 'clean'\n"
    yecho "        images can be safely removed without performance loss)\n"
    yecho "        erase_nites = chunk_nites - erase_lag\n"
+   yecho "        default value: ${erase_lag}\n"
    yecho "\n"
 }
 #if [ "$1" != "--START" ]; then
@@ -121,8 +125,12 @@ done
 ## Note erase_lag (if provided):
 delete_old=0
 if [ -n "$5" ]; then
-   delete_old=1
+   if !( int_check_pass $5 ); then
+      Recho "Invalid erase_lag: '$5'\n\n" >&2
+      exit 1
+   fi
    erase_lag=$5
+   delete_old=1
 
    # Erase lag should be larger than chunk size:
    if [ $erase_lag -lt $chunkdays ]; then

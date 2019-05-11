@@ -117,9 +117,9 @@ def wlen2order(wlen_um):
 rtwl_samples = {}
 #samp_per_order = 11
 samp_per_order = 21
-FSRs_per_order = 1.3
-FSRs_per_order = 1.6
 #FSRs_per_order = 1.0
+FSRs_per_order = 1.3
+#FSRs_per_order = 1.6
 sample_offsets = FSRs_per_order * np.linspace(-0.5, 0.5, samp_per_order)
 for nord,wlcen in zip(useful_orders, center_wlen_um):
     this_FSR = wlcen / float(nord)
@@ -316,6 +316,7 @@ gr_ruling_lmm = 41.59                   # lines per mm
 gr_spacing_um = 1e3 / gr_ruling_lmm     # groove spacing in microns
 grating_turn_deg = 44.827
 grating_tilt_deg = 13.786
+grating_tilt_deg += -0.9
 
 grpoly = po.GratingPolyhedron(gr_width_mm, gr_length_mm, gr_height_mm,
                                 gr_ruling_lmm)
@@ -342,7 +343,7 @@ grpoly.shift_vec(nudge)
 #light_path = []
 
 ## Guesstimated scale factor change from collimator lenses:
-guess_magnify = 2.0
+guess_magnify = 3.0
 
 ## Input beam direction:
 input_turn_deg = 5.0
@@ -372,8 +373,20 @@ fiber_ends = [fiber_exit.copy() + ferrule_fsep * frac_offset,
               fiber_exit.copy() - ferrule_fsep * frac_offset]
 
 ## Make CCD polyhedron:
+ccd_rot_deg =  13.091
+#ccd_rot_deg =   3.091
+ccd_rot_deg = -13.091
+#ccd_rot_deg = -5.
+ccd_rot_deg = 0.0
 ccdpoly = po.CameraPolyhedron(200.0, 0.1, 200.0)
 ccdpoly.shift_xyz(0.0, -450.0, 0.0)
+ccdpoly.yrotate(np.deg2rad(ccd_rot_deg))
+
+## Note sensor UV limits from vertices:
+uv_corners = ccdpoly.get_face('front')._uv_verts
+umin, vmin = np.min(uv_corners, axis=1)
+umax, vmax = np.max(uv_corners, axis=1)
+
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -391,14 +404,7 @@ sys.stderr.write("Tracing spectrum ...\n")
 path_details = {}
 spec_mod_pts = {}
 trace_fibers = [0, 1, 2]
-#for ff in range(3):
-#    path_details[ff] = {}
-#    t_spec_mod_pts = {}
-#all_path_details = {}
-#all_spec_mod_pts = {}
-#for ff in trace_fibers:
-#    path_details = {}
-#    spec_mod_pts = {}
+#trace_fibers = [1]
 for i,(sord, wsamp) in enumerate(rtwl_samples.items(), 1):
     sys.stderr.write("\rsord: %3d (order %d of %d) ... " 
             % (sord, i, useful_orders.size))
@@ -406,21 +412,18 @@ for i,(sord, wsamp) in enumerate(rtwl_samples.items(), 1):
     spec_mod_pts[sord] = {}
     for ff in trace_fibers:
         launch = fiber_ends[ff]
-        paths = [spectr.follow(launch, v_initial, ww, sord) for ww in wsamp]
+        traces = [spectr.follow(launch, v_initial, ww, sord) for ww in wsamp]
+        paths  = [x['path'] for x in traces]
         path_details[sord][ff] = paths
         endpoints = [x[-1] for x in paths]
-        kept = [(ww, cx, cz) for ww,((cx,cy,cz),tt) \
-                            in zip(wsamp, endpoints) if (tt is None)]
+        ##kept = [(ww, (cx, cy, cz)) for ww,((cx,cy,cz),tt) \
+        #kept = [(ww, cx, cz) for ww,((cx,cy,cz),tt) \
+        #                    in zip(wsamp, endpoints) if (tt is None)]
+        #                    #in zip(wsamp, endpoints) if (tt is None)]
+        kept = [x['specmod'] for x in traces if x['complete']]
         #spec_mod_pts[ff][sord] = np.array(kept)
         spec_mod_pts[sord][ff] = np.array(kept)
-    
-    #all_path_details[ff] = path_details
-    #all_spec_mod_pts[ff] = spec_mod_pts
 sys.stderr.write("done.\n")
-
-#pickone = 0
-#path_details = all_path_details[pickone]
-#spec_mod_pts = all_spec_mod_pts[pickone]
 
 ##--------------------------------------------------------------------------##
 ##--------------------------------------------------------------------------##
@@ -443,6 +446,38 @@ def edges_from_vertices(vtx_array):
     edges.extend([vtx_top[:, :2][x,] for x in idxpairs])
     #sys.stderr.write("edges: %s\n" % str(edges))
     return edges
+
+##--------------------------------------------------------------------------##
+##--------------------------------------------------------------------------##
+## Summary wavelength(order) info:
+def wlsummary(stream):
+    mmm = lambda a: (np.min(a), np.average(a), np.max(a))
+    stream.write("%4s,%10s,%10s,%10s\n"
+            % ("sord", "wlmin", "wlavg", "wlmax"))
+    for sord in sorted(spec_mod_pts.keys()):
+        wl_nm = spec_mod_pts[sord][1][:, 0] * 1e3
+        wltxt = ','.join(['%4d'%sord]+['%10.5f'%x for x in mmm(wl_nm)])
+        stream.write(wltxt + '\n')
+    return
+
+## min/mean/max finder:
+#def mmm(a):
+#    return (np.min(a), np.average(a), np.max(a))
+
+## List of wavelengths vs. spectral order:
+dump_wlens = None
+#dump_wlens = 'lam_vs_order_vector.csv'
+if dump_wlens:
+    mmm = lambda a: (np.min(a), np.average(a), np.max(a))
+    with open(dump_wlens, 'w') as dstream:
+    #dstream = sys.stderr
+        dstream.write("%4s,%10s,%10s,%10s\n"
+                % ("sord", "wlmin", "wlavg", "wlmax"))
+        for sord in sorted(spec_mod_pts.keys()):
+            wl_nm = spec_mod_pts[sord][1][:, 0] * 1e3
+            wltxt = ','.join(['%4d'%sord]+['%10.5f'%x for x in mmm(wl_nm)])
+            dstream.write(wltxt + '\n')
+
 
 
 ##--------------------------------------------------------------------------##
@@ -469,31 +504,39 @@ ax2 = fig2.add_subplot(111, aspect='equal')
 ax2.grid(True)
 sskw = {'lw':0, 's':15}
 ppkw = {}
-ppkw = {'marker':'o', 'ms':5}
+ppkw = {'marker':'o', 'ms':3}
 flip_plot = True
 everything = []
 for onum,odata in spec_mod_pts.items():
     for ff in trace_fibers:
-        wlen, xcoo, ycoo = odata[ff].T
+        #wlen, xcoo, ycoo, zcoo = odata[ff].T
+        wlen, ccdu, ccdv = odata[ff].T
         everything.extend([x for x in odata.values()])
         #ax2.scatter(xcoo, ycoo, **sskw)
         wlnm = 1e3 * wlen.mean()
         color = wavelength_colors.wave2rgb(wlnm)
         if flip_plot:
-            ax2.plot(ycoo, -xcoo, color=color, **ppkw)
-            #ax2.scatter(ycoo, -xcoo, color=color, **sskw)
+            ax2.plot(ccdv, ccdu, color=color, **ppkw)
+            #ax2.plot(zcoo, -xcoo, color=color, **ppkw)
+            ##ax2.scatter(zcoo, -xcoo, color=color, **sskw)
         else:
-            ax2.plot(xcoo, ycoo, color=color, **ppkw)
-            #ax2.scatter(xcoo, ycoo, color=color, **sskw)
+            ax2.plot(ccdu, ccdv, color=color, **ppkw)
+            #ax2.plot(xcoo, zcoo, color=color, **ppkw)
+            ##ax2.scatter(xcoo, zcoo, color=color, **sskw)
 
 ## Combined data set:
 #mod_wlen, mod_xcoo, mod_ycoo = \
 #        np.concatenate([x for x in spec_mod_pts.values()]).T
-mod_wlen, mod_xcoo, mod_ycoo = np.concatenate(everything).T
-if flip_plot:
-    mod_xcoo, mod_ycoo = mod_ycoo, -mod_xcoo
-xmin, xmax = mod_xcoo.min(), mod_xcoo.max()
-ymin, ymax = mod_ycoo.min(), mod_ycoo.max()
+#mod_wlen, mod_xcoo, mod_ycoo, mod_zcoo = np.concatenate(everything).T
+mod_wlen, ccd_xcoo, ccd_ycoo = np.concatenate(everything).T
+#ccd_xcoo = +mod_zcoo if flip_plot else mod_xcoo
+#ccd_ycoo = -mod_xcoo if flip_plot else mod_zcoo
+#if flip_plot:
+#    ccd_xcoo, ccd_ycoo = mod_zcoo, -mod_xcoo
+#else:
+#    ccd_xcoo
+xmin, xmax = ccd_xcoo.min(), ccd_xcoo.max()
+ymin, ymax = ccd_ycoo.min(), ccd_ycoo.max()
 span = 1.05 * max(xmax - xmin, ymax - ymin)
 span = 1.05 * (ymax - ymin)
 xmid, ymid = 0.50 * (xmin + xmax), 0.5 * (ymin + ymax)
@@ -503,20 +546,24 @@ xmid, ymid = 0.50 * (xmin + xmax), 0.5 * (ymin + ymax)
 #ax2.set_ylim(yavg - 53., yavg + 65.)
 xlo, xhi = xmid - 0.5*span, xmid + 0.5*span
 ylo, yhi = ymid - 0.5*span, ymid + 0.5*span
-ax2.set_xlim(xlo, xhi)
-ax2.set_ylim(ylo, yhi)
+ax2.set_xlim(umin, umax)
+ax2.set_ylim(vmin, vmax)
+#ax2.set_xlim(xlo, xhi)
+#ax2.set_ylim(ylo, yhi)
+ax2.set_xlabel('CCD U-coord')
+ax2.set_ylabel('CCD V-coord')
 fig2.tight_layout()
 
 ## Limit tweaking:
-xp0, xp1, yp0, yp1 = xmin, xmax, ymin, ymax
+#xp0, xp1, yp0, yp1 = xmin, xmax, ymin, ymax
 xp0, xp1, yp0, yp1 =  xlo,  xhi,  ylo,  yhi
 
 ## Adjust image scale to match reality:
-nr1_sep =  29.0                    # in 2nd-bluemost order
-nr1_ord = 118
-delta = spec_mod_pts[nr1_ord][1] - spec_mod_pts[nr1_ord][0]
-sep_avg = np.sqrt(np.sum(delta[:, 1:]**2, axis=1)).mean()
-enlarge = nr1_sep / sep_avg
+#nr1_sep =  29.0                    # in 2nd-bluemost order
+#nr1_ord = 118
+#delta = spec_mod_pts[nr1_ord][1] - spec_mod_pts[nr1_ord][0]
+#sep_avg = np.sqrt(np.sum(delta[:, 1:]**2, axis=1)).mean()
+#enlarge = nr1_sep / sep_avg
 
 ## Fill mock image:
 hridge = 2
@@ -525,19 +572,18 @@ xx, yy = np.meshgrid(np.arange(nx), np.arange(ny))   # absolute
 mocked = np.zeros_like(xx, dtype=np.float32)
 for onum,odata in spec_mod_pts.items():
     for ff in trace_fibers:
-        wlen, xcoo, ycoo = odata[ff].T
-        txcoo =  ycoo-1 if flip_plot else xcoo-1    # pixel -> array coords
-        tycoo = -xcoo-1 if flip_plot else ycoo-1    # pixel -> array coords
-        ixcoo = float(nx) * (txcoo - xp0) / (xp1 - xp0)
-        iycoo = float(ny) * (tycoo - yp0) / (yp1 - yp0)
-        #ixcoo = enlarge * (txcoo - xp0)
-        #iycoo = enlarge * (tycoo - yp0)
-        #ixcoo = enlarge * (txcoo - xmid)
-        #iycoo = 0.5 * (ny - 1) + enlarge * (tycoo - ymid)
+        #wlen, xcoo, _, ycoo = odata[ff].T
+        wlen, ccdu, ccdv = odata[ff].T
+        txcoo = ccdv if flip_plot else ccdu
+        tycoo = ccdu if flip_plot else ccdv
+        #txcoo =  ycoo-1 if flip_plot else xcoo-1    # pixel -> array coords
+        #tycoo = -xcoo-1 if flip_plot else ycoo-1    # pixel -> array coords
+        #ixcoo = float(nx) * (txcoo - xp0) / (xp1 - xp0)
+        #iycoo = float(ny) * (tycoo - yp0) / (yp1 - yp0)
+        ixcoo = float(nx) * txcoo / (xp1 - xp0)
+        iycoo = float(ny) * tycoo / (yp1 - yp0)
         xl = max(   0, int(np.floor(ixcoo.min())))
         xr = min(nx-1, int(np.ceil( ixcoo.max())))
-        #xl,xr = int(np.floor(ixcoo.min())), int(np.ceil(ixcoo.max()))
-        #yl,yr = int(np.floor(iycoo.min())), int(np.ceil(iycoo.max()))
         xpnts = xl + np.arange(xr - xl + 1)
         yterp = np.interp(xpnts, ixcoo, iycoo)
         y_int = np.int_(np.floor(yterp))
@@ -632,12 +678,12 @@ def qconnect(xyz1, xyz2, **kwargs):
 #    qconnect(pstart, pstop, **grkw)
 
 ## Make plottable series of points:
-test_verts = [x[0] for x in test_path]
+test_verts = [x[0] for x in test_path['path']]
 
 ## Add another point to show final trajectory if destination not reached:
-if isinstance(test_path[-1][1], np.ndarray):
+if isinstance(test_path['path'][-1][1], np.ndarray):
     draw_dist = 500.
-    last_posn, last_traj = test_path[-1]
+    last_posn, last_traj = test_path['path'][-1]
     after_posn = last_posn + draw_dist * last_traj
     test_verts.append(after_posn)
 

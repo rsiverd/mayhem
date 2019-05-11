@@ -76,27 +76,29 @@ if [ -z "$1" ]; then
    usage >&2
    exit 1
 fi
-imdir="$1"
-[ -d $imdir ] || PauseAbort "Can't find directory: $imdir"
+#imdir="$1"
+#[ -d $imdir ] || PauseAbort "Can't find directory: $imdir"
+imlist="$1"
+[ -f $imlist ] || PauseAbort "Can't find file: $imlist"
 
 ##**************************************************************************##
 ##==========================================================================##
 ##--------------------------------------------------------------------------##
 
-## List images:
-yecho "Listing files ... "
-find $imdir -type f -name "*.fits*" | sort > $foo
-total=$(cat $foo | wc -l)
-gecho "done. Found $total files.\n"
-if [ $total -eq 0 ]; then
-   echo "Nothing to do."
-   exit 0
-fi
+### List images:
+#yecho "Listing files ... "
+#find $imdir -type f -name "*.fits*" | sort > $foo
+#total=$(cat $foo | wc -l)
+#gecho "done. Found $total files.\n"
+#if [ $total -eq 0 ]; then
+#   echo "Nothing to do."
+#   exit 0
+#fi
 
 ##--------------------------------------------------------------------------##
 ## Verify files:
 yecho "Verifying data ...\n"
-cat $foo | xargs -n10 fitsverify -e -q | tee $bar | \
+cat $imlist | xargs -n10 fitsverify -e -q | tee $bar | \
    awk -v total=$total '{
       printf "\rChecked %d of %d ...  ", NR, total
    } END { printf "done.\n" }'

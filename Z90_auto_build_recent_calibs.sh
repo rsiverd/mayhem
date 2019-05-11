@@ -7,14 +7,14 @@
 #
 # Rob Siverd
 # Created:      2017-08-14
-# Last updated: 2019-02-19
+# Last updated: 2019-05-11
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Default options:
 debug=0 ; clobber=0 ; force=0 ; timer=0 ; vlevel=0
-script_version="0.20"
+script_version="0.25"
 this_prog="${0##*/}"
 #shopt -s nullglob
 # Propagate errors through pipelines: set -o pipefail
@@ -90,6 +90,8 @@ vcmde "source $date_funcs"
 
 ## Post-restart time buffer (number of hours spent taking arcs/flats):
 buff_hrs=6
+chunkdays=5
+erase_lag=10      # delete things well after expected uses are done
 
 ## Disk/CPU kindness:
 prefix="nice -19 ionice -c3"
@@ -99,12 +101,15 @@ prefix="nice -19 ionice -c3"
 ##--------------------------------------------------------------------------##
 
 ## Calib-builder script is required:
-cal_script="Z81_build_all_calibs_range.sh"
-[ -f $cal_script ] || ErrorAbort "Can't find file: $cal_script"
+base_cal_script="Z81_build_all_calibs_range.sh"
+chnk_cal_script="Z82_build_calibs_in_chunks.sh"
+for item in $base_cal_script $chnk_cal_script ; do
+   [ -f $item ] || ErrorAbort "Can't find file: '$item'"
+done
 
 ## Load site<-->camera mapplings:
 site_cams="aux/site_camera_mappings.sh"
-[ -f $site_cams ] || ErrorAbort "Can't find file: $site_cams" 
+[ -f $site_cams ] || ErrorAbort "Can't find file: '$site_cams'" 
 eval "$(cat $site_cams)"
 
 #echo "camera_from_site:"
@@ -129,7 +134,9 @@ sleep 5
 
 ## Build all calibrations for the specified range:
 echo
-cmde "$prefix ./$cal_script $camid $start_fdate $final_fdate"
+#cmde "$prefix ./$base_cal_script $camid $start_fdate $final_fdate"
+copts="$chunkdays $erase_lag"
+cmde "$prefix ./$chnk_cal_script $camid $start_fdate $final_fdate $copts"
 
 ##--------------------------------------------------------------------------##
 ## Clean up:
@@ -143,6 +150,10 @@ exit 0
 ######################################################################
 # CHANGELOG (Z90_auto_build_recent_calibs.sh):
 #---------------------------------------------------------------------
+#
+#  2018-05-11:
+#     -- Increased script_version to 0.25.
+#     -- Switched from Z81 'dumb' calib builder to chunked Z82.
 #
 #  2018-02-19:
 #     -- Increased script_version to 0.20.

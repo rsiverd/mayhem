@@ -98,7 +98,7 @@ imlist="$1"
 ##--------------------------------------------------------------------------##
 ## Verify files:
 yecho "Verifying data ...\n"
-cat $imlist | xargs -n10 fitsverify -e -q | tee $bar | \
+unbuffer cat $imlist | xargs -n10 fitsverify -e -q | tee $bar | \
    awk -v total=$total '{
       printf "\rChecked %d of %d ...  ", NR, total
    } END { printf "done.\n" }'

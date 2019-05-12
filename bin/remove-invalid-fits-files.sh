@@ -95,6 +95,9 @@ imlist="$1"
 #   exit 0
 #fi
 
+## If image list given directly:
+total=$(cat $imlist | wc -l)
+
 ##--------------------------------------------------------------------------##
 ## Verify files:
 yecho "Verifying data ...\n"

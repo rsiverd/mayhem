@@ -88,3 +88,5 @@ cd NRES/mayhem
 ./bin/fetch-nres-data.py -o /net/shredder.phy.vanderbilt.edu/hd1/siverd/lco_arch_eng --old-first -s cpt --start 2019-04-10 --end 2019-04-20
 ./bin/fetch-nres-data.py -o /net/shredder.phy.vanderbilt.edu/hd1/siverd/lco_arch_eng --old-first -s cpt --proc --start 2019-04-10 --end 2019-04-20
 
+./bin/fetch-nres-data.py -o /net/shredder.phy.vanderbilt.edu/hd1/siverd/lco_arch_eng --old-first -s tlv --start 2019-04-10 --end 2019-04-20
+

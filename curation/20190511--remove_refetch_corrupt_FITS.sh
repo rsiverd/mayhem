@@ -34,14 +34,24 @@ rm z_fits_files.txt z_fits_status.txt
 krang
 cdvae
 
-find cpt/nres??/2019????/raw -type f -name "*.fits.fz" | sort > z_fits_files.txt
-~/NRES/mayhem/bin/remove-invalid-fits-files.sh z_fits_files.txt
+find cpt/nres??/2019????/raw -type f -name "*.fits.fz" | sort > z_fits_files.lsc.txt
+~/NRES/mayhem/bin/remove-invalid-fits-files.sh z_fits_files.lsc.txt
+rm z_fits_files.lsc.txt
 
-find elp/nres??/2019????/raw -type f -name "*.fits.fz" | sort > z_fits_files.txt
-~/NRES/mayhem/bin/remove-invalid-fits-files.sh z_fits_files.txt
+find elp/nres??/2019????/raw -type f -name "*.fits.fz" | sort > z_fits_files.elp.txt
+~/NRES/mayhem/bin/remove-invalid-fits-files.sh z_fits_files.elp.txt
+rm z_fits_files.elp.txt
+
+find cpt/nres??/2019????/raw -type f -name "*.fits.fz" | sort > z_fits_files.cpt.txt
+~/NRES/mayhem/bin/remove-invalid-fits-files.sh z_fits_files.cpt.txt
+rm z_fits_files.cpt.txt
+
+find tlv/nres??/2019????/raw -type f -name "*.fits.fz" | sort > z_fits_files.tlv.txt
+~/NRES/mayhem/bin/remove-invalid-fits-files.sh z_fits_files.tlv.txt
+rm z_fits_files.tlv.txt
 
 
-rm z_fits_files.txt
+rm z_fits_files.???.txt z_fits_files.txt
 
 # -----------------------------------------------------------------------
 # Check for bad tarballs:

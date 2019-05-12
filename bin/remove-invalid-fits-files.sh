@@ -103,7 +103,7 @@ total=$(cat $imlist | wc -l)
 yecho "Verifying data ...\n"
 unbuffer cat $imlist | xargs -n10 fitsverify -e -q | tee $bar | \
    awk -v total=$total '{
-      printf "\rChecked %d of %d ...  ", NR, total
+      printf "\rChecked %d of %d ... ", NR, total
    } END { printf "done.\n" }'
 
 ## Count failures:

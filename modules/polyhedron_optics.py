@@ -370,6 +370,10 @@ class PolyhedralOptic(object):
     def get_face(self, fname):
         return self._faces.get(fname, None)
 
+    def list_faces(self):
+        """A list of faces for use with get_face()."""
+        return list(self._faces.keys())
+
     def _prism_face(self, bvlist):
         tmpvtx = [self._vtx['bot'][x] for x in bvlist]      # bottom vertices
         tmpvtx += [self._vtx['top'][x] for x in reversed(bvlist)]   # add tops

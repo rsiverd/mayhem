@@ -18,13 +18,13 @@
 #
 # Rob Siverd
 # Created:       2019-02-20
-# Last modified: 2019-04-11
+# Last modified: 2019-06-09
 #--------------------------------------------------------------------------
 #**************************************************************************
 #--------------------------------------------------------------------------
 
 ## Current version:
-__version__ = "0.3.1"
+__version__ = "0.3.2"
 
 ## Python version-agnostic module reloading:
 try:
@@ -266,11 +266,42 @@ class PolygonFace(object):
     # -----------------------------------
 
     # Efficient test for rectangular faces:
-    def _rect_contains(self, point, rtol=1e-6):
+    def _rect_contains(self, point, rtol=1e-6, emergency=False):
+        """
+        This method computes the distance in the UV plane between a test 
+        point (assumed to be on that plane!) and the four corners of the face 
+        in UV coordinates (i.e., using basis vectors parallel to the sides of
+        the rectangle). The absolute sum of the U- and V-coordinate differences
+        (i.e., abs_sum = Σ (|ΔU_i| + |ΔV_i|) for i = 1...4) will equal the 
+        rectangle perimeter when the test point lies inside the polygon. If the
+        point is outside, this sum exceeds the perimeter. The test point is
+        considered inside when ((abs_sum - perim) / perim) < rtol.
+
+        As noted above, the test point is assumed to be in the UV plane (which
+        contains the rectangle). More precisely, the xyz2uv conversion gives 
+        the projected UV position (any distance from the UV plane is dropped).
+        As a result, this routine is not by itself appropriate for finding 
+        whether a point lies *ON* a face or not. Proper use entails first 
+        computing the intersection of a ray with the UV plane. The intersection
+        point is then tested for 'insideness' using this method.
+
+        NOTE TO FUTURE SELF: When writing this description I wondered for a bit
+        why I don't compute full uvw coordinates from xyz instead. A routine
+        to find the W distance, get_intersect_distance(), exists already. The
+        answer is that this routine is intended for in-plane use only, hence
+        the name _rect_contains (and NOT _face_contains).
+
+        """
         point_uv = self._xyz2uv_s(point)
         diffs_uv = self._uv_verts - point_uv[:, None]
         totalsep = np.sum(np.abs(diffs_uv))
         fracdiff = np.abs(totalsep - self._perim) / self._perim
+        if emergency:
+            sys.stderr.write("point_uv:  %s\n" % str(point_uv))
+            sys.stderr.write("diffs_uv:  %s\n" % str(diffs_uv))
+            sys.stderr.write("totalsep:  %s\n" % str(totalsep))
+            sys.stderr.write("perimeter: %s\n" % str(self._perim))
+            sys.stderr.write("fracdiff:  %s\n" % str(fracdiff))
         return (fracdiff < rtol)
 
     # Orientation difference calculator for vectors. This finds

@@ -1,0 +1,1 @@
+skimage.morphology library for locating images
